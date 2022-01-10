@@ -22,20 +22,20 @@ come lista vuota */
 
 int emptyProcQ(struct list_head *head){ //5
 /*Restituisce TRUE se la lista puntata da
-head è vuota, FALSE altrimenti. */
+head Ã¨ vuota, FALSE altrimenti. */
 	if(head->p_next == NULL) return TRUE;
 	else return FALSE;
 }
 
-void insertProcQ(struct list_head* head, pcb* p){ //6
-/*Inserisce l’elemento puntato da p nella
+void insertProcQ(struct list_head* head, pcb_t *p){ //6
+/*Inserisce lâ€™elemento puntato da p nella
 coda dei processi puntata da head*/
 	head->p_next = p;	//p2->next = new pcb_t;
 	//head->p_tail = p;
 }
 
 pcb_t headProcQ(struct list_head* head){ //7
-/*Restituisce l’elemento di testa della coda
+/*Restituisce lâ€™elemento di testa della coda
 dei processi da head, SENZA
 RIMUOVERLO. Ritorna NULL se la coda
 non ha elementi. */
@@ -46,8 +46,8 @@ non ha elementi. */
 pcb_t* removeProcQ(struct list_head *head){ //8
 /*Rimuove il primo elemento dalla coda dei
 processi puntata da head. Ritorna NULL se la
-coda è vuota. Altrimenti ritorna il puntatore
-all’elemento rimosso dalla lista */
+coda Ã¨ vuota. Altrimenti ritorna il puntatore
+allâ€™elemento rimosso dalla lista */
 	list_head *p;
 	list_head *newhead;
 	if (head==NULL) return NULL;
@@ -68,8 +68,8 @@ all’elemento rimosso dalla lista */
 
 pcb_t* outProcQ(struct list_head *head, pcb_t *p){ //9
 /*Rimuove il PCB puntato da p dalla coda dei
-processi puntata da head. Se p non è presente
-nella coda, restituisce NULL. (NOTA: p può
+processi puntata da head. Se p non Ã¨ presente
+nella coda, restituisce NULL. (NOTA: p puÃ²
 trovarsi in una posizione arbitraria della coda). */
 	if(head == p){
 		removeProcQ(p);
