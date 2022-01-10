@@ -50,17 +50,17 @@ coda è vuota. Altrimenti ritorna il puntatore
 all’elemento rimosso dalla lista */
 	list_head *p;
 	list_head *newhead;
-	if (head==NULL) return NULL;
-	else if (head->p_next==NULL) return head;
+	if (head==NULL) return NULL;	//controlla se la lista è vuota
+	else if (head->p_next==NULL) return head;	//controlla se ci sono altri elementi oltre la testa
 	else {
-		p = head ;
-		newhead=p->p_next;
+		p = head ;	//salva il puntatore alla testa in un puntatore p temporaneo
+		newhead=p->p_next;	//salva il puntatore al elemento successivo alla testa, che sarà la nuova testa
 		p=p->p_next;
-		while(p->p_next!=NULL){
+		while(p->p_next!=NULL){	//assegna l'indirizo alla nuova testa a tutti i nodi della coda
 			p->head=newhead;
 			p=p->p_next;
 		}
-		head->p_next=NULL;
+		head->p_next=NULL;	//pulisce i campi del nodo rimosso
 		head->p_head=NULL;
 
 		return head;
