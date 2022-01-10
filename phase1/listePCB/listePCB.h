@@ -8,7 +8,7 @@
 #ifndef LISTEPCB_H_
 #define LISTEPCB_H_
 
-typedef struct list_head;
+typedef struct pcb_t list_head;
 
 typedef struct pcb_t {
 // process queue
