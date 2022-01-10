@@ -8,35 +8,23 @@
 #ifndef LISTEPCB_H_
 #define LISTEPCB_H_
 
-typedef pcb_t list_head;
+typedef pcb_t *list_head;
 
 typedef struct pcb_t {
 // process queue
 struct list_head p_next;
-struct list_head p_head;
-//struct list_head p_tail;
 
 // process tree fields
 struct pcb_t *p_parent; // ptr to parent
 struct list_head p_child; // children list
 struct list_head p_sib; // sibling list
 // process status information
- //state_t p_s; // processor state
- //cpu_t p_time; // cpu time used by proc
+ state_t p_s; // processor state
+ cpu_t p_time; // cpu time used by proc
  int *p_semAdd; // ptr to semaphore on which proc is blocked
 } pcb_t, *pcb_PTR;
 
-
-/*
- * typedef struct list_head{
-	list_head p_next;
-	list_head p_head;
-}list_head;
-
-typedef struct pcb_t{
-
-}pcb_t, *pcb_PTR;
-*/
+#define NULL 0
 #define TRUE 1
 #define FALSE 0
 
