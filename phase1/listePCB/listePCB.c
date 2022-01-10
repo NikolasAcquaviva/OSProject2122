@@ -71,12 +71,29 @@ pcb_t* outProcQ(struct list_head *head, pcb_t *p){ //9
 processi puntata da head. Se p non è presente
 nella coda, restituisce NULL. (NOTA: p può
 trovarsi in una posizione arbitraria della coda). */
-	if(head == p){
-		removeProcQ(p);
-		return p;
+	list_head *tmp;
+	list_head *tmpbefore;
+	list_head *rt=NULL;
+	if(head == p){ // controlla se il pcb da togliere è in testa
+		rt=removeProcQ(p); //quindi richiama la funzione per rimuovere il primo elemento della coda
+		
 	}
 	else{
+		if(head->p_next!=NULL){	//controlla che ci siano elementi dopo il primo
+			tmp=head->p_next;	//puntatore da fare scorrere della lista
+			tmpbefore = head;	//puntatore al elemento precedente a quello puntato da tmp
+			while(tmp->p_next!=NULL){ //controlla se il PCB da togliere è in mezzo alla coda
 
+				if(tmp==p){
+					tmpbefore->p_next = tmp->p_next; //fa puntare il blocco precedente a p a quello successivo a p
+					tmp->p_next=NULL;	//toglie il puntatore al blocco successivo a p
+					tmp->p_head=NULL;	//toglie il puntatore alla testa della lista
+					rt=p;
+				}
+				tmpbefore = tmpbefore->p_next; //scorrono i puntatori per far andare avanti il ciclo
+				tmp=tmp->p_next;
+			}
+		}
 	}
-
+	return rt;
 }
