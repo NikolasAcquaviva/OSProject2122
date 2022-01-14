@@ -2,32 +2,55 @@
  * listePCB.h
  *
  *  Created on: 8 gen 2022
- *      Author: Pc
+ *      Author: MM
  */
 
 #ifndef LISTEPCB_H_
 #define LISTEPCB_H_
 
-typedef pcb_t list_head;
+#include "listx.h"
 
+/*
+//parte da commentare perchè contenuta in pandos_type.h
+typedef signed int   cpu_t;
+typedef unsigned int memaddr;
+typedef signed int   state_t;	///contenuto in type.h
+
+// process table entry type
 typedef struct pcb_t {
-// process queue
-struct list_head p_next;
+    // process queue
+    struct list_head p_list;
 
-// process tree fields
-struct pcb_t *p_parent; // ptr to parent
-struct list_head p_child; // children list
-struct list_head p_sib; // sibling list
-// process status information
- state_t p_s; // processor state
- cpu_t p_time; // cpu time used by proc
- int *p_semAdd; // ptr to semaphore on which proc is blocked
+    // process tree fields
+    struct pcb_t    *p_parent; // ptr to parent
+    struct list_head p_child;  // children list
+    struct list_head p_sib;    // sibling list
+
+    // process status information
+    state_t p_s;    // processor state
+    cpu_t   p_time; // cpu time used by proc
+
+    // Pointer to the semaphore the process is currently blocked on
+    int *p_semAdd;
 } pcb_t, *pcb_PTR;
 
-#define NULL 0
+
+//semaphore descriptor (SEMD) data structure
+typedef struct semd_t {
+    // Semaphore key
+    int *s_key;
+    // Queue of PCBs blocked on the semaphore
+    struct list_head s_procq;
+
+    // Semaphore list
+    struct list_head s_link;
+} semd_t, *semd_PTR;
+//fine parte da commentare
+*/
+
 #define TRUE 1
 #define FALSE 0
-
+//#define NULL ((pcb_t*) 0)
 
 void mkEmptyProcQ(struct list_head *head); //4
 /*Crea una lista di PCB, inizializzandola
@@ -37,7 +60,7 @@ int emptyProcQ(struct list_head *head); //5
 /*Restituisce TRUE se la lista puntata da
 head è vuota, FALSE altrimenti. */
 
-void insertProcQ(struct list_head* head, pcb_t *p); //6
+void insertProcQ(struct list_head* head, pcb_t* p); //6
 /*Inserisce l’elemento puntato da p nella
 coda dei processi puntata da head*/
 
