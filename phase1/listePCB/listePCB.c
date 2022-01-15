@@ -79,6 +79,7 @@ all’elemento rimosso dalla lista */
 		p->p_list.prev=NULL;
 
 		return p;
+	}
 }
 
 pcb_t* outProcQ(struct list_head *head, pcb_t *p){ //9
