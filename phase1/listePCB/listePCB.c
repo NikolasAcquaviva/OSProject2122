@@ -47,12 +47,11 @@ pcb_t headProcQ(struct list_head* head){ //7
 dei processi da head, SENZA
 RIMUOVERLO. Ritorna NULL se la coda
 non ha elementi. */
-	pcb_t
-	h=NULL;
+	pcb_t *h=NULL;
 	if(head->next!=NULL){
 		h=head->next;
 	}
-	return h;
+	return *h;
 }
 
 pcb_t* removeProcQ(struct list_head *head){ //8
