@@ -119,11 +119,3 @@ trovarsi in una posizione arbitraria della coda). */
 }
 
 
-/*
-pcb_t* sentinel_listPCB(struct list_head *head){	//cast tra list_head e pcb_t
-	pcb_t* h=allocPcb();	//alloca h che sarà il pcb di head
-	h->p_list.next=head->next;
-	h->p_list.prev=head->prev;
-	return h;
-}
-*/
