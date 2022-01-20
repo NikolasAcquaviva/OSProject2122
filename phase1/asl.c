@@ -1,45 +1,8 @@
-/*
-//semaphore descriptor (SEMD) data structure
-typedef struct semd_t {
-    
-    // Semaphore key
-    int *s_key;
-    
-    // Queue of PCBs blocked on the semaphore
-    struct list_head s_procq;
-
-    // Semaphore list
-    struct list_head s_link;
-
-} semd_t, *semd_PTR;
-
-// process table entry type
-typedef struct pcb_t {
-    
-    // process queue 
-    struct list_head p_list;
-
-    // process tree fields
-    struct pcb_t    *p_parent; // ptr to parent
-    struct list_head p_child;  // children list
-    struct list_head p_sib;    // sibling list
-
-    // process status information
-    state_t p_s;    // processor state
-    cpu_t   p_time; // cpu time used by proc
-
-    // Pointer to the semaphore the process is currently blocked on
-    int *p_semAdd;
-
-} pcb_t, *pcb_PTR;
-*/
-
-
-#include "../h/pandos_const.h" //accordarsi per stabilire una volta per tutte che tutti gli headers stanno in /h non ../h
+#include "../h/pandos_const.h"
 #include "../h/pandos_types.h"
 #include "../h/listx.h"
-#include "./pcb.h"
-#include "./asl.h"
+#include "../h/pcb.h"
+#include "../h/asl.h"
 
 #define TRUE 1
 #define FALSE 0
@@ -49,12 +12,59 @@ typedef struct pcb_t {
 static int *MAXINT = (int *)0x7FFFFFFF;//2^31 -1. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
 static int *MININT = (int *)0x00000000;
 
-//per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoti => puoi usare pointer diretti anzichè copie
+//per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoto => puoi usare pointer diretti anzichè copie
+//non esisterà un semaforo che punti da un lato ai liberi e dall'altro agli occupati
 HIDDEN semd_t semd_table[MAX_PROC + 2]; //Tabella Semafori forniti
-HIDDEN semd_PTR semdFree_h; //Lista dei SEMD liberi o inutilizzati. E' circolare
-HIDDEN semd_PTR semd_h; //Lista dei semafori attivi. Questa lista ha i dummy nodes. Testa di semd_h rimane sempre MININT 
+HIDDEN semd_PTR semdFree_h; //Lista DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
+HIDDEN semd_PTR semd_h; //Lista ORDINATA dei semafori attivi. Questa lista ha i dummy nodes. Testa di semd_h rimane sempre MININT 
 //non ha senso che semd_h sia circolare poichè ci sono MININT e MAXINT che sono gli estremi che non possono essere sorpassati e rimossi
 //in ogni caso sarebbe bastato un gioco di pointers tra MININT e MAXINT
+
+/*
+Ritorna il primo PCB dalla coda dei processi
+bloccati (s_procq) associata al SEMD della
+ASL con chiave semAdd. Se tale descrittore
+non esiste nella ASL, restituisce NULL.
+Altrimenti, restituisce l’elemento rimosso. Se
+la coda dei processi bloccati per il semaforo
+diventa vuota, rimuove il descrittore
+corrispondente dalla ASL e lo inserisce nella
+coda dei descrittori liberi (semdFree_h).
+*/
+pcb_t* removeBlocked(int *semAdd){
+
+	//pedanteria assoluta
+	if (semAdd == NULL) return NULL;
+
+	semd_PTR index = semd_h;
+
+    while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
+
+    	if(index->s_semAdd == semAdd){
+
+    		//Rimuove il primo elemento dalla coda dei processi puntata da head. Ritorna NULL se la
+			//coda è vuota. Altrimenti ritorna il puntatore all’elemento rimosso dalla lista.
+    		pcb_PTR toReturn = removeProcQ(&(index->s_procq), p);
+
+    		//se dopo aver tolto p non ci sono più processi in attesa su quel semaforo => libero il semaforo
+    		if (emptyProcQ(&(index->s_procq))){
+
+    			//lo stacca dalla ASL... per staccare/eliminare si intende "scucire"
+    			__list_del(&(index>s_link->prev), &(index>s_link->next));
+
+    			//...e lo attacca (o "cuce") alla testa di semdFree_h, facendo puntare ad index altro
+    			__list_add(&(index->s_link), &(semdFree_h->s_link->prev), &(semdFree_h->s_link));
+    		}
+
+    		if (toReturn != NULL) toReturn->p_semAdd = NULL;
+    		return toReturn;
+
+    	}
+    	else index = container_of(&(index>s_link->next), "semd_t", "s_link");
+	}
+	return NULL;
+}
+
 
 /*
 Rimuove il PCB puntato da p dalla coda del semaforo
@@ -68,16 +78,36 @@ e lo inserisce nella coda dei descrittori liberi
 pcb_t* outBlocked(pcb_t *p){
 
 	//pedanteria assoluta - qui NULL corrisponde a condizione di errore
-	if (p == NULL) return NULL;
-	if (p->p_semAdd == NULL) return NULL;//il semaforo di p non esiste
+	if (p == NULL || p->p_semAdd == NULL) return NULL; //anche se il semaforo di p non esiste è condizione d'errore
 
 	int *semAdd = p->p_semAdd;  //indirizzo del semaforo da cercare
+
     semd_PTR index = semd_h;
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 
-    	if(index->s_semAdd == semAdd)
+    	if(index->s_semAdd == semAdd){
+
+    		//Rimuove il PCB puntato da p dalla coda dei processi puntata da head. Se p non è presente nella coda, restituisce NULL.
+    		pcb_PTR toReturn = outProcQ(&(index->s_procq), p); //abbiamo la garanzia che il sema4 abbia almeno un processo che aspetta per la risorsa(altrimenti sarebbe stato rimosso)
+    		
+    		//se dopo aver tolto p non ci sono più processi in attesa su quel semaforo => libero il semaforo
+    		if (emptyProcQ(&(index->s_procq))){
+
+    			//lo stacca dalla ASL...
+    			__list_del(&(index>s_link->prev), &(index>s_link->next));
+
+    			//...e lo attacca alla testa di semdFree_h, facendo puntare ad index altro
+    			__list_add(&(index->s_link), &(semdFree_h->s_link->prev), &(semdFree_h->s_link));
+    		}
+
+    		if (toReturn != NULL) toReturn->p_semAdd = NULL;
+    		return toReturn;
+    	}
+
+    	else index = container_of(&(index>s_link->next), "semd_t", "s_link");
     }
+    return NULL;
 }
 
 
@@ -105,7 +135,7 @@ pcb_t* headBlocked(int *semAdd){
 		//Restituisce l’elemento di testa della coda dei processi da head, SENZA RIMUOVERLO. Ritorna NULL se la coda non ha elementi.
 		if(index->s_key == semAdd) return headProcQ(&(index->s_procq));
 
-        index = container_of(index>s_link->next, "semd_t", "s_link");
+        index = container_of(&(index>s_link->next), "semd_t", "s_link");
 	}
 
 	return NULL; //il SEMD non compare nella ASL
@@ -134,7 +164,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
 	while(index->s_key != MAXINT){
 
 		//creato per comodità per l'elif e scorrimento. Se semd_h ha solo un semaforo impegnato => questo sarà MAXINT il quale è l'ultimo
-		semd_PTR nextIndex = container_of(index>s_link->next, "semd_t", "s_link"); //chiedere se va passata la stringa o il tipo
+		semd_PTR nextIndex = container_of(&(index>s_link->next), "semd_t", "s_link"); //chiedere se va passata la stringa o il tipo
 
 		if(index->s_key == semAdd){ //risorsa/semaforo impegnato già precedentemente
 
@@ -151,31 +181,21 @@ int insertBlocked(int *semAdd, pcb_t *p){
 
         //altrimenti se soddisfatte condizioni => inserimento rispettando ordine non decrescente
         else if (nextIndex->s_key > semAdd || nextIndex->s_key == MAXINT){
-        	//Lo so potevo usare funzioni di listx.h per inserimento in una lista ma mi è più chiaro ed esplicito così
 
-        	//nuovo semaforo da allocare => facciamo un check prima
+        	//nuovo semaforo da allocare => facciamo check prima
         	if (semdFree_h == NULL) return TRUE;
         	
         	//riguardo semdFree_h
-			semd_PTR semToAdd = semdFree_h; //stacco la testa di semdFree_h la quale è circolare => opportune modifiche
-            semdFree_h = container_of(semdFree_h>s_link->next, "semd_t", "s_link"); //NUOVA TESTA
-            //escludo semToAdd dalla lista circolare (altrimenti è come se incominciassi a scorrere da testa->next anzichè testa)
-            semdFree_h->s_link->prev = semToAdd->s_link->prev; //la nuova testa punta al precedente della vecchia testa (tramite connettori)
-			semd_PTR tailFree = container_of(semToAdd->s_link->prev, "semd_t", "s_link");
-			tailFree->s_link->next = &(semdFree_h->s_link);
+			semd_PTR semToAdd = semdFree_h; //stacco/salvo la testa di semdFree_h la quale è circolare (prendo il primo sema4 libero)
+			__list_del(&(semdFree_h->s_link->prev), &(semdFree_h>s_link->next));
 
 			//sema4 init
-			//no assegnamento perchè mkEmptyProcQ è void
+			//no assegnamento poichè mkEmptyProcQ è void
             mkEmptyProcQ(&(semToAdd->s_procq)); //no NULL perchè altrimenti la coda VUOTA non viene riconosciuta come tale
             semToAdd->s_key = semAdd; //proper init
 
             //riguardo semd_h
-            semToAdd->s_link->next = &(index->s_link->next); //ciò che puntava prima index
-            semToAdd->s_link->prev = &(index->s_link); //oppure &(nextIndex->s_link->prev)
-
-            index->s_link->next = &(semToAdd->s_link); //aggiusto nuovi nodi contigui
-            nextIndex->s_link->prev = &(semToAdd->s_link);
-
+            __list_add(&(semToAdd->s_link), &(index->s_link), &(index->s_link->next));
 
             p->p_semAdd = semAdd; // Pointer to the semaphore the process is currently blocked on
 
@@ -227,4 +247,3 @@ void initASL(){
 	semd_table[MAX_PROC].s_link->prev = &(semd_table[MAX_PROC-1].s_link);
 
 }
-pcb_t* removeBlocked(int *semAdd){}

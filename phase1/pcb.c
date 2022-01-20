@@ -1,4 +1,8 @@
-#include "listePCB.h"
+#include "../h/pandos_const.h"
+#include "../h/pandos_types.h"
+#include "../h/listx.h"
+#include "../h/pcb.h"
+#include "../h/asl.h"
 
 void initPcbs(){
 	INIT_LIST_HEAD(&pcbFree_h);
