@@ -50,17 +50,17 @@ pcb_t* removeBlocked(int *semAdd){
     		if (emptyProcQ(&(index->s_procq))){
 
     			//lo stacca dalla ASL... per staccare/eliminare si intende "scucire"
-    			__list_del(&(index->s_link.prev), &(index>s_link.next));
+    			__list_del(index->s_link.prev, index>s_link.next); //s_link.prev/next SONO GIA' PUNTATORI a list_head!
 
     			//...e lo attacca (o "cuce") alla testa di semdFree_h, facendo puntare ad index altro
-    			__list_add(&(index->s_link), &(semdFree_h->s_link.prev), &(semdFree_h->s_link));
+    			__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link));
     		}
 
     		if (toReturn != NULL) toReturn->p_semAdd = NULL;
     		return toReturn;
 
     	}
-    	else index = container_of(&(index>s_link.next), "semd_t", "s_link");
+    	else index = container_of(index>s_link.next, "semd_t", "s_link");
 	}
 	return NULL;
 }
@@ -95,17 +95,17 @@ pcb_t* outBlocked(pcb_t *p){
     		if (emptyProcQ(&(index->s_procq))){
 
     			//lo stacca dalla ASL...
-    			__list_del(&(index>s_link.prev), &(index>s_link.next));
+    			__list_del(index>s_link.prev, index>s_link.next);
 
     			//...e lo attacca alla testa di semdFree_h, facendo puntare ad index altro
-    			__list_add(&(index->s_link), &(semdFree_h->s_link.prev), &(semdFree_h->s_link));
+    			__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link));
     		}
 
     		if (toReturn != NULL) toReturn->p_semAdd = NULL;
     		return toReturn;
     	}
 
-    	else index = container_of(&(index>s_link.next), "semd_t", "s_link");
+    	else index = container_of(index>s_link.next, "semd_t", "s_link");
     }
     return NULL;
 }
@@ -135,7 +135,7 @@ pcb_t* headBlocked(int *semAdd){
 		//Restituisce l’elemento di testa della coda dei processi da head, SENZA RIMUOVERLO. Ritorna NULL se la coda non ha elementi.
 		if(index->s_key == semAdd) return headProcQ(&(index->s_procq));
 
-        index = container_of(&(index>s_link.next), "semd_t", "s_link");
+        index = container_of(index>s_link.next, "semd_t", "s_link");
 	}
 
 	//il SEMD non compare nella ASL
@@ -165,7 +165,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
 	while(index->s_key != MAXINT){
 
 		//creato per comodità per l'elif e scorrimento. Se semd_h ha solo un semaforo impegnato => questo sarà MAXINT il quale è l'ultimo
-		semd_PTR nextIndex = container_of(&(index>s_link.next), "semd_t", "s_link"); //chiedere se va passata la stringa o il tipo
+		semd_PTR nextIndex = container_of(index>s_link.next, "semd_t", "s_link"); //chiedere se va passata la stringa o il tipo
 
 		if(index->s_key == semAdd){ //risorsa/semaforo impegnato già precedentemente
 
@@ -188,7 +188,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
         	
         	//riguardo semdFree_h
 			semd_PTR semToAdd = semdFree_h; //stacco/salvo la testa di semdFree_h la quale è circolare (prendo il primo sema4 libero)
-			__list_del(&(semdFree_h->s_link.prev), &(semdFree_h>s_link.next));
+			__list_del(semdFree_h->s_link.prev, semdFree_h>s_link.next);
 
 			//sema4 init
 			//no assegnamento poichè mkEmptyProcQ è void
@@ -196,7 +196,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
             semToAdd->s_key = semAdd; //proper init
 
             //riguardo semd_h
-            __list_add(&(semToAdd->s_link), &(index->s_link), &(index->s_link.next));
+            __list_add(&(semToAdd->s_link), &(index->s_link), index->s_link.next);
 
             p->p_semAdd = semAdd; // Pointer to the semaphore the process is currently blocked on
 
@@ -205,7 +205,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
             return FALSE;
         }
         //altrimenti continuo a scorrere
-       	else index = nextIndex;	//index = container_of(&(index>s_link.next), "semd_t", "s_link");;
+       	else index = nextIndex;	//index = container_of(index>s_link.next, "semd_t", "s_link");;
 	}
 
 	//pedante, non lo raggiungerà mai. Al massimo si fermerà prima di MAXINT
@@ -229,7 +229,7 @@ void initASL(){
 	semd_h->s_link.next = &(semd_table[MAX_PROC+1].s_link);
 	semd_h->s_link.prev = NULL; //NULL == 0? puntatore
 
-	semd_PTR MAXINTDummyNode = &semd_table[MAX_PROC + 1];//container_of(&(semd_h->s_link.next), "semd_t", "s_link"); //puntatore alla struttura che contiene il prossimo connettore
+	semd_PTR MAXINTDummyNode = &semd_table[MAX_PROC + 1];//container_of(semd_h->s_link.next, "semd_t", "s_link"); //puntatore alla struttura che contiene il prossimo connettore
 	MAXINTDummyNode->s_key = MAXINT;
 	mkEmptyProcQ(&(MAXINTDummyNode->s_procq));
 	MAXINTDummyNode->s_link.next = NULL; //NULL == 0? puntatore
