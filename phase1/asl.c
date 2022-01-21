@@ -9,7 +9,7 @@
 #define MAX_PROC 20
 #define HIDDEN static //static globale => visibile solo nel file in cui compare la dichiarazione => è nascosta (hidden) altrove
 
-static int *MAXINT = (int *)0x7FFFFFFF;//2^31 -1. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
+static int *MAXINT = (int *)0x7FFFFFFF; //2^31 -1. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
 static int *MININT = (int *)0x00000000;
 
 //per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoto => puoi usare pointer diretti anzichè copie
@@ -138,7 +138,8 @@ pcb_t* headBlocked(int *semAdd){
         index = container_of(&(index>s_link->next), "semd_t", "s_link");
 	}
 
-	return NULL; //il SEMD non compare nella ASL
+	//il SEMD non compare nella ASL
+	return NULL;
 }
 
 
@@ -191,7 +192,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
 
 			//sema4 init
 			//no assegnamento poichè mkEmptyProcQ è void
-            mkEmptyProcQ(&(semToAdd->s_procq)); //no NULL perchè altrimenti la coda VUOTA non viene riconosciuta come tale
+            mkEmptyProcQ(&(semToAdd->s_procq)); //no NULL perchè altrimenti la lista VUOTA non viene riconosciuta come tale (poichè qui una lista è vuota se entrambi i suoi campi puntano alla lista stessa)
             semToAdd->s_key = semAdd; //proper init
 
             //riguardo semd_h
@@ -207,7 +208,8 @@ int insertBlocked(int *semAdd, pcb_t *p){
        	else index = nextIndex;	//index = container_of(index>s_link->next, "semd_t", "s_link");;
 	}
 
-	return FALSE; //pedante, non lo raggiungerà mai. Al massimo si fermerà prima di MAXINT
+	//pedante, non lo raggiungerà mai. Al massimo si fermerà prima di MAXINT
+	return FALSE;
 }
 
 void initASL(){
@@ -220,7 +222,7 @@ void initASL(){
 		mkEmptyProcQ(&(semd_table[i].s_procq)); //dalla documentazione sembra che debba mettere mkEmptyProcQ() anzichè NULL (pg 23 pdf)
 	}
 
-	//Nodi dummy per lista dei semafori attivi (=> utilizzati). Lista circolare
+	//Inizializzazione Nodi dummy per lista dei semafori attivi (=> utilizzati). Lista circolare
 	semd_h = &semd_table[0];
 	semd_h->s_key = MININT;
 	mkEmptyProcQ(&(semd_h->s_procq));
@@ -233,8 +235,8 @@ void initASL(){
 	MAXINTDummyNode->s_link->next = NULL; //NULL == 0? puntatore
 	MAXINTDummyNode->s_link->prev = &(semd_table[0].s_link);
 
-
-	semdFree_h = &semd_table[1]; //sentinella semafori non attivi => pronti per essere usati.
+	//sentinella semafori non attivi => pronti per essere usati.
+	semdFree_h = &semd_table[1];
 
 	//Collego QUEI semafori tra loro tramite i connettori. Lista circolare (evitando di usare l'operatore modulo per costruirla)
 	semd_table[1].s_link->next = &(semd_table[2].s_link);
