@@ -212,6 +212,13 @@ int insertBlocked(int *semAdd, pcb_t *p){
 	return FALSE;
 }
 
+/*
+Inizializza la lista dei semdFree in
+modo da contenere tutti gli elementi
+della semdTable. Questo metodo
+viene invocato una volta sola durante
+l’inizializzazione della struttura dati.
+*/
 void initASL(){
 
 	//inizializzazione di QUEGLI elementi
@@ -239,13 +246,11 @@ void initASL(){
 	semdFree_h = &semd_table[1];
 
 	//Collego QUEI semafori tra loro tramite i connettori. Lista circolare (evitando di usare l'operatore modulo per costruirla)
-	semd_table[1].s_link.next = &(semd_table[2].s_link);
-	semd_table[1].s_link.prev = &(semd_table[MAX_PROC].s_link);
-	for (int i = 2; i < MAX_PROC; i++){
-		semd_table[i].s_link.next = &(semd_table[i+1].s_link);
-		semd_table[i].s_link.prev = &(semd_table[i-1].s_link);
-	}
-	semd_table[MAX_PROC].s_link.next = &(semd_table[1].s_link);
-	semd_table[MAX_PROC].s_link.prev = &(semd_table[MAX_PROC-1].s_link);
+	__list_add(&(semd_table[1].s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[2].s_link));
+
+	for (int i = 2; i < MAX_PROC; i++) __list_add(&(semd_table[i].s_link), &(semd_table[i-1].s_link), &(semd_table[i+1].s_link));
+	
+	//pedante, è stato già fatto
+	__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semd_table[1].s_link));
 
 }
