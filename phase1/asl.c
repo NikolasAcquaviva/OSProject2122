@@ -9,7 +9,7 @@
 #define MAX_PROC 20
 #define HIDDEN static //static globale => visibile solo nel file in cui compare la dichiarazione => è nascosta (hidden) altrove
 
-static int *MAXINT = (int *)0x7FFFFFFF; //2^31 -1. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
+static int *MAXINT = (int *)0x7FFFFFFF; //2^31 -1 altrimenti numero con segno negativo. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
 static int *MININT = (int *)0x00000000;
 
 //per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoto => puoi usare pointer diretti anzichè copie
@@ -250,7 +250,7 @@ void initASL(){
 
 	for (int i = 2; i < MAX_PROC; i++) __list_add(&(semd_table[i].s_link), &(semd_table[i-1].s_link), &(semd_table[i+1].s_link));
 	
-	//pedante, è stato già fatto
+	//pedante, nei fatti è stato già fatto
 	__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semd_table[1].s_link));
 
 }
