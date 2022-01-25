@@ -5,21 +5,56 @@
 #include "../h/asl.h"
 
 void initPcbs(){
-	INIT_LIST_HEAD(&pcbFree_h);
+	INIT_LIST_HEAD(&pcbFree_h); //inizializza il primo nodo
+	/*
+	La funzione di aggiunta in testa alla lista aggiunge in realtà
+	il nodo tra i primi 2 elementi,di conseguenza è scritta
+	in modo che la lista bidirezionale venga gestita con un
+	nodo sentinella(così il nodo aggiunto sarà sempre il secondo,
+	ovvero il primo esclusa la sentinella). Inoltre la funzione di aggiunta
+	in testa non aggiorna la testa del puntatore, ovvero accedendo
+	a freepcb_h accederemo sempre al nodo sentinella.
+	*/
 	for(int i = 0; i < MAXPROC; i++) list_add(&pcbFree_table[i].p_list, &pcbFree_h);
+	//con la prima riga di codice viene definito il nodo sentinella
+	//ogni volta che entriamo nel for aggiungiamo un nodo che viene 
+	//puntato dal next del nodo sentinella. Avremo quindi MAXPROC + 1
+	//nodi, di cui uno(il primo) è la sentinella.
 }
 
 void freePcb(pcb_t *p){
-	list_add(&p->p_list,&pcbFree_h);
+	//controllo che p non sia già nella lista dei pcb liberi
+	pcb_t *tmp; 
+	list_for_each_entry(tmp,&pcbFree_h,p_list){
+		if(tmp==&p) break;
+	}
+	if(tmp==&pcbFree_h) list_add(&p->p_list,&pcbFree_h);//se sono qui non sono mai entrato nell'if precedente
+	else printf("IL PCB E' GIA' LIBERO!!!");
 }
 
 pcb_t *allocPcb(){
 	if(list_empty(&pcbFree_h)) return NULL;
 	else{
-		struct list_head head = pcbFree_h; //la coda dei processi del primo pcb
+		struct list_head *head = pcbFree_h.next;       //la coda dei processi del primo pcb
 		pcb_t *tmp = container_of(&head,pcb_t,p_list); //puntatore all'istanza pcb_t che contiene la coda dei processi 
-		return tmp;									   //rappresentata dalla testa della lista dei pcb(e.g head)*/		
-		
+													   //rappresentata dalla testa della lista dei pcb(e.g head)*/
+		tmp->p_parent = NULL;
+		LIST_HEAD(p_child);
+		LIST_HEAD(p_sib);
+		INIT_LIST_HEAD(&p_child);
+		INIT_LIST_HEAD(&p_sib);
+		tmp->p_child = p_child;
+		tmp->p_sib = p_sib;
+		tmp->p_s.cause=0;
+		tmp->p_s.entry_hi=0;
+		tmp->p_s.hi=0;
+		tmp->p_s.lo=0;
+		tmp->p_s.pc_epc = 0;
+		tmp->p_s.status = 0;
+		tmp->p_time = 0;
+		tmp->p_semAdd = NULL;
+		for(int i = 0; i < STATE_GPR_LEN; i++) tmp->p_s.gpr[i] = 0;
+		return tmp;									   		
 	}
 }
 
