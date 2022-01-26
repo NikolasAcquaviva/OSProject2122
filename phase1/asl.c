@@ -245,7 +245,7 @@ void initASL(){
 		Si sta dicendo che semd_table[i].s_link punta a una coppia \
 		{&(semd_table[i].s_link), &(semd_table[i].s_link)} \
 		L'ho riscritta come sotto!!
-		struct list_head s_link = LIST_HEAD_INIT(s_link);
+		LIST_HEAD(s_link);
 		semd_table[i].s_link = s_link;
 		mkEmptyProcQ(&(semd_table[i].s_procq)); //dalla documentazione sembra che debba mettere mkEmptyProcQ() anzichè NULL (pg 23 pdf)
 	}
