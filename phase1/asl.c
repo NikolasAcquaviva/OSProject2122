@@ -31,6 +31,15 @@ diventa vuota, rimuove il descrittore
 corrispondente dalla ASL e lo inserisce nella
 coda dei descrittori liberi (semdFree_h).
 */
+
+/*
+ERRORI DI SINTASSI:
+RIGA 48,52 E 95(DA CORREGGERE)
+ALCUNI ALTRI LI HO CORRETTI PERCHE MANCAVA SOLO IL - NELL'OPERATORE FRECCIA
+DARE INOLTRE UN OCCHIATA ALLA CORREZIONE CHE HO FATTO
+E COMMENTATO DA 237 A 248.
+*/
+
 pcb_t* removeBlocked(int *semAdd){
 
 	//pedanteria assoluta
@@ -39,18 +48,18 @@ pcb_t* removeBlocked(int *semAdd){
 	semd_PTR index = semd_h;
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
-
-    	if(index->s_semAdd == semAdd){
+		
+    	if(index->s_semAdd == semAdd){//semd_t non include alcun campo s_semAdd
 
     		//Rimuove il primo elemento dalla coda dei processi puntata da head. Ritorna NULL se la
 			//coda è vuota. Altrimenti ritorna il puntatore all’elemento rimosso dalla lista.
-    		pcb_PTR toReturn = removeProcQ(&(index->s_procq), p);
+    		pcb_PTR toReturn = removeProcQ(&(index->s_procq), p);//identificatore p non definito(inoltre questa funzione dovrebbe prendere un solo parametro)
 
     		//se dopo aver tolto p non ci sono più processi in attesa su quel semaforo => libero il semaforo
     		if (emptyProcQ(&(index->s_procq))){
 
     			//lo stacca dalla ASL... per staccare/eliminare si intende "scucire"
-    			__list_del(index->s_link.prev, index>s_link.next); //s_link.prev/next SONO GIA' PUNTATORI a list_head!
+    			__list_del(index->s_link.prev, index->s_link.next); //s_link.prev/next SONO GIA' PUNTATORI a list_head!
 
     			//...e lo attacca (o "cuce") alla testa di semdFree_h, facendo puntare ad index altro
     			__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link));
@@ -60,7 +69,8 @@ pcb_t* removeBlocked(int *semAdd){
     		return toReturn;
 
     	}
-    	else index = container_of(index>s_link.next, "semd_t", "s_link");
+    	else index = container_of(index->s_link.next, semd_t, s_link);
+		//in container_of venivano passati gli ultimi due campi come stringa, le ho rimosse per risolvere l'errore
 	}
 	return NULL;
 }
@@ -86,7 +96,7 @@ pcb_t* outBlocked(pcb_t *p){
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 
-    	if(index->s_semAdd == semAdd){
+    	if(index->s_semAdd == semAdd){ //stesso errore di sopra
 
     		//Rimuove il PCB puntato da p dalla coda dei processi puntata da head. Se p non è presente nella coda, restituisce NULL.
     		pcb_PTR toReturn = outProcQ(&(index->s_procq), p); //abbiamo la garanzia che il sema4 abbia almeno un processo che aspetta per la risorsa(altrimenti sarebbe stato rimosso)
@@ -95,7 +105,7 @@ pcb_t* outBlocked(pcb_t *p){
     		if (emptyProcQ(&(index->s_procq))){
 
     			//lo stacca dalla ASL...
-    			__list_del(index>s_link.prev, index>s_link.next);
+    			__list_del(index->s_link.prev, index->s_link.next);
 
     			//...e lo attacca alla testa di semdFree_h, facendo puntare ad index altro
     			__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link));
@@ -105,7 +115,7 @@ pcb_t* outBlocked(pcb_t *p){
     		return toReturn;
     	}
 
-    	else index = container_of(index>s_link.next, "semd_t", "s_link");
+    	else index = container_of(index->s_link.next, semd_t, s_link);
     }
     return NULL;
 }
@@ -135,7 +145,7 @@ pcb_t* headBlocked(int *semAdd){
 		//Restituisce l’elemento di testa della coda dei processi da head, SENZA RIMUOVERLO. Ritorna NULL se la coda non ha elementi.
 		if(index->s_key == semAdd) return headProcQ(&(index->s_procq));
 
-        index = container_of(index>s_link.next, "semd_t", "s_link");
+        index = container_of(index->s_link.next, semd_t, s_link);
 	}
 
 	//il SEMD non compare nella ASL
@@ -165,7 +175,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
 	while(index->s_key != MAXINT){
 
 		//creato per comodità per l'elif e scorrimento. Se semd_h ha solo un semaforo impegnato => questo sarà MAXINT il quale è l'ultimo
-		semd_PTR nextIndex = container_of(index>s_link.next, "semd_t", "s_link"); //chiedere se va passata la stringa o il tipo
+		semd_PTR nextIndex = container_of(index->s_link.next, semd_t, s_link); //chiedere se va passata la stringa o il tipo
 
 		if(index->s_key == semAdd){ //risorsa/semaforo impegnato già precedentemente
 
@@ -188,7 +198,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
         	
         	//riguardo semdFree_h
 			semd_PTR semToAdd = semdFree_h; //stacco/salvo la testa di semdFree_h la quale è circolare (prendo il primo sema4 libero)
-			__list_del(semdFree_h->s_link.prev, semdFree_h>s_link.next);
+			__list_del(semdFree_h->s_link.prev, semdFree_h->s_link.next);
 
 			//sema4 init
 			//no assegnamento poichè mkEmptyProcQ è void
@@ -225,7 +235,18 @@ void initASL(){
 	for (int i = 0; i < MAX_PROC + 2; i++){ //https://github.com/leti15/project_pandOS/blob/main/phase1/asl.c
 		semd_table[i].s_key = NULL; //NULL == 0? puntatore
 		//se risulterà che semd_table[i].s_link è una struttura gia' esistente => INIT_LIST_HEAD(&(semd_table[i].s_link)) la quale è VOID => no assegnamento ma comando
-		semd_table[i].s_link = LIST_HEAD_INIT(&(semd_table[i].s_link)); //altrimenti se avessi messo NULL NON RICONOSCIUTA COME "LISTA VUOTA" (ovvero che punta ambo i lati a se stessa) 
+		/*
+
+		semd_table[i].s_link = LIST_HEAD_INIT(semd_table[i].s_link); //altrimenti se avessi messo NULL NON RICONOSCIUTA COME "LISTA VUOTA" (ovvero che punta ambo i lati a se stessa) 
+		
+		*/
+
+		//la riga sopra dà: prevista un'espressione. Attenzione! \
+		Si sta dicendo che semd_table[i].s_link punta a una coppia \
+		{&(semd_table[i].s_link), &(semd_table[i].s_link)} \
+		L'ho riscritta come sotto!!
+		struct list_head s_link = LIST_HEAD_INIT(s_link);
+		semd_table[i].s_link = s_link;
 		mkEmptyProcQ(&(semd_table[i].s_procq)); //dalla documentazione sembra che debba mettere mkEmptyProcQ() anzichè NULL (pg 23 pdf)
 	}
 
