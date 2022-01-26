@@ -49,11 +49,11 @@ pcb_t* removeBlocked(int *semAdd){
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 		
-    	if(index->s_semAdd == semAdd){//semd_t non include alcun campo s_semAdd
+    	if(index->s_key == semAdd){//semd_t non include alcun campo s_semAdd
 
     		//Rimuove il primo elemento dalla coda dei processi puntata da head. Ritorna NULL se la
 			//coda è vuota. Altrimenti ritorna il puntatore all’elemento rimosso dalla lista.
-    		pcb_PTR toReturn = removeProcQ(&(index->s_procq), p);//identificatore p non definito(inoltre questa funzione dovrebbe prendere un solo parametro)
+    		pcb_PTR toReturn = removeProcQ(&(index->s_procq));
 
     		//se dopo aver tolto p non ci sono più processi in attesa su quel semaforo => libero il semaforo
     		if (emptyProcQ(&(index->s_procq))){
@@ -96,7 +96,7 @@ pcb_t* outBlocked(pcb_t *p){
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 
-    	if(index->s_semAdd == semAdd){ //stesso errore di sopra
+    	if(index->s_key == semAdd){ //stesso errore di sopra
 
     		//Rimuove il PCB puntato da p dalla coda dei processi puntata da head. Se p non è presente nella coda, restituisce NULL.
     		pcb_PTR toReturn = outProcQ(&(index->s_procq), p); //abbiamo la garanzia che il sema4 abbia almeno un processo che aspetta per la risorsa(altrimenti sarebbe stato rimosso)
@@ -215,7 +215,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
             return FALSE;
         }
         //altrimenti continuo a scorrere
-       	else index = nextIndex;	//index = container_of(index>s_link.next, "semd_t", "s_link");;
+       	else index = nextIndex;	//index = container_of(index>s_link.next, "semd_t", "s_link");
 	}
 
 	//pedante, non lo raggiungerà mai. Al massimo si fermerà prima di MAXINT
