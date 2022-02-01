@@ -29,18 +29,15 @@ if(tmp==&p) => p non è gia un indirizzo di memoria?
 
 if(tmp==&pcbFree_h) => tmp è un puntatore al tipo pcb_t, mentre &pcbFree_h è un puntatore al tipo list_head
 ricordiamo che la variabile tmp (grazie a list_for_each_entry) punta alla struttura che contiene il campo p_list anziche' al campo stesso.
-inoltre ricordiamoci che siamo gli unici attori tra il "bare metal" e ogni possibile interfaccia, quindi nell'emulatore sicuro
-non c'è una printf()!
+
 
 */
 void freePcb(pcb_t *p){
 	//controllo che p non sia già nella lista dei pcb liberi
 	pcb_t *tmp; 
-	list_for_each_entry(tmp,&pcbFree_h,p_list){
-		if(tmp==&p) break;
-	}
-	if(tmp==&pcbFree_h) list_add(&p->p_list,&pcbFree_h);//se sono qui non sono mai entrato nell'if precedente
-	//else printf("IL PCB E' GIA' LIBERO!!!");
+	list_for_each_entry(tmp,&pcbFree_h,p_list) if(tmp==p) break;
+	if(&tmp->p_list==&pcbFree_h) list_add(&p->p_list,&pcbFree_h);//se sono qui non sono mai entrato nell'if precedente
+	else exit(-1);
 }
 
 pcb_t *allocPcb(){

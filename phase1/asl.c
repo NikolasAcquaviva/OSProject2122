@@ -32,14 +32,6 @@ corrispondente dalla ASL e lo inserisce nella
 coda dei descrittori liberi (semdFree_h).
 */
 
-/*
-ERRORI DI SINTASSI:
-RIGA 48,52 E 95(DA CORREGGERE)
-ALCUNI ALTRI LI HO CORRETTI PERCHE MANCAVA SOLO IL - NELL'OPERATORE FRECCIA
-DARE INOLTRE UN OCCHIATA ALLA CORREZIONE CHE HO FATTO
-E COMMENTATO DA 237 A 248.
-*/
-
 pcb_t* removeBlocked(int *semAdd){
 
 	//pedanteria assoluta
@@ -240,11 +232,6 @@ void initASL(){
 		semd_table[i].s_link = LIST_HEAD_INIT(semd_table[i].s_link); //altrimenti se avessi messo NULL NON RICONOSCIUTA COME "LISTA VUOTA" (ovvero che punta ambo i lati a se stessa) 
 		
 		*/
-
-		//la riga sopra dà: prevista un'espressione. Attenzione! \
-		Si sta dicendo che semd_table[i].s_link punta a una coppia \
-		{&(semd_table[i].s_link), &(semd_table[i].s_link)} \
-		L'ho riscritta come sotto!!
 		LIST_HEAD(s_link);
 		semd_table[i].s_link = s_link;
 		mkEmptyProcQ(&(semd_table[i].s_procq)); //dalla documentazione sembra che debba mettere mkEmptyProcQ() anzichè NULL (pg 23 pdf)
