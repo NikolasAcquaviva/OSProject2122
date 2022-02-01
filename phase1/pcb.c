@@ -3,9 +3,10 @@
 #include "../h/listx.h"
 #include "../h/pcb.h"
 #include "../h/asl.h"
+#include <string.h>
 
 void initPcbs(){
-	INIT_LIST_HEAD(&pcbFree_h); //inizializza il primo nodo
+	INIT_LIST_HEAD(&pcbFree_h); //inizializza il nodo sentinella
 	/*
 	La funzione di aggiunta in testa alla lista aggiunge in realtà
 	il nodo tra i primi 2 elementi,di conseguenza è scritta
@@ -35,26 +36,14 @@ void freePcb(pcb_t *p){
 pcb_t *allocPcb(){
 	if(list_empty(&pcbFree_h)) return NULL;
 	else{
-		struct list_head *head = pcbFree_h.next;       //la coda dei processi del primo pcb
-		pcb_t *tmp = container_of(&head,pcb_t,p_list); //puntatore all'istanza pcb_t che contiene la coda dei processi 
-													   //rappresentata dalla testa della lista dei pcb(e.g head)*/
-		tmp->p_parent = NULL;
-		LIST_HEAD(p_child);
-		LIST_HEAD(p_sib);
-		INIT_LIST_HEAD(&p_child);
-		INIT_LIST_HEAD(&p_sib);
-		tmp->p_child = p_child;
-		tmp->p_sib = p_sib;
-		tmp->p_s.cause=0;
-		tmp->p_s.entry_hi=0;
-		tmp->p_s.hi=0;
-		tmp->p_s.lo=0;
-		tmp->p_s.pc_epc = 0;
-		tmp->p_s.status = 0;
-		tmp->p_time = 0;
-		tmp->p_semAdd = NULL;
-		for(int i = 0; i < STATE_GPR_LEN; i++) tmp->p_s.gpr[i] = 0;
-		return tmp;									   		
+		//il primo vero nodo della lista dei pcb(ricordando che usiamo la sentinella)
+		struct list_head *head = pcbFree_h.next;
+		//l'istanza del primo pcb, quella che contiene il nodo \
+		  puntato da head nel campo p_list
+		pcb_t *tmp = container_of(&head,pcb_t,p_list);
+		//inizializzare il blocco di memoria occupato \
+		  da un'istanza di tipo pcb_t
+		memset(&tmp,0,sizeof(pcb_t)); return tmp;									   		
 	}
 }
 
@@ -167,4 +156,4 @@ trovarsi in una posizione arbitraria della coda). */
 	return rt;
 }
 
-
+  
