@@ -183,10 +183,8 @@ pcb_t* removeChild(pcb_t *p) { //12
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
-// delete non esiste, basta rimuovere il primo figlio del \
-pcb puntato da p. Leggere le funzioni in list.h che lo fanno autonomamente
 if ((&p->p_sib == NULL) && (&p->p_child == NULL)) return NULL;
-else delete(p->p_child);
+else list_del(p->p_child);
 }
 
 pcb_t *outChild(pcb_t* p) { //13
@@ -208,8 +206,9 @@ else {
 	anche una funzione che itera la lista per fornire alla funzione \
 	i puntatori che richiedono(forse quello precedente e successivo \
 	a quello che devi eliminare) . Leggi un po' le funzioni che sono descritte precisamente.
-    pcb_t* tmp = p;
-    delete(p);
+    pcb_t* tmp = list_prev(p);
+	tmp->next = list_next(p);
+    list_del(p);
     return tmp;
 }
 }
