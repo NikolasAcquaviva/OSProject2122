@@ -167,6 +167,12 @@ if ((&p->p_sib == NULL) && (&p->p_child == NULL))  return TRUE;
 else return FALSE;
 }
 
+
+/*
+Commento di Matteo
+prnt->p_child = p => p è un pointer di tipo pcb_t ma il campo p_child prende 
+una struct list_head.
+*/
 void insertChild(pcb_t *prnt, pcb_t *p){ //11
 /*
 Inserisce il PCB puntato da p come figlio
@@ -178,6 +184,13 @@ prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
 if (&prnt->p_child == NULL) prnt->p_child = p;
 }
 
+
+/*
+Commento di Matteo
+dobbiamo decidere come identificare una list_head (o connettore) vuoto
+Lo identifichiamo come vuoto se entrambi i suoi campi puntano a se stesso (come definito dalla
+funzione list_empty in listx.h) oppure se è NULL?
+*/
 pcb_t* removeChild(pcb_t *p) { //12
 /*
 Rimuove il primo figlio del PCB puntato
@@ -198,6 +211,16 @@ removeChild, p può trovarsi in una
 posizione arbitraria (ossia non è
 necessariamente il primo figlio del
 padre).
+*/
+
+/*
+Commento di Matteo.
+tmp e p sono puntatori di tipo pcb_t, ma sia list_prev e list_next accettano
+come argomento struct list_head, e ritornano un pointer a questa struct, non al tipo pcb_t
+Quando leggete struct list_head, leggetela in verità come "struct connettore", creata esclusivamente per creare strutture dati generiche
+Infatti gli unici campi che hanno le struct "connettore" sono prev e next. Non memorizzano nessun'altro valore
+
+tmp->next il tipo pcb_t non ha nessun campo next
 */
 if (p->p_parent == NULL) return NULL;
 else {
