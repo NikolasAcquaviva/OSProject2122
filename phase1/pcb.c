@@ -163,4 +163,49 @@ trovarsi in una posizione arbitraria della coda). */
 	return rt;
 }
 
+bool emptyChild(pcb_t *p) { //10
+/*
+Restituisce TRUE se il PCB puntato da p
+non ha figli, FALSE altrimenti.
+*/
+if ((p->p_sib == NULL) && (p->p_child == NULL))  return TRUE;
+else return FALSE;
+}
+
+void insertChild(pcb_t *prnt, pcb_t *p){ //11
+/*
+Inserisce il PCB puntato da p come figlio
+del PCB puntato da prnt.
+*/
+if (prnt->p_child == NULL) prnt->p_child = p;
+}
+
+pcb_t* removeChild(pcb_t *p) { //12
+/*
+Rimuove il primo figlio del PCB puntato
+da p. Se p non ha figli, restituisce NULL.
+*/
+if ((p->p_sib == NULL) && (p->p_child == NULL)) return NULL;
+else delete(p->p_child);
+}
+
+pcb_t *outChild(pcb_t* p) { //13
+/*
+Rimuove il PCB puntato da p dalla lista
+dei figli del padre. Se il PCB puntato da
+p non ha un padre, restituisce NULL,
+altrimenti restituisce l’elemento
+rimosso (cioè p). A differenza della
+removeChild, p può trovarsi in una
+posizione arbitraria (ossia non è
+necessariamente il primo figlio del
+padre).
+*/
+if (p->p_parent == NULL) return NULL;
+else {
+    pcb_t* tmp = p;
+    delete(p);
+    return tmp;
+}
+}
   
