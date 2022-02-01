@@ -61,27 +61,27 @@ processi puntata da head. Se p non è presente
 nella coda, restituisce NULL. (NOTA: p può
 trovarsi in una posizione arbitraria della coda). */
 
-bool emptyChild(pcb_t *p) //10
+int emptyChild(pcb_t *p); //10
 /*
 Restituisce TRUE se il PCB puntato da p
 non ha figli, FALSE altrimenti.
 */
 
-void insertChild(pcb_t *prnt, pcb_t *p) //11
+void insertChild(pcb_t *prnt, pcb_t *p); //11
 /*
 Inserisce il PCB puntato da p come figlio
 del PCB puntato da prnt.
 */
 
 
-pcb_t* removeChild(pcb_t *p)  //12
+pcb_t* removeChild(pcb_t *p);  //12
 /* 
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
 
 
-pcb_t *outChild(pcb_t* p) //13
+pcb_t *outChild(pcb_t* p); //13
 /*
 Rimuove il PCB puntato da p dalla lista
 dei figli del padre. Se il PCB puntato da

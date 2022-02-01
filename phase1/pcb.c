@@ -23,15 +23,6 @@ void initPcbs(){
 	//nodi, di cui uno(il primo) è la sentinella.
 }
 
-/*
-Commento di Matteo:
-if(tmp==&p) => p non è gia un indirizzo di memoria?
-
-if(tmp==&pcbFree_h) => tmp è un puntatore al tipo pcb_t, mentre &pcbFree_h è un puntatore al tipo list_head
-ricordiamo che la variabile tmp (grazie a list_for_each_entry) punta alla struttura che contiene il campo p_list anziche' al campo stesso.
-
-
-*/
 void freePcb(pcb_t *p){
 	//controllo che p non sia già nella lista dei pcb liberi
 	pcb_t *tmp; 
@@ -163,12 +154,16 @@ trovarsi in una posizione arbitraria della coda). */
 	return rt;
 }
 
-bool emptyChild(pcb_t *p) { //10
+int emptyChild(pcb_t *p) { //10
 /*
 Restituisce TRUE se il PCB puntato da p
 non ha figli, FALSE altrimenti.
 */
-if ((p->p_sib == NULL) && (p->p_child == NULL))  return TRUE;
+//Nikolas: p_sib e p_child sono campi di tipo list_head \
+non possono essere uguali a null, potrebbero esserlo se fossero \
+puntatori a dati di tipo list_head. Allora bisogna fare il \
+controllo sull'indirizzo di memoria a cui punta p
+if ((&p->p_sib == NULL) && (&p->p_child == NULL))  return TRUE;
 else return FALSE;
 }
 
@@ -177,7 +172,10 @@ void insertChild(pcb_t *prnt, pcb_t *p){ //11
 Inserisce il PCB puntato da p come figlio
 del PCB puntato da prnt.
 */
-if (prnt->p_child == NULL) prnt->p_child = p;
+//p_child è di tipo list_head e p è di tipo pcb_t \
+usare la funzione container_of come sopra per far puntare \
+prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
+if (&prnt->p_child == NULL) prnt->p_child = p;
 }
 
 pcb_t* removeChild(pcb_t *p) { //12
@@ -185,7 +183,9 @@ pcb_t* removeChild(pcb_t *p) { //12
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
-if ((p->p_sib == NULL) && (p->p_child == NULL)) return NULL;
+// delete non esiste, basta rimuovere il primo figlio del \
+pcb puntato da p. Leggere le funzioni in list.h che lo fanno autonomamente
+if ((&p->p_sib == NULL) && (&p->p_child == NULL)) return NULL;
 else delete(p->p_child);
 }
 
@@ -203,6 +203,11 @@ padre).
 */
 if (p->p_parent == NULL) return NULL;
 else {
+	//per rimuovere p devi fare in modo di non lasciare la lista scollegata \
+	devi usare la funzione di rimozione fornita da list e probabilmente \
+	anche una funzione che itera la lista per fornire alla funzione \
+	i puntatori che richiedono(forse quello precedente e successivo \
+	a quello che devi eliminare) . Leggi un po' le funzioni che sono descritte precisamente.
     pcb_t* tmp = p;
     delete(p);
     return tmp;
