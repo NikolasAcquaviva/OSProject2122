@@ -3,6 +3,7 @@
 #include "../h/listx.h"
 #include "../h/pcb.h"
 #include "../h/asl.h"
+//NON BASARSI SU QUESTE LIBRERIE!
 #include <string.h>
 
 void initPcbs(){
@@ -41,6 +42,7 @@ pcb_t *allocPcb(){
 		pcb_t *tmp = container_of(&head,pcb_t,p_list);
 		//inizializzare il blocco di memoria occupato \
 		  da un'istanza di tipo pcb_t
+		//NO MEMSET
 		memset(&tmp,0,sizeof(pcb_t)); return tmp;									   		
 	}
 }
