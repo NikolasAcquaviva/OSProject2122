@@ -169,7 +169,6 @@ if ((&p->p_sib == NULL) && (&p->p_child == NULL))  return TRUE;
 else return FALSE;
 }
 
-
 /*
 Commento di Matteo
 prnt->p_child = p => p è un pointer di tipo pcb_t ma il campo p_child prende 
@@ -198,8 +197,13 @@ pcb_t* removeChild(pcb_t *p) { //12
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
+// ATTENZIONE!!!!!!  PER QUANTO RIGUARDA IL COMMENTO DI MATTEO \
+DECIDIAMO CHE LA LISTA È VUOTA SE ENTRAMBI I CAMPI NEXT \
+E PREV PUNTANO AL NODO STESSO, IN REALTA CI BASTA CHE IL NEXT \
+PUNTI AL NODO STESSO, COSÌ SE NE OCCUPA LA FUNZIONE INLINE \
+LIST_EMPTY DI VERIFICARE SE LA LISTA È VUOTA, USARE QUELLA FUNZIONE!!
 if ((&p->p_sib == NULL) && (&p->p_child == NULL)) return NULL;
-else list_del(p->p_child);
+else list_del(&p->p_child);
 }
 
 pcb_t *outChild(pcb_t* p) { //13
@@ -231,7 +235,13 @@ else {
 	anche una funzione che itera la lista per fornire alla funzione \
 	i puntatori che richiedono(forse quello precedente e successivo \
 	a quello che devi eliminare) . Leggi un po' le funzioni che sono descritte precisamente.
-    pcb_t* tmp = list_prev(p);
+    //PERCHE TMP PUNTA AL PRECEDENTE DI P? SBAGLIO O BASTA \
+	MEMORIZZARE P IN UNA VARIABILE CHE SARA RITORNATA DOPO \
+	AVERLO RIMOSSO DALLA LISTA DEI FIGLI DEL PADRE?? \
+	NON SO PERCHÉ NON MI DA UN ERRORE A COMPILE TIME MA LA RIGA \
+	SOTTO È PALESEMENTE UN ERRORE, LIST_PREV RITORNA UN LISTHEAD E \
+	UN PUNTATORE A PCB NON PUO PUNTARCI QUINDI.
+	pcb_t* tmp = list_prev(p);
 	tmp->next = list_next(p);
     list_del(p);
     return tmp;
