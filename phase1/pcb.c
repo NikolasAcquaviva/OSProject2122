@@ -177,13 +177,6 @@ del PCB puntato da prnt.
 	list_add(&p->p_list,&prnt->p_child);
 }
 
-
-/*
-Commento di Matteo
-dobbiamo decidere come identificare una list_head (o connettore) vuoto
-Lo identifichiamo come vuoto se entrambi i suoi campi puntano a se stesso (come definito dalla
-funzione list_empty in listx.h) oppure se è NULL?
-*/
 pcb_t* removeChild(pcb_t *p) { //12
 /*
 Rimuove il primo figlio del PCB puntato
