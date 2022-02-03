@@ -190,7 +190,10 @@ da p. Se p non ha figli, restituisce NULL.
 	}
 }
 
-pcb_t *outChild(pcb_t* p) { //13
+
+/*Commento di Matteo
+list_empty() agisce su struct list_head*, non pcb_t*! Consultare la documentazione e gli header! 
+*/
 /*
 Rimuove il PCB puntato da p dalla lista
 dei figli del padre. Se il PCB puntato da
@@ -202,11 +205,15 @@ posizione arbitraria (ossia non è
 necessariamente il primo figlio del
 padre).
 */
+pcb_t *outChild(pcb_t* p) { //13
+	if p->p_parent == NULL return NULL:
+	
+	//p è il primo ed unico figlio => è la sentinella
+	if ((p->p_sib.prev == &(p->p_sib)) && (p->p_sib.next = &(p->p_sib))) return removeChild(p->p_parent);
 
-	if (list_empty(&p->p_parent)) return NULL;
-	else {
-		pcb_t * tmp = p;
-		list_del(p);
-		return tmp;
-	}
+	//altrimenti scucio e resetto i campi
+    __list_del(p->p_sib.prev, p->p_sib.next);
+    p->p_sib = NULL;
+   	p->p_parent = NULL;
+   	return p;
 }
