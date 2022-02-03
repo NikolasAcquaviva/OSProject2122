@@ -184,9 +184,7 @@ usare la funzione container_of come sopra per far puntare \
 prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
 if (list_empty(&prnt->p_child))
 	p = container_of(&pcbFree_h, pcb_t, p_list);
-	prnt->p_child = p->p_list;
-	//Se faccio così è p che va a puntare al figlio,
-	//non si inserisce però p come figlio di prnt, giusto? 
+	prnt->p_child = p->p_list; 
 }
 
 
