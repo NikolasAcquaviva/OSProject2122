@@ -161,51 +161,30 @@ int emptyChild(pcb_t *p) { //10
 Restituisce TRUE se il PCB puntato da p
 non ha figli, FALSE altrimenti.
 */
-//Nikolas: p_sib e p_child sono campi di tipo list_head \
-non possono essere uguali a null, potrebbero esserlo se fossero \
-puntatori a dati di tipo list_head. Allora bisogna fare il \
-controllo sull'indirizzo di memoria a cui punta p
 if (list_empty(&p->p_child))  return TRUE;
 else return FALSE;
 }
 
-/*
-Commento di Matteo
-prnt->p_child = p => p è un pointer di tipo pcb_t ma il campo p_child prende 
-una struct list_head.
-*/
 void insertChild(pcb_t *prnt, pcb_t *p){ //11
 /*
 Inserisce il PCB puntato da p come figlio
 del PCB puntato da prnt.
 */
-//p_child è di tipo list_head e p è di tipo pcb_t \
-usare la funzione container_of come sopra per far puntare \
-prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
-if (list_empty(&prnt->p_child))
-	p = container_of(&pcbFree_h, pcb_t, p_list);
-	prnt->p_child = p->p_list; 
+list_add(&p->p_list, &prnt->p_child);
 }
 
 
-/*
-Commento di Matteo
-dobbiamo decidere come identificare una list_head (o connettore) vuoto
-Lo identifichiamo come vuoto se entrambi i suoi campi puntano a se stesso (come definito dalla
-funzione list_empty in listx.h) oppure se è NULL?
-*/
 pcb_t* removeChild(pcb_t *p) { //12
 /*
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
-// ATTENZIONE!!!!!!  PER QUANTO RIGUARDA IL COMMENTO DI MATTEO \
-DECIDIAMO CHE LA LISTA È VUOTA SE ENTRAMBI I CAMPI NEXT \
-E PREV PUNTANO AL NODO STESSO, IN REALTA CI BASTA CHE IL NEXT \
-PUNTI AL NODO STESSO, COSÌ SE NE OCCUPA LA FUNZIONE INLINE \
-LIST_EMPTY DI VERIFICARE SE LA LISTA È VUOTA, USARE QUELLA FUNZIONE!!
 if (list_empty(&p->p_child)) return NULL;
-else list_del(&p->p_child);
+else {
+pcb_t * uscita = &p->p_child;
+list_del(&p->p_child);
+return uscita;
+}
 }
 
 pcb_t *outChild(pcb_t* p) { //13
