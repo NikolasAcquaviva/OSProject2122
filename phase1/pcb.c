@@ -182,7 +182,10 @@ del PCB puntato da prnt.
 //p_child è di tipo list_head e p è di tipo pcb_t \
 usare la funzione container_of come sopra per far puntare \
 prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
-if (&prnt->p_child == NULL) prnt->p_child = p;
+if (&prnt->p_child == NULL)
+	p = container_of(&prnt->p_child, pcb_t, p_child);
+	//Se faccio così è p che va a puntare al figlio,
+	//non si inserisce però p come figlio di prnt, giusto? 
 }
 
 
@@ -202,7 +205,7 @@ DECIDIAMO CHE LA LISTA È VUOTA SE ENTRAMBI I CAMPI NEXT \
 E PREV PUNTANO AL NODO STESSO, IN REALTA CI BASTA CHE IL NEXT \
 PUNTI AL NODO STESSO, COSÌ SE NE OCCUPA LA FUNZIONE INLINE \
 LIST_EMPTY DI VERIFICARE SE LA LISTA È VUOTA, USARE QUELLA FUNZIONE!!
-if ((&p->p_sib == NULL) && (&p->p_child == NULL)) return NULL;
+if (list_empty(&p->p_list)) return NULL;
 else list_del(&p->p_child);
 }
 
@@ -228,7 +231,7 @@ Infatti gli unici campi che hanno le struct "connettore" sono prev e next. Non m
 
 tmp->next il tipo pcb_t non ha nessun campo next
 */
-if (p->p_parent == NULL) return NULL;
+if (&p->p_parent == NULL) return NULL;
 else {
 	//per rimuovere p devi fare in modo di non lasciare la lista scollegata \
 	devi usare la funzione di rimozione fornita da list e probabilmente \
@@ -241,10 +244,9 @@ else {
 	NON SO PERCHÉ NON MI DA UN ERRORE A COMPILE TIME MA LA RIGA \
 	SOTTO È PALESEMENTE UN ERRORE, LIST_PREV RITORNA UN LISTHEAD E \
 	UN PUNTATORE A PCB NON PUO PUNTARCI QUINDI.
-	pcb_t* tmp = list_prev(p);
-	tmp->next = list_next(p);
+	pcb_t * tmp = p;
     list_del(p);
-    return tmp;
+	return tmp;
 }
 }
   
