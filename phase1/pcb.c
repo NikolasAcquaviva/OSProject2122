@@ -166,7 +166,7 @@ int emptyChild(pcb_t *p) { //10
 Restituisce TRUE se il PCB puntato da p
 non ha figli, FALSE altrimenti.
 */
-if (list_empty(&p->p_child))  return TRUE;
+if (list_empty(&p->p_child)) return TRUE;
 else return FALSE;
 }
 
@@ -184,12 +184,12 @@ pcb_t* removeChild(pcb_t *p) { //12
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
-if (list_empty(&p->p_child)) return NULL;
-else {
-pcb_t * uscita = &p->p_child;
-list_del(&p->p_child);
-return uscita;
-}
+	if (list_empty(&p->p_child)) return NULL;
+	else {
+		pcb_t *uscita = &p->p_child.next;
+		list_del(&p->p_child.next);
+		return uscita;
+	}
 }
 
 pcb_t *outChild(pcb_t* p) { //13
@@ -205,28 +205,8 @@ necessariamente il primo figlio del
 padre).
 */
 
-/*
-Commento di Matteo.
-tmp e p sono puntatori di tipo pcb_t, ma sia list_prev e list_next accettano
-come argomento struct list_head, e ritornano un pointer a questa struct, non al tipo pcb_t
-Quando leggete struct list_head, leggetela in verità come "struct connettore", creata esclusivamente per creare strutture dati generiche
-Infatti gli unici campi che hanno le struct "connettore" sono prev e next. Non memorizzano nessun'altro valore
-
-tmp->next il tipo pcb_t non ha nessun campo next
-*/
 if (list_empty(&p->p_parent)) return NULL;
 else {
-	//per rimuovere p devi fare in modo di non lasciare la lista scollegata \
-	devi usare la funzione di rimozione fornita da list e probabilmente \
-	anche una funzione che itera la lista per fornire alla funzione \
-	i puntatori che richiedono(forse quello precedente e successivo \
-	a quello che devi eliminare) . Leggi un po' le funzioni che sono descritte precisamente.
-    //PERCHE TMP PUNTA AL PRECEDENTE DI P? SBAGLIO O BASTA \
-	MEMORIZZARE P IN UNA VARIABILE CHE SARA RITORNATA DOPO \
-	AVERLO RIMOSSO DALLA LISTA DEI FIGLI DEL PADRE?? \
-	NON SO PERCHÉ NON MI DA UN ERRORE A COMPILE TIME MA LA RIGA \
-	SOTTO È PALESEMENTE UN ERRORE, LIST_PREV RITORNA UN LISTHEAD E \
-	UN PUNTATORE A PCB NON PUO PUNTARCI QUINDI.
 	pcb_t * tmp = p;
     list_del(p);
 	return tmp;
