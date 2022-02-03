@@ -3,8 +3,6 @@
 #include "../h/listx.h"
 #include "../h/pcb.h"
 #include "../h/asl.h"
-//NON BASARSI SU QUESTE LIBRERIE!
-#include <string.h>
 
 void initPcbs(){
 	INIT_LIST_HEAD(&pcbFree_h); //inizializza il nodo sentinella
@@ -40,11 +38,18 @@ pcb_t *allocPcb(){
 		//l'istanza del primo pcb, quella che contiene il nodo \
 		  puntato da head nel campo p_list
 		pcb_t *tmp = container_of(&head,pcb_t,p_list);
-		//inizializzare il blocco di memoria occupato \
-		  da un'istanza di tipo pcb_t
-		//NO MEMSET
-		memset(&tmp,0,sizeof(pcb_t)); return tmp;									   		
-	}
+		tmp->p_list.next = head->next;
+		tmp->p_list.prev = head->prev;
+		LIST_HEAD(childList);	
+		INIT_LIST_HEAD(&childList);		
+		LIST_HEAD(sibList);
+		INIT_LIST_HEAD(&sibList);
+		tmp->p_parent = NULL;
+		tmp->p_child = childList;	
+		tmp->p_sib = sibList;
+		tmp->p_semAdd = NULL;
+		tmp->p_time = 0;
+		}
 }
 
 void mkEmptyProcQ(struct list_head *head){ //4
@@ -56,7 +61,8 @@ come lista vuota */
 int emptyProcQ(struct list_head *head){ //5
 /*Restituisce TRUE se la lista puntata da
 head è vuota, FALSE altrimenti. */
-	list_empty(head);
+	if(list_empty(head)) return TRUE;
+	else return FALSE;
 }
 
 void insertProcQ(struct list_head* head, pcb_t* p){ //6
@@ -163,11 +169,6 @@ if (list_empty(&p->p_child)) return TRUE;
 else return FALSE;
 }
 
-/*
-Commento di Matteo
-prnt->p_child = p => p è un pointer di tipo pcb_t ma il campo p_child prende 
-una struct list_head.
-*/
 void insertChild(pcb_t *prnt, pcb_t *p){ //11
 /*
 Inserisce il PCB puntato da p come figlio
@@ -209,7 +210,7 @@ necessariamente il primo figlio del
 padre).
 */
 
-if (list_empty(&p->p_parent)) return NULL;
+	if (list_empty(&p->p_parent)) return NULL;
 	else {
 		pcb_t * tmp = p;
 		list_del(p);
