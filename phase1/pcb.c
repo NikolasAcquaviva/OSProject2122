@@ -3,8 +3,6 @@
 #include "../h/listx.h"
 #include "../h/pcb.h"
 #include "../h/asl.h"
-//NON BASARSI SU QUESTE LIBRERIE!
-#include <string.h>
 
 void initPcbs(){
 	INIT_LIST_HEAD(&pcbFree_h); //inizializza il nodo sentinella
@@ -40,10 +38,17 @@ pcb_t *allocPcb(){
 		//l'istanza del primo pcb, quella che contiene il nodo \
 		  puntato da head nel campo p_list
 		pcb_t *tmp = container_of(&head,pcb_t,p_list);
-		//inizializzare il blocco di memoria occupato \
-		  da un'istanza di tipo pcb_t
-		//NO MEMSET
-		memset(&tmp,0,sizeof(pcb_t)); return tmp;									   		
+		tmp->p_list.next = head->next;
+		tmp->p_list.prev = head->prev;
+		LIST_HEAD(childList);	
+		INIT_LIST_HEAD(&childList);		
+		LIST_HEAD(sibList);
+		INIT_LIST_HEAD(&sibList);
+		tmp->p_parent = NULL;
+		tmp->p_child = childList;	
+		tmp->p_sib = sibList;
+		tmp->p_semAdd = NULL;
+		tmp->p_time = 0;
 	}
 }
 
@@ -165,7 +170,7 @@ non ha figli, FALSE altrimenti.
 non possono essere uguali a null, potrebbero esserlo se fossero \
 puntatori a dati di tipo list_head. Allora bisogna fare il \
 controllo sull'indirizzo di memoria a cui punta p
-if ((&p->p_sib == NULL) && (&p->p_child == NULL))  return TRUE;
+if (list_empty(&p->p_sib) && list_empty(&p->p_child)) return TRUE;
 else return FALSE;
 }
 
@@ -184,6 +189,7 @@ usare la funzione container_of come sopra per far puntare \
 prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
 if (&prnt->p_child == NULL)
 	p = container_of(&prnt->p_child, pcb_t, p_child);
+	prnt->p_child = p->p_list;
 	//Se faccio così è p che va a puntare al figlio,
 	//non si inserisce però p come figlio di prnt, giusto? 
 }
@@ -222,15 +228,6 @@ necessariamente il primo figlio del
 padre).
 */
 
-/*
-Commento di Matteo.
-tmp e p sono puntatori di tipo pcb_t, ma sia list_prev e list_next accettano
-come argomento struct list_head, e ritornano un pointer a questa struct, non al tipo pcb_t
-Quando leggete struct list_head, leggetela in verità come "struct connettore", creata esclusivamente per creare strutture dati generiche
-Infatti gli unici campi che hanno le struct "connettore" sono prev e next. Non memorizzano nessun'altro valore
-
-tmp->next il tipo pcb_t non ha nessun campo next
-*/
 if (&p->p_parent == NULL) return NULL;
 else {
 	//per rimuovere p devi fare in modo di non lasciare la lista scollegata \
