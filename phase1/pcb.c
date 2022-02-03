@@ -170,7 +170,7 @@ non ha figli, FALSE altrimenti.
 non possono essere uguali a null, potrebbero esserlo se fossero \
 puntatori a dati di tipo list_head. Allora bisogna fare il \
 controllo sull'indirizzo di memoria a cui punta p
-if (list_empty(&p->p_sib) && list_empty(&p->p_child)) return TRUE;
+if (list_empty(&p->p_child))  return TRUE;
 else return FALSE;
 }
 
@@ -187,7 +187,7 @@ del PCB puntato da prnt.
 //p_child è di tipo list_head e p è di tipo pcb_t \
 usare la funzione container_of come sopra per far puntare \
 prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
-if (&prnt->p_child == NULL)
+if (list_empty(&prnt->p_child))
 	p = container_of(&prnt->p_child, pcb_t, p_child);
 	prnt->p_child = p->p_list;
 	//Se faccio così è p che va a puntare al figlio,
@@ -228,7 +228,16 @@ necessariamente il primo figlio del
 padre).
 */
 
-if (&p->p_parent == NULL) return NULL;
+/*
+Commento di Matteo.
+tmp e p sono puntatori di tipo pcb_t, ma sia list_prev e list_next accettano
+come argomento struct list_head, e ritornano un pointer a questa struct, non al tipo pcb_t
+Quando leggete struct list_head, leggetela in verità come "struct connettore", creata esclusivamente per creare strutture dati generiche
+Infatti gli unici campi che hanno le struct "connettore" sono prev e next. Non memorizzano nessun'altro valore
+
+tmp->next il tipo pcb_t non ha nessun campo next
+*/
+if (list_empty(&p->p_parent)) return NULL;
 else {
 	//per rimuovere p devi fare in modo di non lasciare la lista scollegata \
 	devi usare la funzione di rimozione fornita da list e probabilmente \
@@ -244,6 +253,5 @@ else {
 	pcb_t * tmp = p;
     list_del(p);
 	return tmp;
+	}
 }
-}
-  
