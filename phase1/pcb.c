@@ -183,7 +183,8 @@ del PCB puntato da prnt.
 usare la funzione container_of come sopra per far puntare \
 prnt->p_child all'istanza pcb che ha il campo p_child che punta a p
 if (list_empty(&prnt->p_child))
-	p = container_of(&prnt->p_child, pcb_t, p_child);
+	p = container_of(&pcbFree_h, pcb_t, p_list);
+	prnt->p_child = p->p_list;
 	//Se faccio così è p che va a puntare al figlio,
 	//non si inserisce però p come figlio di prnt, giusto? 
 }
@@ -205,7 +206,7 @@ DECIDIAMO CHE LA LISTA È VUOTA SE ENTRAMBI I CAMPI NEXT \
 E PREV PUNTANO AL NODO STESSO, IN REALTA CI BASTA CHE IL NEXT \
 PUNTI AL NODO STESSO, COSÌ SE NE OCCUPA LA FUNZIONE INLINE \
 LIST_EMPTY DI VERIFICARE SE LA LISTA È VUOTA, USARE QUELLA FUNZIONE!!
-if (list_empty(&p->p_list)) return NULL;
+if (list_empty(&p->p_child)) return NULL;
 else list_del(&p->p_child);
 }
 
