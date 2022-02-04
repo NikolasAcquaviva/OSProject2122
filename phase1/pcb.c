@@ -27,7 +27,6 @@ void freePcb(pcb_t *p){
 	pcb_t *tmp; 
 	list_for_each_entry(tmp,&pcbFree_h,p_list) if(tmp==p) break;
 	if(&tmp->p_list==&pcbFree_h) list_add(&p->p_list,&pcbFree_h);//se sono qui non sono mai entrato nell'if precedente
-	else exit(-1);
 }
 
 pcb_t *allocPcb(){
@@ -37,7 +36,7 @@ pcb_t *allocPcb(){
 		struct list_head *head = pcbFree_h.next;
 		//l'istanza del primo pcb, quella che contiene il nodo \
 		  puntato da head nel campo p_list
-		pcb_t *tmp = container_of(&head,pcb_t,p_list);
+		pcb_t *tmp = container_of(head,pcb_t,p_list);
 		tmp->p_list.next = head->next;
 		tmp->p_list.prev = head->prev;
 		LIST_HEAD(childList);	
@@ -104,7 +103,7 @@ all’elemento rimosso dalla lista */
 	pcb_t* p;
 	pcb_t* pafter;
 
-	if (head->next==NULL){ 	//controlla se la lista è vuota
+	if (list_empty(head)){ 	//controlla se la lista è vuota
 		return NULL;
 	}
 	p=head->next;
@@ -133,11 +132,11 @@ trovarsi in una posizione arbitraria della coda). */
 	pcb_t *tmpbefore;
 	pcb_t *rt=NULL;
 
-	if(head->next == p){ // controlla se il pcb da togliere è il primo
+	if(head->next == &p->p_list){ // controlla se il pcb da togliere è il primo
 		rt=removeProcQ(head); //quindi richiama la funzione per rimuovere il primo elemento della coda
 	}
 	else{
-		tmp=head->next;
+		tmp=container_of(head->next,pcb_t,p_list);
 		if(tmp->p_list.next==head) {	//controlla se ci sono altri elementi oltre al primo
 			return rt;
 		}
@@ -186,23 +185,23 @@ da p. Se p non ha figli, restituisce NULL.
 */
 	if (list_empty(&p->p_child)) return NULL;
 	else{
-		pcb_t * tmp = container_of(&p->p_child.next, pcb_t, p_list);
+		pcb_t * tmp = container_of(p->p_child.next, pcb_t, p_list);
 		// tmp = pcb primo figlio
 		if (list_empty(&tmp->p_sib)){
-			list_del(&p->p_child.next);
+			list_del(p->p_child.next);
 			return tmp;
 		}
 		else{
 			p->p_child.next = tmp->p_sib.next;
-			pcb_t * tmp_sib = container_of(&tmp->p_sib.next, pcb_t, p_list);
+			pcb_t * tmp_sib = container_of(tmp->p_sib.next, pcb_t, p_list);
 			tmp_sib->p_child.next = tmp->p_child.next;
-			pcb_t * tmp_child = container_of(&tmp->p_child.next, pcb_t, p_list);
-			tmp_child->p_parent = tmp->p_sib.next;
+			pcb_t * tmp_child = container_of(tmp->p_child.next, pcb_t, p_list);
+			tmp_child->p_parent = tmp_sib;
 			pcb_t * iter;
 			list_for_each_entry(iter, &tmp_child->p_sib, p_sib){
-				iter->p_parent = tmp->p_sib.next;
+				iter->p_parent = tmp_sib;
 			}
-			list_del(&p->p_child.next);
+			list_del(p->p_child.next);
 			return tmp;
 		}
 	}
@@ -222,10 +221,10 @@ necessariamente il primo figlio del
 padre).
 */
 	if (p->p_parent == NULL) return NULL;
-	else if (p->p_parent->p_child.next == p) return removeChild(p->p_parent);
+	else if (p->p_parent->p_child.next == &p->p_list) return removeChild(p->p_parent);
 	else{
 		pcb_t * exit = p;
-		list_del(p);
+		list_del(&p->p_list);
 		return exit;
 	}
 }
