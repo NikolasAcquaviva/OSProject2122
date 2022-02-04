@@ -178,24 +178,36 @@ del PCB puntato da prnt.
 }
 
 
-/*
-Commento di Matteo
-dobbiamo decidere come identificare una list_head (o connettore) vuoto
-Lo identifichiamo come vuoto se entrambi i suoi campi puntano a se stesso (come definito dalla
-funzione list_empty in listx.h) oppure se è NULL?
-*/
+
 pcb_t* removeChild(pcb_t *p) { //12
 /*
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
 	if (list_empty(&p->p_child)) return NULL;
-	else {
-		pcb_t *uscita = &p->p_child.next;
-		list_del(&p->p_child.next);
-		return uscita;
+	else{
+		pcb_t * tmp = container_of(&p->p_child.next, pcb_t, p_list);
+		// tmp = pcb primo figlio
+		if (list_empty(&tmp->p_sib)){
+			list_del(&p->p_child.next);
+			return tmp;
+		}
+		else{
+			p->p_child.next = tmp->p_sib.next;
+			pcb_t * tmp_sib = container_of(&tmp->p_sib.next, pcb_t, p_list);
+			tmp_sib->p_child.next = tmp->p_child.next;
+			pcb_t * tmp_child = container_of(&tmp->p_child.next, pcb_t, p_list);
+			tmp_child->p_parent = tmp->p_sib.next;
+			pcb_t * iter;
+			list_for_each_entry(iter, &tmp_child->p_sib, p_sib){
+				iter->p_parent = tmp->p_sib.next;
+			}
+			list_del(&p->p_child.next);
+			return tmp;
+		}
 	}
 }
+
 
 pcb_t *outChild(pcb_t* p) { //13
 /*
@@ -209,11 +221,11 @@ posizione arbitraria (ossia non è
 necessariamente il primo figlio del
 padre).
 */
-
-	if (list_empty(&p->p_parent)) return NULL;
-	else {
-		pcb_t * tmp = p;
+	if (p->p_parent == NULL) return NULL;
+	else if (p->p_parent->p_child.next == p) return removeChild(p->p_parent);
+	else{
+		pcb_t * exit = p;
 		list_del(p);
-		return tmp;
+		return exit;
 	}
 }
