@@ -14,10 +14,10 @@
 #define HIDDEN static
 
 
-int insertBlocked(int *semAdd, pcb_t *p);
-pcb_t* removeBlocked(int *semAdd);
-pcb_t* outBlocked(pcb_t *p);
-pcb_t* headBlocked(int *semAdd);
-void initASL();
+extern int insertBlocked(int *semAdd, pcb_t *p);
+extern pcb_t* removeBlocked(int *semAdd);
+extern pcb_t* outBlocked(pcb_t *p);
+extern pcb_t* headBlocked(int *semAdd);
+extern void initASL();
 
 #endif
