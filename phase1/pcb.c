@@ -140,8 +140,8 @@ trovarsi in una posizione arbitraria della coda). */
 			return rt;
 		}
 		else{
-			while((tmp!=head)&&(tmp!=p)){	//scorre la lista fino a che non trova il pcb p o ritorna alla testa della lista
-				tmp=tmp->p_list.next;
+			list_for_each_entry(tmp, head, p_list){	//scorre la lista fino a che non trova il pcb p o ritorna alla testa della lista
+				 if(tmp==p) break;
 			}
 			if(tmp==p){// se ha trovato l'elemento
 				tmpbefore=tmp->p_list.prev;					//puntatore dell'elemento precedente a p
