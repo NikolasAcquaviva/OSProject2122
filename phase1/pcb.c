@@ -66,30 +66,17 @@ head è vuota, FALSE altrimenti. */
 void insertProcQ(struct list_head* head, pcb_t* p){ //6
 /*Inserisce l’elemento puntato da p nella
 coda dei processi puntata da head*/
-	struct list_head* tail;
-	if(head->next !=NULL){	//caso lista non vuota
-		tail=head->prev;	//prende l'elemento precedente della lista
-		tail->next=p;		//inserisce il pcb puntato da p
-		p->p_list.prev=tail;	//riempie i campi di p
-		p->p_list.next=head;
-		head->prev=p;	//imposta p come ultimo elemento della lista
-	}
-	else{	//caso lista vuota
-		head->next=p;	//mette p come precedente e successivo
-		head->prev=p;
-		p->p_list.prev=p;
-		p->p_list.next=p;
-	}
+	list_add_tail(p->p_list.next, head);		//inserisce il pcb puntato da p in coda
 }
 
-pcb_t *headProcQ(struct list_head* head){ //7
+pcb_t* headProcQ(struct list_head* head){ //7
 /*Restituisce l’elemento di testa della coda
 dei processi da head, SENZA
 RIMUOVERLO. Ritorna NULL se la coda
 non ha elementi. */
-	pcb_t *h = NULL;
-	if(head->next != NULL){
-		h = head->next;
+	pcb_t* h = NULL;
+	if(head->next != head){
+		h =container_of(head->next, pcb_t, p_list);
 	}
 	return h;
 }
@@ -105,16 +92,16 @@ all’elemento rimosso dalla lista */
 	if (list_empty(head)){ 	//controlla se la lista è vuota
 		return NULL;
 	}
-	p=head->next;
+	p=container_of(head->next, pcb_t, p_list);
 	if (p->p_list.next==head) {	//controlla se ci sono altri elementi oltre al primo
-		head->next=NULL;
-		head->prev=NULL;
+		head->next=head;
+		head->prev=head;
 		return p;
 	}
 	else {
-		pafter=p->p_list.next;
+		pafter=container_of(p->p_list.next, pcb_t, p_list);
 		pafter->p_list.prev=head;
-		head->next=pafter;
+		head->next=pafter->p_list.next;
 		p->p_list.next=NULL;
 		p->p_list.prev=NULL;
 
@@ -144,11 +131,11 @@ trovarsi in una posizione arbitraria della coda). */
 				 if(tmp==p) break;
 			}
 			if(tmp==p){// se ha trovato l'elemento
-				tmpbefore=tmp->p_list.prev;					//puntatore dell'elemento precedente a p
-				tmpbefore->p_list.next=tmp->p_list.next;	//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
-				rt=tmp;										//rt ora punta a p
-				tmp=tmp->p_list.next;						//tmp ora punta all'elemento successivo a p
-				tmp->p_list.prev=tmpbefore;					//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
+				tmpbefore=container_of(tmp->p_list.prev,pcb_t,p_list);		//puntatore dell'elemento precedente a p
+				tmpbefore->p_list.next=tmp->p_list.next;			//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
+				rt=tmp;								//rt ora punta a p
+				tmp=container_of(tmp->p_list.next,pcb_t,p_list);		//tmp ora punta all'elemento successivo a p
+				container_of(tmp->p_list.prev,pcb_t,p_list);			//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
 				rt->p_list.next=NULL;						//pulisco i campi di p che ho rimosso dalla lista
 				rt->p_list.prev=NULL;
 			}
