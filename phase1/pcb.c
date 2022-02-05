@@ -75,7 +75,7 @@ dei processi da head, SENZA
 RIMUOVERLO. Ritorna NULL se la coda
 non ha elementi. */
 	pcb_t* h = NULL;
-	if(head->next != head){
+	if(head->next != head){	// controlla se c'è un elemento dopo head
 		h =container_of(head->next, pcb_t, p_list);
 	}
 	return h;
@@ -101,9 +101,9 @@ all’elemento rimosso dalla lista */
 	else {
 		pafter=container_of(p->p_list.next, pcb_t, p_list);
 		pafter->p_list.prev=head;
-		head->next=pafter->p_list.next;
-		p->p_list.next=NULL;
-		p->p_list.prev=NULL;
+		head->next=&pafter->p_list;
+		p->p_list.next=&p->p_list;
+		p->p_list.prev=&p->p_list;
 
 		return p;
 	}
@@ -131,13 +131,13 @@ trovarsi in una posizione arbitraria della coda). */
 				 if(tmp==p) break;
 			}
 			if(tmp==p){// se ha trovato l'elemento
-				tmpbefore=container_of(tmp->p_list.prev,pcb_t,p_list);		//puntatore dell'elemento precedente a p
-				tmpbefore->p_list.next=tmp->p_list.next;			//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
-				rt=tmp;								//rt ora punta a p
+				tmpbefore=container_of(tmp->p_list.prev,pcb_t,p_list);	//puntatore dell'elemento precedente a p
+				tmpbefore->p_list.next=tmp->p_list.next;				//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
+				rt=tmp;													//rt ora punta a p
 				tmp=container_of(tmp->p_list.next,pcb_t,p_list);		//tmp ora punta all'elemento successivo a p
-				container_of(tmp->p_list.prev,pcb_t,p_list);			//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
-				rt->p_list.next=NULL;						//pulisco i campi di p che ho rimosso dalla lista
-				rt->p_list.prev=NULL;
+				tmp->p_list.prev=&tmpbefore->p_list;			//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
+				rt->p_list.next=&rt->p_list;							//pulisco i campi di p che ho rimosso dalla lista
+				rt->p_list.prev=&rt->p_list;
 			}
 		}
 
