@@ -66,7 +66,7 @@ head è vuota, FALSE altrimenti. */
 void insertProcQ(struct list_head* head, pcb_t* p){ //6
 /*Inserisce l’elemento puntato da p nella
 coda dei processi puntata da head*/
-	list_add_tail(p->p_list.next, head);		//inserisce il pcb puntato da p in coda
+	list_add_tail(&p->p_list, head);		//inserisce il pcb puntato da p in coda
 }
 
 pcb_t* headProcQ(struct list_head* head){ //7
