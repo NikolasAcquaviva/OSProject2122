@@ -178,16 +178,19 @@ da p. Se p non ha figli, restituisce NULL.
 			return tmp;
 		}
 		else{
-			p->p_child = tmp->p_sib;
+			struct list_head toRemove = p->p_child;
+			p->p_child = tmp->p_sib; //primo figlio di p diventa il primo fratello del precedente primo figlio
 			pcb_t * tmp_sib = container_of(&tmp->p_sib, pcb_t, p_list);
-			tmp_sib->p_child = tmp->p_child;
+			tmp_sib->p_child = tmp->p_child; //il nuovo figlio ha come figlio il figlio del precedente
 			pcb_t * tmp_child = container_of(&tmp->p_child, pcb_t, p_list);
 			tmp_child->p_parent = tmp_sib;
 			pcb_t * iter;
-			list_for_each_entry(iter, &tmp_child->p_sib, p_sib){
+			list_for_each_entry(iter, &tmp_child->p_list, p_sib){
+				//assegno a tutti i figli a 2 livelli da p il parent che sia \
+				il nuovo primo figlio(tmp_sib) e non quello che deve essere cancellato
 				iter->p_parent = tmp_sib;
 			}
-			list_del(&p->p_child);
+			list_del(&toRemove);
 			return tmp;
 		}
 	}
