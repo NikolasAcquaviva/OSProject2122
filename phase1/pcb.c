@@ -171,23 +171,23 @@ da p. Se p non ha figli, restituisce NULL.
 */
 	if (list_empty(&p->p_child)) return NULL;
 	else{
-		pcb_t * tmp = container_of(p->p_child.next, pcb_t, p_list);
+		pcb_t * tmp = container_of(&p->p_child, pcb_t, p_list);
 		// tmp = pcb primo figlio
 		if (list_empty(&tmp->p_sib)){
-			list_del(p->p_child.next);
+			list_del(&p->p_child);
 			return tmp;
 		}
 		else{
-			p->p_child.next = tmp->p_sib.next;
-			pcb_t * tmp_sib = container_of(tmp->p_sib.next, pcb_t, p_list);
-			tmp_sib->p_child.next = tmp->p_child.next;
-			pcb_t * tmp_child = container_of(tmp->p_child.next, pcb_t, p_list);
+			p->p_child = tmp->p_sib;
+			pcb_t * tmp_sib = container_of(&tmp->p_sib, pcb_t, p_list);
+			tmp_sib->p_child = tmp->p_child;
+			pcb_t * tmp_child = container_of(&tmp->p_child, pcb_t, p_list);
 			tmp_child->p_parent = tmp_sib;
 			pcb_t * iter;
 			list_for_each_entry(iter, &tmp_child->p_sib, p_sib){
 				iter->p_parent = tmp_sib;
 			}
-			list_del(p->p_child.next);
+			list_del(&p->p_child);
 			return tmp;
 		}
 	}
@@ -207,7 +207,7 @@ necessariamente il primo figlio del
 padre).
 */
 	if (p->p_parent == NULL) return NULL;
-	else if (p->p_parent->p_child.next == &p->p_list) return removeChild(p->p_parent);
+	else if (&p->p_parent->p_child == &p->p_list) return removeChild(p->p_parent);
 	else{
 		pcb_t * exit = p;
 		list_del(&p->p_list);
