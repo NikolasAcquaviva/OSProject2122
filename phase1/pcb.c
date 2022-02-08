@@ -39,14 +39,13 @@ pcb_t *allocPcb(){
 		tmp->p_list.next = head->next;
 		tmp->p_list.prev = head->prev;
 		LIST_HEAD(childList);	
-		INIT_LIST_HEAD(&childList);		
 		LIST_HEAD(sibList);
-		INIT_LIST_HEAD(&sibList);
 		tmp->p_parent = NULL;
 		tmp->p_child = childList;	
 		tmp->p_sib = sibList;
 		tmp->p_semAdd = NULL;
 		tmp->p_time = 0;
+		return tmp;
 		}
 }
 
@@ -76,7 +75,7 @@ RIMUOVERLO. Ritorna NULL se la coda
 non ha elementi. */
 	pcb_t* h = NULL;
 	if(head->next != head){	// controlla se c'è un elemento dopo head
-		h =container_of(head->next, pcb_t, p_list);
+		h = container_of(head->next, pcb_t, p_list);
 	}
 	return h;
 }
@@ -86,27 +85,13 @@ pcb_t* removeProcQ(struct list_head *head){ //8
 processi puntata da head. Ritorna NULL se la
 coda è vuota. Altrimenti ritorna il puntatore
 all’elemento rimosso dalla lista */
-	pcb_t* p;
-	pcb_t* pafter;
 
 	if (list_empty(head)){ 	//controlla se la lista è vuota
 		return NULL;
 	}
-	p=container_of(head->next, pcb_t, p_list);
-	if (p->p_list.next==head) {	//controlla se ci sono altri elementi oltre al primo
-		head->next=head;
-		head->prev=head;
-		return p;
-	}
-	else {
-		pafter=container_of(p->p_list.next, pcb_t, p_list);
-		pafter->p_list.prev=head;
-		head->next=&pafter->p_list;
-		p->p_list.next=&p->p_list;
-		p->p_list.prev=&p->p_list;
-
-		return p;
-	}
+	pcb_t *p = container_of(head->next, pcb_t, p_list); //primo elemento della coda dei processi
+	list_del(&p->p_list);
+	return p;
 }
 
 pcb_t* outProcQ(struct list_head *head, pcb_t *p){ //9
@@ -115,34 +100,41 @@ processi puntata da head. Se p non è presente
 nella coda, restituisce NULL. (NOTA: p può
 trovarsi in una posizione arbitraria della coda). */
 	pcb_t *tmp;
-	pcb_t *tmpbefore;
-	pcb_t *rt=NULL;
 
-	if(head->next == &p->p_list){ 		// controlla se il pcb da togliere è il primo
-		rt=removeProcQ(head);		//quindi richiama la funzione per rimuovere il primo elemento della coda
+	list_for_each_entry(tmp, head, p_list){
+		if(tmp==p){//p è nella coda dei processi puntata da head
+			list_del(&tmp->p_list);
+			return tmp;
+		}
 	}
-	else{
-		tmp=container_of(head->next,pcb_t,p_list);
-		if(tmp->p_list.next==head) {	//controlla se ci sono altri elementi oltre al primo
-			return rt;
-		}
-		else{
-			list_for_each_entry(tmp, head, p_list){		//scorre la lista fino a che non trova il pcb p o ritorna alla testa della lista
-				 if(tmp==p) break;
-			}
-			if(tmp==p){// se ha trovato l'elemento
-				tmpbefore=container_of(tmp->p_list.prev,pcb_t,p_list);	//puntatore dell'elemento precedente a p
-				tmpbefore->p_list.next=tmp->p_list.next;		//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
-				rt=tmp;							//rt ora punta a p
-				tmp=container_of(tmp->p_list.next,pcb_t,p_list);	//tmp ora punta all'elemento successivo a p
-				tmp->p_list.prev=&tmpbefore->p_list;			//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
-				rt->p_list.next=&rt->p_list;				//pulisco i campi di p che ho rimosso dalla lista
-				rt->p_list.prev=&rt->p_list;
-			}
-		}
 
-	}
-	return rt;
+	return NULL;
+
+	// if(head->next == &p->p_list){ 		// controlla se il pcb da togliere è il primo
+	// 	rt=removeProcQ(head);		//quindi richiama la funzione per rimuovere il primo elemento della coda
+	// }
+	// else{
+	// 	tmp=container_of(head->next,pcb_t,p_list);
+	// 	if(tmp->p_list.next==head) {	//controlla se ci sono altri elementi oltre al primo
+	// 		return rt;
+	// 	}
+	// 	else{
+	// 		list_for_each_entry(tmp, head, p_list){		//scorre la lista fino a che non trova il pcb p o ritorna alla testa della lista
+	// 			 if(tmp==p) break;
+	// 		}
+	// 		if(tmp==p){// se ha trovato l'elemento
+	// 			tmpbefore=container_of(tmp->p_list.prev,pcb_t,p_list);	//puntatore dell'elemento precedente a p
+	// 			tmpbefore->p_list.next=tmp->p_list.next;		//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
+	// 			rt=tmp;							//rt ora punta a p
+	// 			tmp=container_of(tmp->p_list.next,pcb_t,p_list);	//tmp ora punta all'elemento successivo a p
+	// 			tmp->p_list.prev=&tmpbefore->p_list;			//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
+	// 			rt->p_list.next=&rt->p_list;				//pulisco i campi di p che ho rimosso dalla lista
+	// 			rt->p_list.prev=&rt->p_list;
+	// 		}
+	// 	}
+
+	// }
+	//return rt;
 }
 
 int emptyChild(pcb_t *p) { //10
