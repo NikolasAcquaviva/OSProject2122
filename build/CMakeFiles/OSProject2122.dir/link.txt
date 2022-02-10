@@ -1,1 +1,0 @@
-/usr/bin/cc    CMakeFiles/OSProject2122.dir/home/nikolas/WorkSpace/OSProject2122/testers/p1test.c.o CMakeFiles/OSProject2122.dir/asl.c.o CMakeFiles/OSProject2122.dir/pcb.c.o  -o OSProject2122 

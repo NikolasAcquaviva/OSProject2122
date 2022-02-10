@@ -1,10 +1,10 @@
 #ifndef PCB_H_
 #define PCB_H_
 
-#include "../h/pandos_const.h"
-#include "../h/pandos_types.h"
-#include "../h/listx.h"
 #include "asl.h"
+#include "../pandos_const.h"
+#include "../pandos_types.h"
+#include "../listx.h"
 
 
 #define TRUE 1

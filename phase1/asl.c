@@ -1,6 +1,6 @@
-#include "../h/pandos_const.h"
-#include "../h/pandos_types.h"
-#include "../h/listx.h"
+#include "../pandos_const.h"
+#include "../pandos_types.h"
+#include "../listx.h"
 #include "pcb.h"
 
 #define TRUE 1

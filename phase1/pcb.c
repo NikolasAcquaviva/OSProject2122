@@ -1,7 +1,7 @@
-#include "../h/pandos_const.h"
-#include "../h/pandos_types.h"
-#include "../h/listx.h"
 #include "asl.h"
+#include "../pandos_const.h"
+#include "../pandos_types.h"
+#include "../listx.h"
 
 /*pcbFree_h: lista dei PCB che 
 sono liberi o inutilizzati*/
