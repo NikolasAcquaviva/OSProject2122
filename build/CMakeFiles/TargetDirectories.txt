@@ -1,0 +1,3 @@
+/home/nikolas/WorkSpace/OSProject2122/build/CMakeFiles/rebuild_cache.dir
+/home/nikolas/WorkSpace/OSProject2122/build/CMakeFiles/edit_cache.dir
+/home/nikolas/WorkSpace/OSProject2122/build/CMakeFiles/OSProject2122.dir

@@ -3,6 +3,13 @@
 #include "../h/listx.h"
 #include "asl.h"
 
+/*pcbFree_h: lista dei PCB che 
+sono liberi o inutilizzati*/
+HIDDEN struct list_head pcbFree_h = LIST_HEAD_INIT(pcbFree_h);
+/*pcbFree_table[MAXPROC]: array
+di PCB con dimensione massima MAXPROC*/
+HIDDEN pcb_t pcbFree_table[MAXPROC];
+
 void initPcbs(){
 	INIT_LIST_HEAD(&pcbFree_h); //inizializza il nodo sentinella
 	/*
