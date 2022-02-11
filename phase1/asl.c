@@ -34,7 +34,7 @@ coda dei descrittori liberi (semdFree_h).
 pcb_t* removeBlocked(int *semAdd){
 
 	//pedanteria assoluta
-	if (semAdd == NULL) return NULL;
+	//if (semAdd == NULL) return NULL;
 
 	semd_PTR index = semd_h;
 
@@ -126,7 +126,7 @@ coda dei processi è vuota.
 pcb_t* headBlocked(int *semAdd){
 
 	//pedanteria assoluta
-	if (semAdd == NULL) return NULL;
+	//if (semAdd == NULL) return NULL;
 
 	semd_PTR index = semd_h;
 
@@ -159,7 +159,7 @@ FALSE.
 int insertBlocked(int *semAdd, pcb_t *p){
 
 	//pedanteria assoluta
-	if (p == NULL || semAdd == NULL) return FALSE;
+	//if (p == NULL || semAdd == NULL) return FALSE;
 
 	semd_PTR index = semd_h; //copia puntatore temporaneo per scorrere. Si parte da MININT
 
@@ -169,6 +169,7 @@ int insertBlocked(int *semAdd, pcb_t *p){
 		semd_PTR nextIndex = container_of(index->s_link.next, semd_t, s_link); //chiedere se va passata la stringa o il tipo
 
 		if(index->s_key == semAdd){ //risorsa/semaforo impegnato già precedentemente
+
 			p->p_semAdd = semAdd;   /* ptr to semaphore on which proc is blocked */
             insertProcQ(&(index->s_procq), p); //insertProcQ(struct list_head* head, pcb* p)
             return FALSE;
