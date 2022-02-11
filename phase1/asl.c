@@ -169,7 +169,6 @@ int insertBlocked(int *semAdd, pcb_t *p){
 		semd_PTR nextIndex = container_of(index->s_link.next, semd_t, s_link); //chiedere se va passata la stringa o il tipo
 
 		if(index->s_key == semAdd){ //risorsa/semaforo impegnato già precedentemente
-
 			p->p_semAdd = semAdd;   /* ptr to semaphore on which proc is blocked */
             insertProcQ(&(index->s_procq), p); //insertProcQ(struct list_head* head, pcb* p)
             return FALSE;

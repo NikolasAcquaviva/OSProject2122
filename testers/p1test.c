@@ -247,10 +247,8 @@ int main(void)
         if ((q = removeChild(procp[0])) == NULL)
             adderrbuf("removeChild: unexpected NULL   ");
     }
-    termprint("\nsono uscito dal for",0);
     if (removeChild(procp[0]) != NULL)
         adderrbuf("removeChild: removes too many children   ");
-    termprint("\npassato primo controllo",0);
     if (!emptyChild(procp[0]))
         adderrbuf("emptyChild: unexpected FALSE   ");
     

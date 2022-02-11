@@ -12,9 +12,7 @@ Inserting...
 Inserted 9 children   
 outChild ok   
 Removing...   
-
-sono uscito dal for
-passato primo controlloinsertChild, removeChild and emptyChild ok   
+insertChild, removeChild and emptyChild ok   
 process tree module ok      
 Initialized active semaphore list   
 insertBlocked test #1 started  
