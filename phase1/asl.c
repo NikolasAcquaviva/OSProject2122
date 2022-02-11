@@ -1,3 +1,6 @@
+//CONTROLLO
+//COMMENTO
+
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "../listx.h"
@@ -18,6 +21,8 @@ HIDDEN semd_PTR semdFree_h; //Lista DISORDINATA dei SEMD liberi o inutilizzati. 
 HIDDEN semd_PTR semd_h; //Lista ORDINATA dei semafori attivi. Questa lista ha i dummy nodes. Testa di semd_h rimane sempre MININT 
 //non ha senso che semd_h sia circolare poichè ci sono MININT e MAXINT che sono gli estremi che non possono essere sorpassati e rimossi
 //in ogni caso sarebbe bastato un gioco di pointers tra MININT e MAXINT
+
+HIDDEN semd_PTR semdFreeSentry;
 
 /*
 Ritorna il primo PCB dalla coda dei processi
@@ -53,7 +58,8 @@ pcb_t* removeBlocked(int *semAdd){
     			__list_del(index->s_link.prev, index->s_link.next); //s_link.prev/next SONO GIA' PUNTATORI a list_head!
 
     			//...e lo attacca (o "cuce") alla testa di semdFree_h, facendo puntare ad index altro
-    			__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link));
+    			//__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link)); COMMENTO
+    			__list_add(&(index->s_link), &(semdFree_h->s_link), semdFree_h->s_link.next); //LO ATTACCO DIETRO LA TESTA
     		}
 
     		if (toReturn != NULL) toReturn->p_semAdd = NULL;
@@ -98,7 +104,8 @@ pcb_t* outBlocked(pcb_t *p){
     			__list_del(index->s_link.prev, index->s_link.next);
 
     			//...e lo attacca alla testa di semdFree_h, facendo puntare ad index altro
-    			__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link));
+    			//__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link)); COMMENTO
+    			__list_add(&(index->s_link), &(semdFree_h->s_link), semdFree_h->s_link.next); //LO ATTACCO DIETRO LA TESTA
     		}
 
     		if (toReturn != NULL) toReturn->p_semAdd = NULL;
@@ -157,7 +164,6 @@ FALSE.
 */
 int insertBlocked(int *semAdd, pcb_t *p){
 
-	int count = 0;
 	//pedanteria assoluta
 	//if (p == NULL || semAdd == NULL) return FALSE;
 
@@ -185,10 +191,14 @@ int insertBlocked(int *semAdd, pcb_t *p){
         else if (nextIndex->s_key > semAdd || nextIndex->s_key == MAXINT){
 
         	//nuovo semaforo da allocare => facciamo check prima
-        	if (semdFree_h == NULL) return TRUE;
+        	//if (list_empty(&(semdFree_h->s_link))) return TRUE; OPPURE
+        	if (list_empty(&(semdFreeSentry->s_link))) return TRUE;
+        	//if (semdFree_h == NULL) return TRUE;
         	
         	//riguardo semdFree_h
-			semd_PTR semToAdd = semdFree_h; //stacco/salvo la testa di semdFree_h la quale è circolare (prendo il primo sema4 libero)
+        	//CONTROLLO CHE NON SIA LA SENTINELLA
+			// COMMENTO semd_PTR semToAdd = semdFree_h; //stacco/salvo la testa di semdFree_h la quale è circolare (prendo il primo sema4 libero)
+			semd_PTR semToAdd = container_of(semdFreeSentry->s_link.next, semd_t, s_link);
 			__list_del(semdFree_h->s_link.prev, semdFree_h->s_link.next);
 
 			//sema4 init
@@ -205,8 +215,6 @@ int insertBlocked(int *semAdd, pcb_t *p){
 
             return FALSE;
         }
-        count++;
-        if (count == MAX_PROC +1) return TRUE;
         //altrimenti continuo a scorrere
        	else index = nextIndex;	//index = container_of(index>s_link.next, "semd_t", "s_link");
 	}
@@ -252,14 +260,17 @@ void initASL(){
 	MAXINTDummyNode->s_link.prev = &(semd_table[0].s_link);
 
 	//sentinella semafori non attivi => pronti per essere usati.
-	semdFree_h = &semd_table[1];
+	semdFree_h = semdFreeSentry;
+	//semdFree_h = &semd_table[1]; COMMENTO
 
 	//Collego QUEI semafori tra loro tramite i connettori. Lista circolare (evitando di usare l'operatore modulo per costruirla)
-	__list_add(&(semd_table[1].s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[2].s_link));
+	//__list_add(&(semd_table[1].s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[2].s_link)); COMMENTO
+	__list_add(&(semdFreeSentry->s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[1].s_link));
 
 	for (int i = 2; i < MAX_PROC; i++) __list_add(&(semd_table[i].s_link), &(semd_table[i-1].s_link), &(semd_table[i+1].s_link));
 	
 	//pedante, nei fatti è stato già fatto
-	__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semd_table[1].s_link));
+	//__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semd_table[1].s_link)); COMMENTO
+	__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semdFreeSentry->s_link));
 
 }
