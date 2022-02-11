@@ -40,7 +40,7 @@ pcb_t* removeBlocked(int *semAdd){
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 		
-    	if(index->s_key == semAdd){//semd_t non include alcun campo s_semAdd
+    	if(index->s_key == semAdd){
 
     		//Rimuove il primo elemento dalla coda dei processi puntata da head. Ritorna NULL se la
 			//coda è vuota. Altrimenti ritorna il puntatore all’elemento rimosso dalla lista.
@@ -61,7 +61,6 @@ pcb_t* removeBlocked(int *semAdd){
 
     	}
     	else index = container_of(index->s_link.next, semd_t, s_link);
-		//in container_of venivano passati gli ultimi due campi come stringa, le ho rimosse per risolvere l'errore
 	}
 	return NULL;
 }
@@ -158,12 +157,13 @@ FALSE.
 */
 int insertBlocked(int *semAdd, pcb_t *p){
 
+	int count = 0;
 	//pedanteria assoluta
 	//if (p == NULL || semAdd == NULL) return FALSE;
 
 	semd_PTR index = semd_h; //copia puntatore temporaneo per scorrere. Si parte da MININT
 
-	while(index->s_key != MAXINT){
+	while(index->s_key != MAXINT || index == NULL){
 
 		//creato per comodità per l'elif e scorrimento. Se semd_h ha solo un semaforo impegnato => questo sarà MAXINT il quale è l'ultimo
 		semd_PTR nextIndex = container_of(index->s_link.next, semd_t, s_link); //chiedere se va passata la stringa o il tipo
@@ -205,6 +205,8 @@ int insertBlocked(int *semAdd, pcb_t *p){
 
             return FALSE;
         }
+        count++;
+        if (count == MAX_PROC +1) return TRUE;
         //altrimenti continuo a scorrere
        	else index = nextIndex;	//index = container_of(index>s_link.next, "semd_t", "s_link");
 	}
