@@ -11,21 +11,11 @@ di PCB con dimensione massima MAXPROC*/
 HIDDEN pcb_t pcbFree_table[MAXPROC];
 
 void initPcbs(){
-	INIT_LIST_HEAD(&pcbFree_h); //inizializza il nodo sentinella
-	/*
-	La funzione di aggiunta in testa alla lista aggiunge in realtà
-	il nodo tra i primi 2 elementi,di conseguenza è scritta
-	in modo che la lista bidirezionale venga gestita con un
-	nodo sentinella(così il nodo aggiunto sarà sempre il secondo,
-	ovvero il primo esclusa la sentinella). Inoltre la funzione di aggiunta
-	in testa non aggiorna la testa del puntatore, ovvero accedendo
-	a freepcb_h accederemo sempre al nodo sentinella.
-	*/
-	for(int i = 0; i < MAXPROC; i++) list_add(&pcbFree_table[i].p_list, &pcbFree_h);
-	//con la prima riga di codice viene definito il nodo sentinella
-	//ogni volta che entriamo nel for aggiungiamo un nodo che viene 
-	//puntato dal next del nodo sentinella. Avremo quindi MAXPROC + 1
-	//nodi, di cui uno(il primo) è la sentinella.
+	INIT_LIST_HEAD(&pcbFree_h); 
+	for(int i = 0; i < MAXPROC; i++) {
+		list_add(&pcbFree_table[i].p_list, &pcbFree_h);
+		pcbFree_table[i].p_list = *pcbFree_h.next;
+	}
 }
 
 void freePcb(pcb_t *p){
@@ -40,18 +30,16 @@ pcb_t *allocPcb(){
 	else{
 		//il primo vero nodo della lista dei pcb(ricordando che usiamo la sentinella)
 		struct list_head *head = pcbFree_h.next;
-		//l'istanza del primo pcb, quella che contiene il nodo \
-		  puntato da head nel campo p_list
+		//l'istanza del primo pcb, quella che contiene il nodo
+		//puntato da head nel campo p_list
 		pcb_t *tmp = container_of(head,pcb_t,p_list);
-		tmp->p_list.next = head->next;
-		tmp->p_list.prev = head->prev;
-		LIST_HEAD(childList);	
-		LIST_HEAD(sibList);
+		
 		tmp->p_parent = NULL;
-		tmp->p_child = childList;	
-		tmp->p_sib = sibList;
+		tmp->p_child.next = tmp->p_child.prev = &tmp->p_child;	
+		tmp->p_sib.next = tmp->p_sib.prev = &tmp->p_sib; 
 		tmp->p_semAdd = NULL;
 		tmp->p_time = 0;
+		list_del(&tmp->p_list);
 		return tmp;
 		}
 }
@@ -116,32 +104,6 @@ trovarsi in una posizione arbitraria della coda). */
 	}
 
 	return NULL;
-
-	// if(head->next == &p->p_list){ 		// controlla se il pcb da togliere è il primo
-	// 	rt=removeProcQ(head);		//quindi richiama la funzione per rimuovere il primo elemento della coda
-	// }
-	// else{
-	// 	tmp=container_of(head->next,pcb_t,p_list);
-	// 	if(tmp->p_list.next==head) {	//controlla se ci sono altri elementi oltre al primo
-	// 		return rt;
-	// 	}
-	// 	else{
-	// 		list_for_each_entry(tmp, head, p_list){		//scorre la lista fino a che non trova il pcb p o ritorna alla testa della lista
-	// 			 if(tmp==p) break;
-	// 		}
-	// 		if(tmp==p){// se ha trovato l'elemento
-	// 			tmpbefore=container_of(tmp->p_list.prev,pcb_t,p_list);	//puntatore dell'elemento precedente a p
-	// 			tmpbefore->p_list.next=tmp->p_list.next;		//il campo next del pcb precedente a p, ora punta all'elemento successivo a p
-	// 			rt=tmp;							//rt ora punta a p
-	// 			tmp=container_of(tmp->p_list.next,pcb_t,p_list);	//tmp ora punta all'elemento successivo a p
-	// 			tmp->p_list.prev=&tmpbefore->p_list;			//il campo prev del pcb successivo a p, ora punta all'elemento precedente a p
-	// 			rt->p_list.next=&rt->p_list;				//pulisco i campi di p che ho rimosso dalla lista
-	// 			rt->p_list.prev=&rt->p_list;
-	// 		}
-	// 	}
-
-	// }
-	//return rt;
 }
 
 int emptyChild(pcb_t *p) { //10
@@ -159,6 +121,7 @@ Inserisce il PCB puntato da p come figlio
 del PCB puntato da prnt.
 */
 	list_add(&p->p_list,&prnt->p_child);
+	p->p_parent = prnt;
 }
 
 
@@ -170,26 +133,26 @@ da p. Se p non ha figli, restituisce NULL.
 */
 	if (list_empty(&p->p_child)) return NULL;
 	else{
-		pcb_t * tmp = container_of(&p->p_child, pcb_t, p_list);
+		pcb_t *tmp = container_of(p->p_child.next, pcb_t, p_list);
 		// tmp = pcb primo figlio
 		if (list_empty(&tmp->p_sib)){
-			list_del(&p->p_child);
+			list_del(&tmp->p_list);
 			return tmp;
 		}
 		else{
-			struct list_head toRemove = p->p_child;
-			p->p_child = tmp->p_sib; //primo figlio di p diventa il primo fratello del precedente primo figlio
-			pcb_t * tmp_sib = container_of(&tmp->p_sib, pcb_t, p_list);
+			struct list_head *toRemove = &tmp->p_list;
+			p->p_child.next = tmp->p_sib.next; //primo figlio di p diventa il primo fratello del precedente primo figlio
+			pcb_t * tmp_sib = container_of(tmp->p_sib.next, pcb_t, p_list); // accediamo al next perché la lista dei fratelli parte da tmp,ovvero tmp non è fratello destro di nessun nodo e il primo fratello è la sentinella della lista dei fratelli
 			tmp_sib->p_child = tmp->p_child; //il nuovo figlio ha come figlio il figlio del precedente
 			pcb_t * tmp_child = container_of(&tmp->p_child, pcb_t, p_list);
 			tmp_child->p_parent = tmp_sib;
 			pcb_t * iter;
-			list_for_each_entry(iter, &tmp_child->p_list, p_sib){
-				//assegno a tutti i figli a 2 livelli da p il parent che sia \
-				il nuovo primo figlio(tmp_sib) e non quello che deve essere cancellato
+			list_for_each_entry(iter, &tmp_child->p_sib, p_sib){
+				//assegno a tutti i figli a 2 livelli da p il parent che sia 
+				//il nuovo primo figlio(tmp_sib) e non quello che deve essere cancellato
 				iter->p_parent = tmp_sib;
 			}
-			list_del(&toRemove);
+			list_del(toRemove);
 			return tmp;
 		}
 	}
@@ -211,7 +174,7 @@ padre).
 	if (p->p_parent == NULL) return NULL;
 	else if (&p->p_parent->p_child == &p->p_list) return removeChild(p->p_parent);
 	else{
-		pcb_t * exit = p;
+		pcb_t *exit = p;
 		list_del(&p->p_list);
 		return exit;
 	}

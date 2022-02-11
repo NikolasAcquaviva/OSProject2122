@@ -11,10 +11,6 @@
  *
  *      Modified by Michael Goldweber on May 15, 2004
  */
-//#include <pandos_const.h>
-//#include <pandos_types.h>
-
-
 
 #include <pandos_const.h>
 #include <pandos_types.h>
@@ -234,6 +230,7 @@ int main(void)
 
     /* Check outChild */
     q = outChild(procp[1]);
+    
     if (q == NULL || q != procp[1])
         adderrbuf("outChild failed on first child   ");
     q = outChild(procp[4]);
@@ -250,12 +247,13 @@ int main(void)
         if ((q = removeChild(procp[0])) == NULL)
             adderrbuf("removeChild: unexpected NULL   ");
     }
+    termprint("\nsono uscito dal for",0);
     if (removeChild(procp[0]) != NULL)
         adderrbuf("removeChild: removes too many children   ");
-
+    termprint("\npassato primo controllo",0);
     if (!emptyChild(procp[0]))
         adderrbuf("emptyChild: unexpected FALSE   ");
-
+    
     addokbuf("insertChild, removeChild and emptyChild ok   \n");
     addokbuf("process tree module ok      \n");
 
