@@ -17,7 +17,10 @@ static int *MININT = (int *)0x00000000;
 //per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoto => puoi usare pointer diretti anzichè copie
 //non esisterà un semaforo che punti da un lato ai liberi e dall'altro agli occupati
 HIDDEN semd_t semd_table[MAX_PROC + 2]; //Tabella Semafori forniti
-HIDDEN semd_PTR semdFree_h; //Lista DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
+
+//HO MESSO const PER RIMARCARE CHE IL RIFERIMENTO E' COSTANTE ALLA SENTINELLA. SOLO COSì (forse) POSSIAMO VERIFICARE SE LA LISTA E' VUOTA
+//UTILIZZANDO AL CONTEMPO __list_del
+const HIDDEN semd_PTR semdFree_h; //Lista DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
 HIDDEN semd_PTR semd_h; //Lista ORDINATA dei semafori attivi. Questa lista ha i dummy nodes. Testa di semd_h rimane sempre MININT 
 //non ha senso che semd_h sia circolare poichè ci sono MININT e MAXINT che sono gli estremi che non possono essere sorpassati e rimossi
 //in ogni caso sarebbe bastato un gioco di pointers tra MININT e MAXINT
