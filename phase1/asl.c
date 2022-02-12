@@ -13,19 +13,61 @@
 
 static int *MAXINT = (int *)0x7FFFFFFF; //2^31 -1 altrimenti numero con segno negativo. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
 static int *MININT = (int *)0x00000000;
-
 //per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoto => puoi usare pointer diretti anzichè copie
 //non esisterà un semaforo che punti da un lato ai liberi e dall'altro agli occupati
-HIDDEN semd_t semd_table[MAX_PROC + 2]; //Tabella Semafori forniti
+HIDDEN semd_t semd_table[MAX_PROC]; //Tabella Semafori forniti
 
-//HO MESSO const PER RIMARCARE CHE IL RIFERIMENTO E' COSTANTE ALLA SENTINELLA. SOLO COSì (forse) POSSIAMO VERIFICARE SE LA LISTA E' VUOTA
-//UTILIZZANDO AL CONTEMPO __list_del
-const HIDDEN semd_PTR semdFree_h; //Lista DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
-HIDDEN semd_PTR semd_h; //Lista ORDINATA dei semafori attivi. Questa lista ha i dummy nodes. Testa di semd_h rimane sempre MININT 
+HIDDEN struct list_head semdFree_h = LIST_HEAD_INIT(semdFree_h); //Lista DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
+HIDDEN struct list_head semd_h = LIST_HEAD_INIT(semd_h); //Lista ORDINATA dei semafori attivi. Questa lista ha i dummy nodes. Testa di semd_h rimane sempre MININT 
 //non ha senso che semd_h sia circolare poichè ci sono MININT e MAXINT che sono gli estremi che non possono essere sorpassati e rimossi
 //in ogni caso sarebbe bastato un gioco di pointers tra MININT e MAXINT
 
-HIDDEN semd_PTR semdFreeSentry;
+
+/*
+Inizializza la lista dei semdFree in
+modo da contenere tutti gli elementi
+della semdTable. Questo metodo
+viene invocato una volta sola durante
+l’inizializzazione della struttura dati.
+*/
+void initASL(){
+	INIT_LIST_HEAD(&semd_h);
+	INIT_LIST_HEAD(&semdFree_h);
+	//inizializzazione di QUEGLI elementi
+	for (int i = 0; i < MAX_PROC; i++){ //https://github.com/leti15/project_pandOS/blob/main/phase1/asl.c
+		list_add(&semd_table[i].s_link,&semdFree_h); //aggiunta in testa
+		semd_table[i].s_key = NULL; 
+		semd_table[i].s_link = *semdFree_h.next; 
+		//il link dell'i-esimo punta al next perché il primo è la sentinella
+		//ad ogni iterazione di ciclo il next non sarà mai lo stesso elemento
+		//perché aggiungo sempre in testa
+		mkEmptyProcQ(&(semd_table[i].s_procq)); //dalla documentazione sembra che debba mettere mkEmptyProcQ() anzichè NULL (pg 23 pdf)
+	}
+
+	//Inizializzazione Nodi dummy per lista dei semafori attivi (=> utilizzati). Lista circolare
+	/*semd_h = &semd_table[0];
+	semd_h->s_key = MININT;
+	mkEmptyProcQ(&(semd_h->s_procq));
+	semd_h->s_link.next = &(semd_table[MAX_PROC+1].s_link);
+	semd_h->s_link.prev = NULL; 
+
+	semd_PTR MAXINTDummyNode = &semd_table[MAX_PROC + 1];//container_of(semd_h->s_link.next, "semd_t", "s_link"); //puntatore alla struttura che contiene il prossimo connettore
+	MAXINTDummyNode->s_key = MAXINT;
+	mkEmptyProcQ(&(MAXINTDummyNode->s_procq));
+	MAXINTDummyNode->s_link.next = NULL; //NULL == 0? puntatore
+	MAXINTDummyNode->s_link.prev = &(semd_table[0].s_link);
+
+	//sentinella semafori non attivi => pronti per essere usati.
+	semdFree_h = semdFreeSentry;
+	//semdFree_h = &semd_table[1]; COMMENTO
+
+	//Collego QUEI semafori tra loro tramite i connettori. Lista circolare (evitando di usare l'operatore modulo per costruirla)
+	//__list_add(&(semd_table[1].s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[2].s_link)); COMMENTO
+	__list_add(&(semdFreeSentry->s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[1].s_link));
+
+	for (int i = 2; i < MAX_PROC; i++) __list_add(&(semd_table[i].s_link), &(semd_table[i-1].s_link), &(semd_table[i+1].s_link));
+*/
+}
 
 /*
 Ritorna il primo PCB dalla coda dei processi
@@ -41,10 +83,7 @@ coda dei descrittori liberi (semdFree_h).
 
 pcb_t* removeBlocked(int *semAdd){
 
-	//pedanteria assoluta
-	//if (semAdd == NULL) return NULL;
-
-	semd_PTR index = semd_h;
+	semd_PTR index = container_of(semd_h.next,semd_t,s_link);
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 		
@@ -62,7 +101,7 @@ pcb_t* removeBlocked(int *semAdd){
 
     			//...e lo attacca (o "cuce") alla testa di semdFree_h, facendo puntare ad index altro
     			//__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link)); COMMENTO
-    			__list_add(&(index->s_link), &(semdFree_h->s_link), semdFree_h->s_link.next); //LO ATTACCO DIETRO LA TESTA
+    			list_add(&(index->s_link), &semdFree_h); //LO ATTACCO DIETRO LA TESTA
     		}
 
     		if (toReturn != NULL) toReturn->p_semAdd = NULL;
@@ -91,7 +130,7 @@ pcb_t* outBlocked(pcb_t *p){
 
 	int *semAdd = p->p_semAdd;  //indirizzo del semaforo da cercare
 
-    semd_PTR index = semd_h;
+    semd_PTR index = container_of(semd_h.next,semd_t,s_link);
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 
@@ -108,7 +147,7 @@ pcb_t* outBlocked(pcb_t *p){
 
     			//...e lo attacca alla testa di semdFree_h, facendo puntare ad index altro
     			//__list_add(&(index->s_link), semdFree_h->s_link.prev, &(semdFree_h->s_link)); COMMENTO
-    			__list_add(&(index->s_link), &(semdFree_h->s_link), semdFree_h->s_link.next); //LO ATTACCO DIETRO LA TESTA
+    			list_add(&(index->s_link), &semdFree_h); //LO ATTACCO DIETRO LA TESTA
     		}
 
     		if (toReturn != NULL) toReturn->p_semAdd = NULL;
@@ -137,7 +176,7 @@ pcb_t* headBlocked(int *semAdd){
 	//pedanteria assoluta
 	//if (semAdd == NULL) return NULL;
 
-	semd_PTR index = semd_h;
+	semd_PTR index = container_of(semd_h.next,semd_t,s_link);
 
 	//controllo se semAdd compare nella ASL
 	while(index->s_key != MAXINT){
@@ -167,12 +206,9 @@ FALSE.
 */
 int insertBlocked(int *semAdd, pcb_t *p){
 
-	//pedanteria assoluta
-	//if (p == NULL || semAdd == NULL) return FALSE;
+	semd_PTR index = container_of(semd_h.next,semd_t,s_link); //copia puntatore temporaneo per scorrere. Si parte da MININT
 
-	semd_PTR index = semd_h; //copia puntatore temporaneo per scorrere. Si parte da MININT
-
-	while(index->s_key != MAXINT || index == NULL){
+	while(index->s_key != MAXINT || index != NULL){
 
 		//creato per comodità per l'elif e scorrimento. Se semd_h ha solo un semaforo impegnato => questo sarà MAXINT il quale è l'ultimo
 		semd_PTR nextIndex = container_of(index->s_link.next, semd_t, s_link); //chiedere se va passata la stringa o il tipo
@@ -194,15 +230,13 @@ int insertBlocked(int *semAdd, pcb_t *p){
         else if (nextIndex->s_key > semAdd || nextIndex->s_key == MAXINT){
 
         	//nuovo semaforo da allocare => facciamo check prima
-        	//if (list_empty(&(semdFree_h->s_link))) return TRUE; OPPURE
-        	if (list_empty(&(semdFreeSentry->s_link))) return TRUE;
-        	//if (semdFree_h == NULL) return TRUE;
+        	if (list_empty(&(semdFree_h))) return TRUE;
         	
         	//riguardo semdFree_h
         	//CONTROLLO CHE NON SIA LA SENTINELLA
 			// COMMENTO semd_PTR semToAdd = semdFree_h; //stacco/salvo la testa di semdFree_h la quale è circolare (prendo il primo sema4 libero)
-			semd_PTR semToAdd = container_of(semdFreeSentry->s_link.next, semd_t, s_link);
-			__list_del(semdFree_h->s_link.prev, semdFree_h->s_link.next);
+			semd_PTR semToAdd = container_of(semdFree_h.next, semd_t, s_link);
+			list_del(semdFree_h.next);
 
 			//sema4 init
 			//no assegnamento poichè mkEmptyProcQ è void
@@ -224,56 +258,4 @@ int insertBlocked(int *semAdd, pcb_t *p){
 
 	//pedante, non lo raggiungerà mai. Al massimo si fermerà prima di MAXINT
 	return FALSE;
-}
-
-/*
-Inizializza la lista dei semdFree in
-modo da contenere tutti gli elementi
-della semdTable. Questo metodo
-viene invocato una volta sola durante
-l’inizializzazione della struttura dati.
-*/
-void initASL(){
-
-	//inizializzazione di QUEGLI elementi
-	for (int i = 0; i < MAX_PROC + 2; i++){ //https://github.com/leti15/project_pandOS/blob/main/phase1/asl.c
-		semd_table[i].s_key = NULL; //NULL == 0? puntatore
-		//se risulterà che semd_table[i].s_link è una struttura gia' esistente => INIT_LIST_HEAD(&(semd_table[i].s_link)) la quale è VOID => no assegnamento ma comando
-		/*
-
-		semd_table[i].s_link = LIST_HEAD_INIT(semd_table[i].s_link); //altrimenti se avessi messo NULL NON RICONOSCIUTA COME "LISTA VUOTA" (ovvero che punta ambo i lati a se stessa) 
-		
-		*/
-		LIST_HEAD(s_link);
-		semd_table[i].s_link = s_link;
-		mkEmptyProcQ(&(semd_table[i].s_procq)); //dalla documentazione sembra che debba mettere mkEmptyProcQ() anzichè NULL (pg 23 pdf)
-	}
-
-	//Inizializzazione Nodi dummy per lista dei semafori attivi (=> utilizzati). Lista circolare
-	semd_h = &semd_table[0];
-	semd_h->s_key = MININT;
-	mkEmptyProcQ(&(semd_h->s_procq));
-	semd_h->s_link.next = &(semd_table[MAX_PROC+1].s_link);
-	semd_h->s_link.prev = NULL; //NULL == 0? puntatore
-
-	semd_PTR MAXINTDummyNode = &semd_table[MAX_PROC + 1];//container_of(semd_h->s_link.next, "semd_t", "s_link"); //puntatore alla struttura che contiene il prossimo connettore
-	MAXINTDummyNode->s_key = MAXINT;
-	mkEmptyProcQ(&(MAXINTDummyNode->s_procq));
-	MAXINTDummyNode->s_link.next = NULL; //NULL == 0? puntatore
-	MAXINTDummyNode->s_link.prev = &(semd_table[0].s_link);
-
-	//sentinella semafori non attivi => pronti per essere usati.
-	semdFree_h = semdFreeSentry;
-	//semdFree_h = &semd_table[1]; COMMENTO
-
-	//Collego QUEI semafori tra loro tramite i connettori. Lista circolare (evitando di usare l'operatore modulo per costruirla)
-	//__list_add(&(semd_table[1].s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[2].s_link)); COMMENTO
-	__list_add(&(semdFreeSentry->s_link), &(semd_table[MAX_PROC].s_link), &(semd_table[1].s_link));
-
-	for (int i = 2; i < MAX_PROC; i++) __list_add(&(semd_table[i].s_link), &(semd_table[i-1].s_link), &(semd_table[i+1].s_link));
-	
-	//pedante, nei fatti è stato già fatto
-	//__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semd_table[1].s_link)); COMMENTO
-	__list_add(&(semd_table[MAX_PROC].s_link), &(semd_table[MAX_PROC-1].s_link), &(semdFreeSentry->s_link));
-
 }
