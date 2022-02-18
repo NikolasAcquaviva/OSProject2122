@@ -1,6 +1,3 @@
-//CONTROLLO
-//COMMENTO
-
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "../listx.h"
@@ -12,16 +9,11 @@
 #define HIDDEN static //static globale => visibile solo nel file in cui compare la dichiarazione => è nascosta (hidden) altrove
 
 static int *MAXINT = (int *)0x7FFFFFFF; //2^31 -1 altrimenti numero con segno negativo. Univoco addr. di memoria del valore del sema4 è identificativo di quest'ultimo 
-static int *MININT = (int *)0x00000000;
 //per fugare dubbi: intersezione tra semdFree_h e semd_h è l'insieme vuoto
 //non esisterà un semaforo che punti da un lato ai liberi e dall'altro agli occupati
 HIDDEN semd_t semd_table[MAX_PROC]; //Tabella Semafori forniti
-
 HIDDEN struct list_head semdFree_h = LIST_HEAD_INIT(semdFree_h); //Lista (con sentinella) DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
 HIDDEN struct list_head semd_h = LIST_HEAD_INIT(semd_h); //Lista (con sentinella) ORDINATA dei semafori attivi 
-//non ha senso che semd_h sia circolare poichè ci sono MININT e MAXINT che sono gli estremi che non possono essere sorpassati e rimossi
-
-
 /*
 Inizializza la lista dei semdFree in
 modo da contenere tutti gli elementi
