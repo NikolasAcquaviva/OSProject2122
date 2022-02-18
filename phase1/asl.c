@@ -14,6 +14,7 @@ static int *MAXINT = (int *)0x7FFFFFFF; //2^31 -1 altrimenti numero con segno ne
 HIDDEN semd_t semd_table[MAX_PROC]; //Tabella Semafori forniti
 HIDDEN struct list_head semdFree_h = LIST_HEAD_INIT(semdFree_h); //Lista (con sentinella) DISORDINATA dei SEMD liberi o inutilizzati. E' circolare. (L'importante è prendere un semaforo libero)
 HIDDEN struct list_head semd_h = LIST_HEAD_INIT(semd_h); //Lista (con sentinella) ORDINATA dei semafori attivi 
+
 /*
 Inizializza la lista dei semdFree in
 modo da contenere tutti gli elementi

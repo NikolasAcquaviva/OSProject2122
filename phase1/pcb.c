@@ -11,7 +11,10 @@ di PCB con dimensione massima MAXPROC*/
 HIDDEN pcb_t pcbFree_table[MAXPROC];
 
 void initPcbs(){
+	//inizializzazione sentinella
 	INIT_LIST_HEAD(&pcbFree_h); 
+	//aggiunta dei pcb della table alla lista dei pcb liberi e aggiornamento dei campi
+	//p_list di ognuno perché puntino ai nodi della lista dei pcb liberi
 	for(int i = 0; i < MAXPROC; i++) {
 		list_add(&pcbFree_table[i].p_list, &pcbFree_h);
 		pcbFree_table[i].p_list = *pcbFree_h.next;
