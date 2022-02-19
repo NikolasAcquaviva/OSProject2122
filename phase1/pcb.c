@@ -29,6 +29,9 @@ void freePcb(pcb_t *p){
 }
 
 pcb_t *allocPcb(){
+	//i campi p_list di ogni pcb sono inizializzati in initpcbs()
+	//la lista dei pcb liberi cosi come, per ogni pcb, la lista 
+	//dei figli e dei fratelli sono liste bidirezionali con sentinella
 	if(list_empty(&pcbFree_h)) return NULL;
 	else{
 		//il primo vero nodo della lista dei pcb(ricordando che usiamo la sentinella)
