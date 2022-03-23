@@ -40,10 +40,10 @@ int main() {
 
 	passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
 	//popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
-	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
+	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler(); /*in Memory related constants */
 	passUpVector->tlb_refill_stackPtr = (memaddr) KERNELSTACK;
 	passUpVector->exception_stackPtr = (memaddr) KERNELSTACK;
-	passUpVector->exception_handler = (memaddr) exceptionHandler;
+	passUpVector->exception_handler = (memaddr) exceptionHandler();
 
 	softBlockCount = 0;
 	processCount = 0;
@@ -80,7 +80,7 @@ int main() {
 	RAMTOP(initState.reg_sp); //SP a ramtop
 
     /*process needs to have interrupts enabled, the processor Local Timer enabled, kernel-mode on => Status register constants */
-    initState.status = IEPON | IMON | TEBITON //parte non capita appieno https://github.com/AndreSkin/progetto_PandOs/blob/main/Fase_2/initial.c
+    initState.status = IEPON | IMON | TEBITON; //parte non capita appieno https://github.com/AndreSkin/progetto_PandOs/blob/main/Fase_2/initial.c
     //2.3 nel libro (non student guide). cosa significano?
 
     initState.pc_epc = (memaddr) test; /*(exec) PC all'indirizzo della funzione test di p2test */
