@@ -9,6 +9,7 @@ Cose da fare in SYSCALL:
     3. Inserire il valore di ritorno nel registro v0 del processo chiamante
     4. Incrementare il PC di una word (4.0B) per proseguire il flusso
 */
+int id = 1;
 
 void exceptionHandler(){
     
@@ -21,8 +22,28 @@ unsigned int arg2,unsigned int arg3){
 
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
-
+/*
+creo il processo:
+decido se alta o bassa prio;
+genero il puntatore alla struttura di supporto;
+gli assegno un id;
+;
+lo inserisco come figlio del current;
+ritorno l'id del processo;
+*/
+    pcb_t* nuovo;
+    freePcb(nuovo);
+    nuovo->p_s = statep; // Appunto personale: cercare la funzione di change
+    nuovo->p_prio = prio;
+    nuovo->p_supportStruct = supportp;
+    nuovo->p_pid = id;
+    id++;
+    insertChild(currentProcess, nuovo); 
+    // Ho messo "currentProcess" perché serve il processo 
+    // corrente, ma se non è usabile troverò un altro modo.
+    return nuovo->p_pid;
 }
+
 
 void TERM_PROCESS(int pid, int a2, int a3){
 
