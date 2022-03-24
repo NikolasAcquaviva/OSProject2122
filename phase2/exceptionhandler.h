@@ -1,5 +1,5 @@
-#ifndef SYSCALL_H
-#define SYSCALL_H
+#ifndef EXCEPTION_HANDLER_H
+#define EXCEPTION_HANDLER_H
 
 #include "../pandos_types.h"
 
