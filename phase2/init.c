@@ -40,10 +40,10 @@ int main() {
 
 	passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
 	//popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
-	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler(); /*in Memory related constants */
+	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
 	passUpVector->tlb_refill_stackPtr = (memaddr) KERNELSTACK;
 	passUpVector->exception_stackPtr = (memaddr) KERNELSTACK;
-	passUpVector->exception_handler = (memaddr) exceptionHandler();
+	passUpVector->exception_handler = (memaddr) exceptionHandler;
 
 	softBlockCount = 0;
 	processCount = 0;

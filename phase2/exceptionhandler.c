@@ -9,6 +9,11 @@ Cose da fare in SYSCALL:
     3. Inserire il valore di ritorno nel registro v0 del processo chiamante
     4. Incrementare il PC di una word (4.0B) per proseguire il flusso
 */
+
+void exceptionHandler(){
+    
+}
+
 unsigned int SYSCALL(unsigned int number,unsigned int arg1,
 unsigned int arg2,unsigned int arg3){
         
