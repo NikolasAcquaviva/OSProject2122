@@ -31,17 +31,22 @@ gli assegno un id;
 lo inserisco come figlio del current;
 ritorno l'id del processo;
 */
-    pcb_t* nuovo;
-    freePcb(nuovo);
-    nuovo->p_s = statep; // Appunto personale: cercare la funzione di change
-    nuovo->p_prio = prio;
-    nuovo->p_supportStruct = supportp;
-    nuovo->p_pid = id;
-    id++;
-    insertChild(currentProcess, nuovo); 
-    // Ho messo "currentProcess" perché serve il processo 
-    // corrente, ma se non è usabile troverò un altro modo.
-    return nuovo->p_pid;
+    pcb_t* nuovo = allocPcbs();
+    if (nuovo != NULL){ 
+        nuovo->p_s = statep; // Appunto personale: cercare la funzione di change
+        nuovo->p_prio = prio;
+        nuovo->p_supportStruct = supportp;
+        nuovo->p_pid = id;
+        id++;
+        insertProcQ(prio, nuovo);
+        insertChild(currentProcess, nuovo);
+        nuovo->p_time = 0;
+        nuovo->p_semAdd = NULL;
+        // Ho messo "currentProcess" perché serve il processo 
+        // corrente, ma se non è usabile troverò un altro modo.
+        return nuovo->p_pid;
+    }
+    else return -1;
 }
 
 
