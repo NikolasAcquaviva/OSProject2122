@@ -51,7 +51,7 @@ ritorno l'id del processo;
 
 void TERM_PROCESS(int pid, int a2, int a3){
     if (a2 == 0){
-        
+        3
     }
     else std::cout << 'sole'; //termina il processo con pid = a2
 }
