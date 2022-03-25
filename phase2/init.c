@@ -1,3 +1,5 @@
+// cerca AGGIUNTO o MODIFICATO per vedere cosa ho modificato dopo il cambio di politica dei pid
+
 #include "../pandos_const.h" //per dubbi cerca "?"
 #include "../pandos_types.h"
 #include "pcb.h"
@@ -9,6 +11,8 @@
 #define FALSE 0
 
 //dichiarazione delle  variabili globali
+//come politica dei pid è stato scelto un contatore
+int pidCounter = 1; //AGGIUNTO
 /* Number of started, but not yet terminated processes. */
 int processCount;
 /* Number of started, but not terminated processes that in are the
@@ -18,9 +22,14 @@ int softBlockCount;
 that are in the “ready” state. */
 //ricordarsi che quando un processo ad alta priorità esegue una yield(), bisogna
 //cercare di far eseguire gli altri, anche se è il primo della high priority q
-struct list_head HighPriorityReadyQueue; //capire TAIL
-unsigned int lastHighPriorityProcessHasYielded = NULL; //pid, solo per processi ad alta priorità. unsigned int perchè lo è memaddr
+struct list_head HighPriorityReadyQueue; //capire TAIL - coda dove gli elementi vengono semplicemente inseriti in fondo?
+
+//MODIFICATO
+unsigned int lastHighPriorityProcessHasYielded = NULL; //puntatore al pcb del processo associato.
+//solo per processi ad alta priorità. unsigned int perchè lo è memaddr
 //NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere
+//quando un processo ad alta priorità rilascia, ricordarsi di inserire il puntatore al pcb corrispondente dentro lastHighPriorityProcessHasYielded
+
 /* Tail pointer to a queue of pcbs (related to low priority processes) 
 that are in the “ready” state. */
 struct list_head LowPriorityReadyQueue;
@@ -59,7 +68,8 @@ int main() {
 
 	//load interval timer globale. pg 21 pdf capitolo rivisto
 	LDIT(PSECOND); //100000 - ?"scrivendolo nel registro corrispondente" ci serve un indirizzo? DEV2ON 0x00000004 (dubbio sorto dalle slide,
-	// sul libro è sciallato e non c'è nessun accenno a ciò)
+	// sul libro è sciallato e non c'è nessun accenno a ciò).
+	//bisogna convertire anche qui? non credo
 
 	pcb_PTR initProc = AllocPcb(); //init anche di p_list? avviene/avvenuto già in pcb.c?
 	initProc->p_time = 0;
@@ -70,7 +80,12 @@ int main() {
 	initProc->p_sib = NULL;
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità. gestire già la politica di assegnamento dei pid? (puntatore
 	// univoco a struttura pcb_t)
-	initProc->p_pid = (int)&initProc; //identificativo univoco ovvero suo indirizzo logico di memoria. Gli anni scorsi non c'era questo campo
+	
+	//prima
+	//initProc->p_pid = (int)&initProc; //identificativo univoco ovvero suo indirizzo logico di memoria. Gli anni scorsi non c'era questo campo
+	//ora
+	initProc->p_pid = pidCounter; //MODIFICATO
+	pidCounter+=1;
 
 	processCount+=1;
 
