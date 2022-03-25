@@ -14,6 +14,8 @@ int processCount;
 /* Number of started, but not terminated processes that in are the
 “blocked” state  due to an I/O or timer request */
 int softBlockCount;
+//massimo numero di processi attivi,utile per il pid progressivo
+int maxPid;
 /* Tail pointer to a queue of pcbs (related to high priority processes) 
 that are in the “ready” state. */
 //ricordarsi che quando un processo ad alta priorità esegue una yield(), bisogna
@@ -70,7 +72,7 @@ int main() {
 	initProc->p_sib = NULL;
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità. gestire già la politica di assegnamento dei pid? (puntatore
 	// univoco a struttura pcb_t)
-	initProc->p_pid = (int)&initProc; //identificativo univoco ovvero suo indirizzo logico di memoria. Gli anni scorsi non c'era questo campo
+	initProc->p_pid = 1; //identificativo univoco ovvero suo indirizzo logico di memoria. Gli anni scorsi non c'era questo campo
 
 	processCount+=1;
 

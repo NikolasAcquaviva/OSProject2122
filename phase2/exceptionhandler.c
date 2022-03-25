@@ -4,8 +4,6 @@
 #include "exceptionhandler.h"
 #include "init.h"
 
-//progressive unique id for processes
-int id = 1;
 
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
@@ -47,7 +45,7 @@ void PassUp_Or_Die(int index){
     }
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
-        currentProcess->p_supportStruct->sup_exceptState[index] = *BIOSDATAPAGE;
+        currentProcess->p_supportStruct->sup_exceptState[index] = *((state_t*) BIOSDATAPAGE);
         //carichiamo il context dal giusto campo della struttura di supporto
         context_t rightContext = currentProcess->p_supportStruct->sup_exceptContext[index];
         LDCXT(rightContext.stackPtr, rightContext.status, rightContext.pc);
@@ -88,7 +86,8 @@ ritorno l'id del processo;
         nuovo->p_s = *statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
-        nuovo->p_pid = id;
+        nuovo->p_pid = maxPid+1;
+        maxActiveProcess++;
         id++;
         insertProcQ(prio, nuovo);
         insertChild(currentProcess, nuovo);

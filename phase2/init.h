@@ -10,6 +10,7 @@
 
 //toDO: lasciare le variabili che davvero devono essere globali
 extern int processCount;
+extern int maxPid;
 extern int softBlockCount;
 extern struct list_head HighPriorityReadyQueue;
 extern unsigned int lastHighPriorityProcessHasYielded = NULL;
