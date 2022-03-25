@@ -2,6 +2,17 @@
 #include "../pandos_types.h"
 #include <umps3/umps/libumps.h>
 #include "exceptionhandler.h"
+
+void exceptionHandler(){
+    memaddr Cause = getCAUSE(); //otteniamo il contenuto del registro cause
+    int exCode = ((Cause & 127) >> 2); //codice eccezione dal registro cause
+    
+    if(exCode == 0) InterruptExceptionHandler();
+    else if(exCode <= 3) TLBExceptionHandler();
+    else if(exCode == 8) SYSCALLExceptionHandler();
+    else if (exCode <= 12) TrapExceptionHandler();
+}
+
 /*
 Cose da fare in SYSCALL:
     1. Salvare lo stato del processo(dopo averlo interrotto) e passare al kernel
@@ -10,12 +21,7 @@ Cose da fare in SYSCALL:
     4. Incrementare il PC di una word (4.0B) per proseguire il flusso
 */
 
-void exceptionHandler(){
-    
-}
-
-unsigned int SYSCALL(unsigned int number,unsigned int arg1,
-unsigned int arg2,unsigned int arg3){
+void SYSCALLExceptionHandler(){
         
 }
 

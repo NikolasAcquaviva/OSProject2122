@@ -4,6 +4,7 @@
 #include "../pandos_types.h"
 
 void exceptionHandler();
+void SYSCALLExceptionHandler();
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp);
 void TERM_PROCESS(int pid, int a2, int a3);
 void _PASSEREN(int *semaddr, int a2, int a3);
