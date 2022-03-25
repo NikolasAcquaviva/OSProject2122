@@ -4,9 +4,10 @@
 #include "../pandos_types.h"
 
 void GeneralExceptionHandler();
+void PassUp_Or_Die(int index);
 void TLBExceptionHandler();
 void TrapExceptionHandler();
-void InterruptExceptionHandler();
+extern void InterruptExceptionHandler();
 void SYSCALLExceptionHandler();
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp);
 void TERM_PROCESS(int pid, int a2, int a3);

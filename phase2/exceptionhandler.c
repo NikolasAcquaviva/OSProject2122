@@ -4,7 +4,10 @@
 #include "exceptionhandler.h"
 #include "init.h"
 
+//progressive unique id for processes
+int id = 1;
 
+//Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
     memaddr Cause = getCAUSE(); //otteniamo il contenuto del registro cause
     int exCode = ((Cause & 127) >> 2); //codice eccezione dal registro cause
@@ -31,16 +34,40 @@ void GeneralExceptionHandler(){
     }
 }
 
+//Funzione Pass-up or Die per tutte le eccezioni diverse da Syscall con codice non positivo e Interrupts
+//Serve l'indice per distinguere tra page fault o eccezione generale
+void PassUp_Or_Die(int index){
+    if(currentProcess->p_supportStruct == NULL){
+        //Siamo nel caso die
+        TERM_PROCESS();
+        //rimuoviamo il processo terminato dalla lista dei figli del padre
+        outChild(currentProcess);
+        //numero processi cambia dopo la terminazione del processo corrente
+        processCount--;
+    }
+    else{
+        //salviamo lo stato nel giusto campo della struttura di supporto
+        currentProcess->p_supportStruct->sup_exceptState[index] = *BIOSDATAPAGE;
+        //carichiamo il context dal giusto campo della struttura di supporto
+        context_t rightContext = currentProcess->p_supportStruct->sup_exceptContext[index];
+        LDCXT(rightContext.stackPtr, rightContext.status, rightContext.pc);
+    }
+}
+
+void TLBExceptionHandler(){
+
+}
+
+void TrapExceptionHandler(){
+
+}
 
 /*
 Cose da fare in SYSCALL:
-    1. Salvare lo stato del processo(dopo averlo interrotto) e passare al kernel
     2. Eseguire una delle 10 chiamate in base al codice passato come primo parametro
     3. Inserire il valore di ritorno nel registro v0 del processo chiamante
-    4. Incrementare il PC di una word (4.0B) per proseguire il flusso
+    4. Incrementare il PC di una word (4.0B) per proseguire il flusso (se bloccante)
 */
-int id = 1;
-
 void SYSCALLExceptionHandler(){
         
 }

@@ -33,7 +33,7 @@ int deviceSemaphores[NoDEVICE];
 //variable could be defined somewhere else => specifichiamo che provengono dall'esterno
 extern void test();
 extern void uTLB_RefillHandler();
-extern void exceptionHandler();
+extern void GeneralExceptionHandler();
 
 
 int main() {
