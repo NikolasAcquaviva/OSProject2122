@@ -39,7 +39,7 @@ gli assegno un id;
 lo inserisco come figlio del current;
 ritorno l'id del processo;
 */
-    pcb_t* nuovo = allocPcbs();
+    pcb_t* nuovo = allocPcb();
     if (nuovo != NULL){
         nuovo->p_s = statep;
         nuovo->p_prio = prio;
