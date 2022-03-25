@@ -4,14 +4,31 @@
 #include "exceptionhandler.h"
 #include "init.h"
 
-void exceptionHandler(){
+
+void GeneralExceptionHandler(){
     memaddr Cause = getCAUSE(); //otteniamo il contenuto del registro cause
     int exCode = ((Cause & 127) >> 2); //codice eccezione dal registro cause
     
-    if(exCode == 0) InterruptExceptionHandler();
-    else if(exCode <= 3) TLBExceptionHandler();
-    else if(exCode == 8) SYSCALLExceptionHandler();
-    else if (exCode <= 12) TrapExceptionHandler();
+    if(exCode == 0) {
+        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
+        currentProcess->p_supportStruct->pc = InterruptExceptionHandler;
+        reg_t9 = InterruptExceptionHandler;
+    }
+    else if(exCode <= 3) {
+        currentProcess->p_supportStruct->stackPtr = KERNELSTACK
+        currentProcess->p_supportStruct->pc = TLBExceptionHandler;
+        reg_t9 = TLBExceptionHandler;
+    }
+    else if(exCode == 8) {
+        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
+        currentProcess->p_supportStruct->pc = SYSCALLExceptionHandler;
+        reg_t9 = SYSCALLExceptionHandler;
+    }
+    else if (exCode <= 12) {
+        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
+        currentProcess->p_supportStruct->pc = TrapExceptionHandler;
+        reg_t9 = TrapExceptionHandler;
+    }
 }
 
 
@@ -41,7 +58,7 @@ ritorno l'id del processo;
 */
     pcb_t* nuovo = allocPcb();
     if (nuovo != NULL){
-        nuovo->p_s = statep;
+        nuovo->p_s = *statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = id;
