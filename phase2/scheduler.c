@@ -1,3 +1,5 @@
+// cerca AGGIUNTO o MODIFICATO per vedere cosa ho modificato dopo il cambio di politica dei pid
+
 //toDO: ricordarsi di settare la flag globale lastHighPriorityProcessHasYielded quando si esegue la syscall YIELD
 //setSTATUS/TIMER pg 71/158
 #include "../pandos_const.h"
@@ -43,7 +45,7 @@ void scheduler() {
 
 		pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue); //testa NON rimossa (peek)
 
-		//e se è il primo processo nella coda ad alta priorità pronto per essere eseguito (puntatore pcb = pid processo)
+		//e se è il primo processo nella coda ad alta priorità pronto per essere eseguito (riconosciuto tramite suo puntatore pcb)
 		if (headHighPriorityQueue == lastHighPriorityProcessHasYielded) {
 
 			//controlla che non sia l'unico, ovvero che il suo next non sia la sentinella
@@ -109,6 +111,10 @@ void scheduler() {
 
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
+
+		//gli assegno un pid (?)
+		currentProcess->p_pid = pidCounter;
+		pidCounter += 1;
 
 		//ed INFINE carico lo stato del processo nel processore
 		LDST(&(currentProcess->p_s));
