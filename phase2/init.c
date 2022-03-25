@@ -18,12 +18,12 @@ int softBlockCount;
 that are in the “ready” state. */
 //ricordarsi che quando un processo ad alta priorità esegue una yield(), bisogna
 //cercare di far eseguire gli altri, anche se è il primo della high priority q
-struct list_head readyQueueHighPriority; //capire TAIL
-unsigned int lastProcessHasYielded[1][1] = [NULL][NULL]; //solo per processi ad alta priorità. unsigned int perchè lo è memaddr. nel primo ci sarà il pid,
-//nel secondo ci sarà un booleano. NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere
+struct list_head HighPriorityReadyQueue; //capire TAIL
+unsigned int lastHighPriorityProcessHasYielded = NULL; //pid, solo per processi ad alta priorità. unsigned int perchè lo è memaddr
+//NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere
 /* Tail pointer to a queue of pcbs (related to low priority processes) 
 that are in the “ready” state. */
-struct list_head readyQueueLowPriority;
+struct list_head LowPriorityReadyQueue;
 /* Pointer to the current pcb that is in running state */
 //the current (and only) executing process 
 pcb_PTR currentProcess;
@@ -40,17 +40,17 @@ int main() {
 
 	passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
 	//popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
-	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
+	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler(); /*in Memory related constants */
 	passUpVector->tlb_refill_stackPtr = (memaddr) KERNELSTACK;
 	passUpVector->exception_stackPtr = (memaddr) KERNELSTACK;
-	passUpVector->exception_handler = (memaddr) exceptionHandler;
+	passUpVector->exception_handler = (memaddr) exceptionHandler();
 
 	softBlockCount = 0;
 	processCount = 0;
 	currentProcess = NULL;
 
-	mkEmptyProcQ(&readyQueueLowPriority);
-	mkEmptyProcQ(&readyQueueHighPriority);
+	mkEmptyProcQ(&LowPriorityReadyQueue);
+	mkEmptyProcQ(&HighPriorityReadyQueue);
 
 	initPcbs();
 	initASL();
@@ -61,7 +61,7 @@ int main() {
 	LDIT(PSECOND); //100000 - ?"scrivendolo nel registro corrispondente" ci serve un indirizzo? DEV2ON 0x00000004 (dubbio sorto dalle slide,
 	// sul libro è sciallato e non c'è nessun accenno a ciò)
 
-	pcb_PTR initProc = AllocPcb();
+	pcb_PTR initProc = AllocPcb(); //init anche di p_list? avviene/avvenuto già in pcb.c?
 	initProc->p_time = 0;
 	initProc->p_semAdd = NULL;
 	initProc->p_supportStruct = NULL;
@@ -70,6 +70,7 @@ int main() {
 	initProc->p_sib = NULL;
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità. gestire già la politica di assegnamento dei pid? (puntatore
 	// univoco a struttura pcb_t)
+	initProc->p_pid = (int)&initProc; //identificativo univoco ovvero suo indirizzo logico di memoria. Gli anni scorsi non c'era questo campo
 
 	processCount+=1;
 
@@ -88,7 +89,7 @@ int main() {
 
     initProc->p_s = initState;
 
-    insertProcQ(&(readyQueueLowPriority), initProc);
+    insertProcQ(&(LowPriorityReadyQueue), initProc);
 
 	scheduler();
 
