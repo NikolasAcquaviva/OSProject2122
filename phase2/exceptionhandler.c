@@ -2,6 +2,7 @@
 #include "../pandos_types.h"
 #include <umps3/umps/libumps.h>
 #include "exceptionhandler.h"
+#include "init.h"
 /*
 Cose da fare in SYSCALL:
     1. Salvare lo stato del processo(dopo averlo interrotto) e passare al kernel
@@ -32,8 +33,8 @@ lo inserisco come figlio del current;
 ritorno l'id del processo;
 */
     pcb_t* nuovo = allocPcbs();
-    if (nuovo != NULL){ 
-        nuovo->p_s = statep; // Appunto personale: cercare la funzione di change
+    if (nuovo != NULL){
+        nuovo->p_s = statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = id;
@@ -42,8 +43,6 @@ ritorno l'id del processo;
         insertChild(currentProcess, nuovo);
         nuovo->p_time = 0;
         nuovo->p_semAdd = NULL;
-        // Ho messo "currentProcess" perché serve il processo 
-        // corrente, ma se non è usabile troverò un altro modo.
         return nuovo->p_pid;
     }
     else return -1;
@@ -51,7 +50,10 @@ ritorno l'id del processo;
 
 
 void TERM_PROCESS(int pid, int a2, int a3){
-
+    if (a2 == 0){
+        
+    }
+    else std::cout << 'sole'; //termina il processo con pid = a2
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
