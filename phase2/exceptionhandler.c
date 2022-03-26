@@ -9,27 +9,27 @@
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
     memaddr Cause = getCAUSE(); //otteniamo il contenuto del registro cause
-    int exCode = ((Cause & 127) >> 2); //codice eccezione dal registro cause
+    int exCode = ((Cause & CAUSEMASK) >> 2); //codice eccezione dal registro cause
     
     if(exCode == 0) {
         currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
         currentProcess->p_supportStruct->pc = InterruptExceptionHandler;
-        reg_t9 = InterruptExceptionHandler;
+        currentProcess->p_s.reg_t9 = InterruptExceptionHandler;
     }
     else if(exCode <= 3) {
         currentProcess->p_supportStruct->stackPtr = KERNELSTACK
         currentProcess->p_supportStruct->pc = TLBExceptionHandler;
-        reg_t9 = TLBExceptionHandler;
+        currentProcess->p_s.reg_t9 = TLBExceptionHandler;
     }
     else if(exCode == 8) {
         currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
         currentProcess->p_supportStruct->pc = SYSCALLExceptionHandler;
-        reg_t9 = SYSCALLExceptionHandler;
+        currentProcess->p_s.reg_t9 = SYSCALLExceptionHandler;
     }
     else if (exCode <= 12) {
         currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
         currentProcess->p_supportStruct->pc = TrapExceptionHandler;
-        reg_t9 = TrapExceptionHandler;
+        currentProcess->p_s.reg_t9 = TrapExceptionHandler;
     }
 }
 
@@ -38,11 +38,13 @@ void GeneralExceptionHandler(){
 void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
         //Siamo nel caso die
-        TERM_PROCESS();
         //rimuoviamo il processo terminato dalla lista dei figli del padre
         outChild(currentProcess);
         //numero processi cambia dopo la terminazione del processo corrente
         processCount--;
+        
+        TERM_PROCESS();
+        
     }
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
@@ -54,11 +56,11 @@ void PassUp_Or_Die(int index){
 }
 
 void TLBExceptionHandler(){
-
+    PassUp_Or_Die(PGFAULTEXCEPT);
 }
 
 void TrapExceptionHandler(){
-
+    PassUp_Or_Die(GENERALEXCEPT);
 }
 
 /*
@@ -68,7 +70,78 @@ Cose da fare in SYSCALL:
     4. Incrementare il PC di una word (4.0B) per proseguire il flusso (se bloccante)
 */
 void SYSCALLExceptionHandler(){
-        
+    //se il codice della syscall è positivo(ma valido), pass-up or die
+    //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
+    
+    //prendiamo i registri
+    int a0 = currentProcess->p_s.reg_a0,
+        a1 = currentProcess->p_s.reg_a1,
+        a2 = currentProcess->p_s.reg_a2,
+        a3 = currentProcess->p_s.reg_a3;
+    //check user mode
+    int user = currentProcess->p_supportStruct.sup_exceptState[GENERALEXCEPT].status;
+    user = (user << 28) >> 31;
+    if(a0 <= -1 && a0 >= -10 && user == 1){
+        currentProcess->p_supportStruct->sup_exceptContext[GENERALEXCEPT].cause = 10;
+        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
+        currentProcess->p_supportStruct->pc = TrapExceptionHandler;
+        currentProcess->p_s.reg_t9 = TrapExceptionHandler;
+    }
+    else if(a0 > 0 && <= 10) PassUp_Or_Die();
+    else{
+        switch (a0){
+        case '-1':
+            currentProcess->p_s.reg_v0 = CREATE_PROCESS(a1,a2,a3);
+            break;
+        case '-2':
+            TERM_PROCESS(a1,a2,a3);
+            break;
+        case '-3':
+            _PASSEREN(a1,a2,a3);
+            break;
+        case '-4':
+            _VERHOGEN(a1,a2,a3);
+            break;
+        case '-5':
+            currentProcess->p_s.reg_v0 = DO_IO(a1,a2,a3);
+            break;
+        case '-6':
+            currentProcess->p_s.reg_v0 = GET_CPU_TIME(a1,a2,a3);
+            break;
+        case '-7':
+            WAIT_FOR_CLOCK(a1,a2,a3);
+            break;
+        case '-8':
+            GET_SUPPORT_DATA(a1,a2,a3);
+            break;
+        case '-9':
+            currentProcess->p_s.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
+            break;
+        case '-10':
+            _YIELD(a1,a2,a3);
+            break;
+        default:
+            //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
+            currentProcess->p_supportStruct->sup_exceptContext[GENERALEXCEPT].cause = 10;
+            currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
+            currentProcess->p_supportStruct->pc = TrapExceptionHandler;
+            currentProcess->p_s.reg_t9 = TrapExceptionHandler;
+            break;
+        }
+
+        /*
+            Se arrivo qui significa che sono entrato in uno dei casi
+            in cui la syscall aveva un codice nel range negativo ed 
+            inoltre non termina il processo.
+            Dobbiamo caricare lo stato salvato nella bios data page
+            e incrementare di una word il program counter per 
+            non avere il loop infinito di syscalls
+        */
+
+        LDST((STATE_PTR) BIOSDATAPAGE);
+        currentProcess->p_s.pc_epc += 4;
+    }
+    
 }
 
 
