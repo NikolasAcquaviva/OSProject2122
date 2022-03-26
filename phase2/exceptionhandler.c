@@ -106,7 +106,11 @@ void TERM_PROCESS(int pid, int a2, int a3){
     else {
         pcb_t* tmp = currentProcess;
         while(tmp->p_pid != a2){
-             tmp = tmp->p_child;
+            if (tmp->p_s == blocked){
+                pcb_t *exist = outBlocked(tmp)
+                if (exist != NULL) incrementa valore semaforo;
+            } 
+            tmp = tmp->p_child;
         }
         tmp = tmp->p_child;
         outChild(tmp);
