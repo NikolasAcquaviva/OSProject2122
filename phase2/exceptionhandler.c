@@ -3,6 +3,7 @@
 #include <umps3/umps/libumps.h>
 #include "exceptionhandler.h"
 #include "init.h"
+#include "scheduler.h"
 
 
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
@@ -100,9 +101,20 @@ ritorno l'id del processo;
 
 void TERM_PROCESS(int pid, int a2, int a3){
     if (a2 == 0){
-        3
+        TERM_PROCESS(pid, pid, a3);
     }
-    else std::cout << 'sole'; //termina il processo con pid = a2
+    else {
+        pcb_t* tmp = currentProcess;
+        while(tmp->p_pid != a2){
+             tmp = tmp->p_child;
+        }
+        tmp = tmp->p_child;
+        outChild(tmp);
+        if (tmp->p_prio = HighPriority) removeProcQ(&HighPriorityReadyQueque);
+        else removeProcQ(&LowPriorityReadyQueque);
+        TERM_PROCESS(pid, tmp->p_child->p_pid, a3);
+    }
+    scheduler();
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
