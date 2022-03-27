@@ -36,7 +36,6 @@ void scheduler() {
 	}
 	//default values
 	currentProcess = NULL;
-	lastHighPriorityProcessHasYielded = FALSE;
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)

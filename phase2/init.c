@@ -67,7 +67,7 @@ int main() {
 
 	for (int i = 0; i < NoDEVICE; i++) deviceSemaphores[i] = 0;
 
-	//load interval timer globale. pg 21 pdf capitolo rivisto
+	//load interval timer globale. pg 21 pdf capitolo rivisto. (Interval) timer è un vero e proprio dispositivo fisico che fa svolgere al kernel il context switch
 	LDIT(PSECOND); //100000 - ?"scrivendolo nel registro corrispondente" ci serve un indirizzo? DEV2ON 0x00000004 (dubbio sorto dalle slide,
 	// sul libro è sciallato e non c'è nessun accenno a ciò).
 	//bisogna convertire anche qui? non credo
