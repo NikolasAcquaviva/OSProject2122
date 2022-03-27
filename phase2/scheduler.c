@@ -19,7 +19,7 @@ extern pcb_PTR currentProcess;
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 
 //flags
-unsigned int lastHighPriorityProcessHasYielded;
+pcb_PTR lastHighPriorityProcessHasYielded;
 unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 //priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. x = 5ms
 
@@ -36,7 +36,6 @@ void scheduler() {
 	}
 	//default values
 	currentProcess = NULL;
-	lastHighPriorityProcessHasYielded = FALSE;
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
