@@ -19,7 +19,6 @@ extern pcb_PTR currentProcess;
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 
 //flags
-pcb_PTR lastHighPriorityProcessHasYielded;
 unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 //priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. x = 5ms
 

@@ -26,7 +26,7 @@ that are in the “ready” state. */
 struct list_head HighPriorityReadyQueue; //capire TAIL - coda dove gli elementi vengono semplicemente inseriti in fondo?
 
 //MODIFICATO
-unsigned int lastHighPriorityProcessHasYielded = NULL; //puntatore al pcb del processo associato.
+pcb_PTR lastHighPriorityProcessHasYielded = NULL; //puntatore al pcb del processo associato.
 //solo per processi ad alta priorità. unsigned int perchè lo è memaddr
 //NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere
 //quando un processo ad alta priorità rilascia, ricordarsi di inserire il puntatore al pcb corrispondente dentro lastHighPriorityProcessHasYielded
