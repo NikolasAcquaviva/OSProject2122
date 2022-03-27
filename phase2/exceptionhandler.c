@@ -139,7 +139,7 @@ void SYSCALLExceptionHandler(){
         */
 
         LDST((STATE_PTR) BIOSDATAPAGE);
-        currentProcess->p_s.pc_epc += 4;
+        currentProcess->p_s.pc_epc += WORDLEN;
     }
     
 }
@@ -206,22 +206,42 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
 
 }
 
+// We've to return the accumulated processor time in 
+// microseconds used by the requesting process
 int GET_CPU_TIME(int a1, int a2, int a3){
+    cpu_t currentTime; 
+    STCK(currentTime);
+    currentProcess->p_time = currentTime-startTime;
+    return currentProcess->p_time;
+}
+
+void WAIT_FOR_CLOCK(int a1, int a2, int a3){
 
 }
 
-int WAIT_FOR_CLOCK(int a1, int a2, int a3){
-
-}
-
+// We've to return the support data structure for 
+// the current process, if isn't provided return NULL
 support_t* GET_SUPPORT_DATA(int a1, int a2, int a3){
-
+    return currentProcess->p_supportStruct;
 }
 
+// get pid of current process if parent is equal to 0
+// get pid of the parent process otherwise
 int GET_PROCESS_ID(int parent, int a2, int a3){
-
+    if(parent) return currentProcess->p_parent->p_pid;
+    else return currentProcess->p_pid;
 }
 
-int _YIELD(int a1, int a2, int a3){
-
+// take out the current process from its queue
+// and reinsert enqueuing it in the queue
+void _YIELD(int a1, int a2, int a3){
+    if(currentProcess->p_prio){ //coda ad alta priorità
+        outProcQ(&HighPriorityReadyQueue,currentProcess);
+        insertProcQ(&HighPriorityReadyQueue,currentProcess);
+        lastHighPriorityProcessHasYielded = TRUE;
+    }
+    else{
+        outProcQ(&LowPriorityReadyQueue,currentProcess);
+        insertPRocQ(&LowPriorityReadyQueue,currentProcess);
+    }
 }

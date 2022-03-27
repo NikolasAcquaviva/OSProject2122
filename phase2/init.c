@@ -72,7 +72,7 @@ int main() {
 	// sul libro è sciallato e non c'è nessun accenno a ciò).
 	//bisogna convertire anche qui? non credo
 
-	pcb_PTR initProc = AllocPcb(); //init anche di p_list? avviene/avvenuto già in pcb.c?
+	pcb_PTR initProc = allocPcb(); //init anche di p_list? avviene/avvenuto già in pcb.c?
 	initProc->p_time = 0;
 	initProc->p_semAdd = NULL;
 	initProc->p_supportStruct = NULL;

@@ -4,3 +4,4 @@
 #include "asl.h"
 #include "init.h"
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
+extern cpu_t startTime;
