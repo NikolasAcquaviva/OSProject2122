@@ -75,7 +75,7 @@ void scheduler() {
 			}
 		}
 		//altrimenti come consuetudine fai partire il processo con più alta priorità in attesa
-		//la coda ad alta priorità è necessariamente non vuota, poichè c'è almeno il processo che ha svolto la YIELD()
+		//la coda ad alta priorità è necessariamente non vuota, poichè c'è almeno il processo che ha svolto la YIELD() => non può essere null
 		//quindi dal momento che abbiamo scartato l'ipotesi che il primo ed eventuale unico elemento sia il processo che ha svolto la yield,
 		//possiamo tranquillamente prendere il primo dalla high priority ready queue
 		else {
@@ -94,6 +94,7 @@ void scheduler() {
 			highPriorityProcessChosen = TRUE;
 		}
 	}
+	
 	//resetto la flag
 	lastHighPriorityProcessHasYielded = NULL;
 
