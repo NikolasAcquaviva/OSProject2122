@@ -23,17 +23,17 @@ int softBlockCount;
 that are in the “ready” state. */
 //ricordarsi che quando un processo ad alta priorità esegue una yield(), bisogna
 //cercare di far eseguire gli altri, anche se è il primo della high priority q
-struct list_head HighPriorityReadyQueue; //capire TAIL - coda dove gli elementi vengono semplicemente inseriti in fondo?
+struct list_head HighPriorityReadyQueue;// = LIST_HEAD_INIT(HighPriorityReadyQueue); //capire TAIL - coda dove gli elementi vengono semplicemente inseriti in fondo?
 
 //MODIFICATO
-pcb_PTR lastHighPriorityProcessHasYielded = NULL; //puntatore al pcb del processo associato.
-//solo per processi ad alta priorità. unsigned int perchè lo è memaddr
+pcb_PTR lastProcessHasYielded = NULL; //puntatore al pcb del processo associato.
+//unsigned int perchè lo è memaddr
 //NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere
-//quando un processo ad alta priorità rilascia, ricordarsi di inserire il puntatore al pcb corrispondente dentro lastHighPriorityProcessHasYielded
+//quando un processo rilascia, ricordarsi di inserire il puntatore al pcb corrispondente dentro lastProcessHasYielded
 
 /* Tail pointer to a queue of pcbs (related to low priority processes) 
 that are in the “ready” state. */
-struct list_head LowPriorityReadyQueue;
+struct list_head LowPriorityReadyQueue;// = LIST_HEAD_INIT(LowPriorityReadyQueue);
 /* Pointer to the current pcb that is in running state */
 //the current (and only) executing process 
 pcb_PTR currentProcess;
@@ -72,13 +72,14 @@ int main() {
 	// sul libro è sciallato e non c'è nessun accenno a ciò).
 	//bisogna convertire anche qui? non credo
 
-	pcb_PTR initProc = allocPcb(); //init anche di p_list? avviene/avvenuto già in pcb.c?
+	pcb_PTR initProc = allocPcb(); //init anche di p_list? avviene/avvenuto già in pcb.c? sembra di no...
 	initProc->p_time = 0;
 	initProc->p_semAdd = NULL;
 	initProc->p_supportStruct = NULL;
 	initProc->p_parent = NULL; //"set all the process Tree fields to NULL"
-	initProc->p_child = NULL; //commento di nikolas: impossibile assegnare un valore di tipo (void*) a struct list head
-	initProc->p_sib = NULL;   //usare la funzione di lista per inizializzazione di lista vuota. riguardare come avevamo fatto nei moduli di fase 1 per praticita
+	initProc->p_list = INIT_LIST_HEAD(&(initProc->p_list)); //INIT_LIST_HEAD anzichè LIST_HEAD_INIT perchè la seconda restituisce una struct list head nuova, mentre noi dobbiamo inizializzare le preesistenti
+	initProc->p_child = INIT_LIST_HEAD(&(initProc->p_child)); //commento di nikolas: impossibile assegnare un valore di tipo (void*) a struct list head
+	initProc->p_sib = INIT_LIST_HEAD(&(initProc->p_sib));   //usare la funzione di lista per inizializzazione di lista vuota. riguardare come avevamo fatto nei moduli di fase 1 per praticita
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità. gestire già la politica di assegnamento dei pid? (puntatore
 	// univoco a struttura pcb_t)
 	
