@@ -1,7 +1,8 @@
-#include "../pandos_const.h"
+#ifndef SCHEDULER_H
+#define SCHEDULER_H
+
 #include "../pandos_types.h"
-#include "pcb.h"
-#include "asl.h"
-#include "init.h"
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 extern cpu_t startTime;
+
+#endif

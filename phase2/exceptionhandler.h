@@ -1,8 +1,6 @@
 #ifndef EXCEPTION_HANDLER_H
 #define EXCEPTION_HANDLER_H
 
-#include "../pandos_types.h"
-
 void GeneralExceptionHandler();
 static void PassUp_Or_Die(int index);
 static void TLBExceptionHandler();

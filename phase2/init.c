@@ -50,10 +50,10 @@ int main() {
 
 	passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
 	//popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
-	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler(); /*in Memory related constants */
+	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
 	passUpVector->tlb_refill_stackPtr = (memaddr) KERNELSTACK;
 	passUpVector->exception_stackPtr = (memaddr) KERNELSTACK;
-	passUpVector->exception_handler = (memaddr) exceptionHandler();
+	passUpVector->exception_handler = (memaddr) GeneralExceptionHandler;
 
 	softBlockCount = 0;
 	processCount = 0;
@@ -77,8 +77,8 @@ int main() {
 	initProc->p_semAdd = NULL;
 	initProc->p_supportStruct = NULL;
 	initProc->p_parent = NULL; //"set all the process Tree fields to NULL"
-	initProc->p_child = NULL;
-	initProc->p_sib = NULL;
+	initProc->p_child = NULL; //commento di nikolas: impossibile assegnare un valore di tipo (void*) a struct list head
+	initProc->p_sib = NULL;   //usare la funzione di lista per inizializzazione di lista vuota. riguardare come avevamo fatto nei moduli di fase 1 per praticita
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità. gestire già la politica di assegnamento dei pid? (puntatore
 	// univoco a struttura pcb_t)
 	

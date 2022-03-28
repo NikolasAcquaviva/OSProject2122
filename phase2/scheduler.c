@@ -49,10 +49,10 @@ void scheduler() {
 			//controlla che non sia l'unico, ovvero che il suo next non sia la sentinella
 			//ma poichè non sappiamo l'indirizzo della sentinella, controlliamo che il next del next
 			//non sia il processo che ha rilasciato la risorsa (ovvero il processo stesso)
-			if (container_of(headHighPriorityQueue->p_list.next.next, pcb_t, p_list) == headHighPriorityQueue) {
+			if (container_of(headHighPriorityQueue->p_list.next->next, pcb_t, p_list) == headHighPriorityQueue) { //
 
 				//controlla che la coda low priority NON sia vuota. Se non è vuota fai partire il suo primo processo in attesa
-				if (!list_empty(LowPriorityReadyQueue)) {
+				if (!list_empty(&LowPriorityReadyQueue)) {
 					currentProcess = removeProcQ(&LowPriorityReadyQueue);
 					highPriorityProcessChosen = FALSE;
 				}
@@ -127,6 +127,6 @@ void scheduler() {
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
-		else if (processCount > 0 && softBlockedCount == 0) PANIC(); //Deadlock
+		else if (processCount > 0 && softBlockCount == 0) PANIC(); //Deadlock
 	}
 }

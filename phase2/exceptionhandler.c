@@ -1,10 +1,10 @@
 #include "../pandos_const.h"
-#include "../pandos_types.h"
 #include <umps3/umps/libumps.h>
 #include "exceptionhandler.h"
 #include "init.h"
 #include "scheduler.h"
 
+#define CAUSEMASK    0xFF
 
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
@@ -12,23 +12,23 @@ void GeneralExceptionHandler(){
     int exCode = ((Cause & CAUSEMASK) >> 2); //codice eccezione dal registro cause
     
     if(exCode == 0) {
-        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
-        currentProcess->p_supportStruct->pc = InterruptExceptionHandler;
+        currentProcess->p_s.reg_sp = KERNELSTACK;
+        currentProcess->p_s.pc_epc = InterruptExceptionHandler;
         currentProcess->p_s.reg_t9 = InterruptExceptionHandler;
     }
     else if(exCode <= 3) {
-        currentProcess->p_supportStruct->stackPtr = KERNELSTACK
-        currentProcess->p_supportStruct->pc = TLBExceptionHandler;
+        currentProcess->p_s.reg_sp = KERNELSTACK;
+        currentProcess->p_s.pc_epc = TLBExceptionHandler;
         currentProcess->p_s.reg_t9 = TLBExceptionHandler;
     }
     else if(exCode == 8) {
-        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
-        currentProcess->p_supportStruct->pc = SYSCALLExceptionHandler;
+        currentProcess->p_s.reg_sp = KERNELSTACK;
+        currentProcess->p_s.pc_epc = SYSCALLExceptionHandler;
         currentProcess->p_s.reg_t9 = SYSCALLExceptionHandler;
     }
     else if (exCode <= 12) {
-        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
-        currentProcess->p_supportStruct->pc = TrapExceptionHandler;
+        currentProcess->p_s.reg_sp = KERNELSTACK;
+        currentProcess->p_s.pc_epc = TrapExceptionHandler;
         currentProcess->p_s.reg_t9 = TrapExceptionHandler;
     }
 }
@@ -37,13 +37,14 @@ void GeneralExceptionHandler(){
 //Serve l'indice per distinguere tra page fault o eccezione generale
 void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
+        int a1 = currentProcess->p_s.reg_a1;
         //Siamo nel caso die
         //rimuoviamo il processo terminato dalla lista dei figli del padre
         outChild(currentProcess);
         //numero processi cambia dopo la terminazione del processo corrente
         processCount--;
         
-        TERM_PROCESS();
+        TERM_PROCESS(a1,0,0);
         
     }
     else{
@@ -79,15 +80,15 @@ void SYSCALLExceptionHandler(){
         a2 = currentProcess->p_s.reg_a2,
         a3 = currentProcess->p_s.reg_a3;
     //check user mode
-    int user = currentProcess->p_supportStruct.sup_exceptState[GENERALEXCEPT].status;
+    int user = currentProcess->p_supportStruct->sup_exceptState[GENERALEXCEPT].status;
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        currentProcess->p_supportStruct->sup_exceptContext[GENERALEXCEPT].cause = 10;
-        currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
-        currentProcess->p_supportStruct->pc = TrapExceptionHandler;
+        currentProcess->p_s.cause = 10;
+        currentProcess->p_s.reg_sp = KERNELSTACK;
+        currentProcess->p_s.pc_epc = TrapExceptionHandler;
         currentProcess->p_s.reg_t9 = TrapExceptionHandler;
     }
-    else if(a0 > 0 && <= 10) PassUp_Or_Die();
+    else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
         switch (a0){
         case '-1':
@@ -122,9 +123,9 @@ void SYSCALLExceptionHandler(){
             break;
         default:
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-            currentProcess->p_supportStruct->sup_exceptContext[GENERALEXCEPT].cause = 10;
-            currentProcess->p_supportStruct->stackPtr = KERNELSTACK;
-            currentProcess->p_supportStruct->pc = TrapExceptionHandler;
+            currentProcess->p_s.cause = 10;
+            currentProcess->p_s.reg_sp = KERNELSTACK;
+            currentProcess->p_s.pc_epc = TrapExceptionHandler;
             currentProcess->p_s.reg_t9 = TrapExceptionHandler;
             break;
         }
@@ -238,10 +239,10 @@ void _YIELD(int a1, int a2, int a3){
     if(currentProcess->p_prio){ //coda ad alta priorità
         outProcQ(&HighPriorityReadyQueue,currentProcess);
         insertProcQ(&HighPriorityReadyQueue,currentProcess);
-        lastHighPriorityProcessHasYielded = TRUE;
+        lastHighPriorityProcessHasYielded = currentProcess;
     }
     else{
         outProcQ(&LowPriorityReadyQueue,currentProcess);
-        insertPRocQ(&LowPriorityReadyQueue,currentProcess);
+        insertProcQ(&LowPriorityReadyQueue,currentProcess);
     }
 }

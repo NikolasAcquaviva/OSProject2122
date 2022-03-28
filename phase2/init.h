@@ -1,8 +1,5 @@
-#include "../pandos_const.h" //per dubbi cerca "?"
-#include "../pandos_types.h"
-#include "pcb.h"
-#include "asl.h"
-#include "scheduler.h"
+#ifndef INIT_H
+#define INIT_H
 
 #define NoDEVICE 49 //numero di device
 #define TRUE 1
@@ -18,3 +15,5 @@ extern pcb_PTR lastHighPriorityProcessHasYielded;
 extern struct list_head LowPriorityReadyQueue; 
 extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
+
+#endif
