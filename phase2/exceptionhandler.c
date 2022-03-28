@@ -163,7 +163,8 @@ ritorno l'id del processo;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = pidCounter;
         pidCounter++;
-        insertProcQ(prio, nuovo);
+        if (prio ==  1) insertProcQ(HighPriorityReadyQueue, nuovo);
+        else insertProcQ(LowPriorityReadyQueue, nuovo);
         insertChild(currentProcess, nuovo);
         nuovo->p_time = 0;
         nuovo->p_semAdd = NULL;
@@ -180,17 +181,18 @@ void TERM_PROCESS(int pid, int a2, int a3){
     else {
         pcb_t* tmp = currentProcess;
         while(tmp->p_pid != a2){
-            if (tmp->p_s == blocked){
-                pcb_t *exist = outBlocked(tmp)
-                if (exist != NULL) incrementa valore semaforo;
-            } 
-            tmp = tmp->p_child;
+            tmp = container_of(&tmp->p_child, pcb_t, p_list);
         }
-        tmp = tmp->p_child;
+        tmp = container_of(&tmp->p_child, pcb_t, p_list);
+        if (tmp->p_semAdd != NULL){
+                pcb_t *exist = outBlocked(tmp);
+                if (exist->p_semAdd < 0) exist->p_semAdd++; // value++
+            }
         outChild(tmp);
-        if (tmp->p_prio = HighPriority) removeProcQ(&HighPriorityReadyQueque);
-        else removeProcQ(&LowPriorityReadyQueque);
-        TERM_PROCESS(pid, tmp->p_child->p_pid, a3);
+        if (tmp->p_prio = 1) removeProcQ(HighPriorityReadyQueue);
+        else removeProcQ(LowPriorityReadyQueue);
+        tmp = container_of(&tmp->p_child, pcb_t, p_list);
+        TERM_PROCESS(pid, tmp->p_pid, a3);
     }
     scheduler();
 }
