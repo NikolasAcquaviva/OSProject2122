@@ -163,8 +163,8 @@ ritorno l'id del processo;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = pidCounter;
         pidCounter++;
-        if (prio ==  1) insertProcQ(HighPriorityReadyQueue, nuovo);
-        else insertProcQ(LowPriorityReadyQueue, nuovo);
+        if (prio ==  1) insertProcQ(&HighPriorityReadyQueue, nuovo);
+        else insertProcQ(&LowPriorityReadyQueue, nuovo);
         insertChild(currentProcess, nuovo);
         nuovo->p_time = 0;
         nuovo->p_semAdd = NULL;
@@ -175,30 +175,48 @@ ritorno l'id del processo;
 
 
 void TERM_PROCESS(int pid, int a2, int a3){
-    if (a2 == 0){
-        TERM_PROCESS(pid, pid, a3);
-    }
-    else {
-        pcb_t* tmp = currentProcess;
-        while(tmp->p_pid != a2){
-            tmp = container_of(&tmp->p_child, pcb_t, p_list);
+    if (!emptyChild(currentProcess)){
+        if (pid == 0){
+        TERM_PROCESS(currentProcess->p_pid, 0, 0);
         }
-        tmp = container_of(&tmp->p_child, pcb_t, p_list);
-        if (tmp->p_semAdd != NULL){
-                pcb_t *exist = outBlocked(tmp);
-                if (exist->p_semAdd < 0) exist->p_semAdd++; // value++
+        else {
+            pcb_t* tmp = currentProcess;
+            while(tmp->p_pid != pid){
+                tmp = container_of(&tmp->p_child, pcb_t, p_list);
             }
-        outChild(tmp);
-        if (tmp->p_prio = 1) removeProcQ(HighPriorityReadyQueue);
-        else removeProcQ(LowPriorityReadyQueue);
-        tmp = container_of(&tmp->p_child, pcb_t, p_list);
-        TERM_PROCESS(pid, tmp->p_pid, a3);
+            pcb_t* fader = tmp;
+            tmp = container_of(&tmp->p_child, pcb_t, p_list);
+            outChild(fader);
+            if (fader->p_prio = 1) removeProcQ(&HighPriorityReadyQueue);
+            else removeProcQ(&LowPriorityReadyQueue);
+            processCount--;
+            if (tmp->p_semAdd != NULL){
+                pcb_t *exist = outBlocked(tmp);
+                if (exist->p_semAdd < 0) exist->p_semAdd++; 
+            }
+            pcb_t* fader = tmp;
+            tmp = container_of(&tmp->p_child, pcb_t, p_list);
+            outChild(fader);
+            if (tmp->p_prio = 1) removeProcQ(&HighPriorityReadyQueue);
+            else removeProcQ(&LowPriorityReadyQueue);
+            processCount--;
+            TERM_PROCESS(tmp->p_pid, 0, 0);
+        }
     }
     scheduler();
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
-
+    pcb_t* semaforo = currentProcess;
+    while (semaforo->p_semAdd != &semaddr){
+        semaforo = container_of(&semaforo->p_child, pcb_t, p_list);
+    }
+    semaforo->p_semAdd--;
+    if (semaforo->p_semAdd < 0){
+        insertBlocked(&semaforo->p_semAdd, semaforo);
+        semaforo->p_semAdd++;
+    }
+    scheduler();
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
