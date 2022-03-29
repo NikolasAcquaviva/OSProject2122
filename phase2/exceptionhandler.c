@@ -226,6 +226,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
                     insertBlocked(&pcb->p_semAdd, pcb);
                     removeProcQ(&HighPriorityReadyQueue);
                     *pcb->p_semAdd++;
+                    softBlockCount++;
                 }
             }
         }
@@ -240,6 +241,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
             insertBlocked(&pcb->p_semAdd, pcb);
             removeProcQ(&LowPriorityReadyQueue);
             *pcb->p_semAdd++;
+            softBlockCount++;
         }
     }
     scheduler();
