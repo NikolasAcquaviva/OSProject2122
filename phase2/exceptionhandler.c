@@ -39,15 +39,8 @@ void GeneralExceptionHandler(){
 //Serve l'indice per distinguere tra page fault o eccezione generale
 void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
-        int a1 = currentProcess->p_s.reg_a1;
         //Siamo nel caso die
-        //rimuoviamo il processo terminato dalla lista dei figli del padre
-        outChild(currentProcess);
-        //numero processi cambia dopo la terminazione del processo corrente
-        processCount--;
-        
-        TERM_PROCESS(a1,0,0);
-        
+        TERM_PROCESS(currentProcess->p_pid,0,0);
     }
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
@@ -147,15 +140,39 @@ void SYSCALLExceptionHandler(){
     
 }
 
-void Die (pcb_t *p){
-    outChild(p);
-    if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
-    else outProcQ(&LowPriorityReadyQueue, p);
-    processCount--;
+//funzione che performa le azioni necessarie al tempo di terminazione di un processo
+//Usata in casi di die portion of pass-up or die oppure nsys2
+static void Die (pcb_t *p, int isRoot){
+    int* startDevice, endDevice; //memorizzano l'indirizzo di memoria 
+    // di inizio e fine dell'array dei device semaphores
+    int isDevice; //ci dice se un semaforo è un device semaphore o meno
+    if(isRoot) outChild(p); 
+    // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
+    
+    //controlliamo il tipo del semaforo, isDevice è 1 se è un device semaphore
+    startDevice = deviceSemaphores;
+    endDevice = deviceSemaphores[NoDEVICE-1]+32; 
+    //32 è la dimensione del tipo int, noDevice è la lunghezza del vettore
+    //calcoliamo l'indirizzo di fine vettore 
+
+    //se p è bloccato incrementiamo il valore del semaforo
+    //oppure decrementiamo il numero di processi softblock
+    //se è bloccato rispettivamente su un semaforo binario o su un devicesemaphore
     if (p->p_semAdd != NULL){
-        *p->p_semAdd++;
-        softBlockCount--;
+        //se l'indirizzo è compreso tra startdevice ed enddevice è l'indirizzo di un device semaphore
+        isDevice = (p->p_semAdd >= startDevice && p->p_semAdd <= endDevice);
+        isDevice ? softBlockCount-- : *p->p_semAdd++; 
     }
+    else{ //lo rimuoviamo dalla coda dei processi pronti
+        if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
+        else outProcQ(&LowPriorityReadyQueue, p);
+    }
+    processCount--;
+}
+
+//trova il pcb che ha come id un certo pid
+static pcb_PTR FindProcess(int pid){
+
 }
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
@@ -187,7 +204,7 @@ ritorno l'id del processo;
 
 
 void TERM_PROCESS(int pid, int a2, int a3){
-    if (!emptyChild(currentProcess)){
+    /*if (!emptyChild(currentProcess)){
         if (pid == 0){
         TERM_PROCESS(currentProcess->p_pid, 0, 0);
         }
@@ -208,8 +225,26 @@ void TERM_PROCESS(int pid, int a2, int a3){
             Die(fader);
             TERM_PROCESS(tmp->p_pid, 0, 0);
         }
+    }*/
+    if(pid == 0){
+        Die(currentProcess,1); //Die performa un'operazione speciale solo se il pcb è root (1)
+        pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
+        list_for_each_entry(tmpChild,&currentProcess->p_child,p_child){
+            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) Die(tmpSib,0);
+            //per ogni pcb sulla lista dei child, solo dopo aver terminato
+            //tutti i fratelli, terminiamo il child stesso
+            Die(tmpChild,0);
+        }     
     }
-    scheduler();
+    else{
+        pcb_PTR proc = FindProcess(pid); //proc->p_pid = pid
+        Die(proc,1); 
+        pcb_PTR tmpChild,tmpSib; 
+        list_for_each_entry(tmpChild,&proc->p_child,p_child){
+            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) Die(tmpSib,0);
+            Die(tmpChild,0);
+        }
+    }
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
