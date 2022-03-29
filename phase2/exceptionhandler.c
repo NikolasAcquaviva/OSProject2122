@@ -264,10 +264,11 @@ void _YIELD(int a1, int a2, int a3){
     if(currentProcess->p_prio){ //coda ad alta priorità
         outProcQ(&HighPriorityReadyQueue,currentProcess);
         insertProcQ(&HighPriorityReadyQueue,currentProcess);
-        lastHighPriorityProcessHasYielded = currentProcess;
+        lastProcessHasYielded = currentProcess;
     }
     else{
         outProcQ(&LowPriorityReadyQueue,currentProcess);
         insertProcQ(&LowPriorityReadyQueue,currentProcess);
+        lastProcessHasYielded = currentProcess;
     }
 }

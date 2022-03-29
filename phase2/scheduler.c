@@ -117,7 +117,7 @@ void scheduler() {
 					else { //lastProcessHasYielded = head; è l'unico tra tutte due le code... best effort!
 						currentProcess = removeProcQ(&LowPriorityReadyQueue); //non utilizziamo headLowPriorityQueue perchè altrimenti
 						//non rimuoveremmo l'elemento dalla coda!
-						highPriorityProcessChosen = False;
+						highPriorityProcessChosen = FALSE;
 					}
 				}
 			}
