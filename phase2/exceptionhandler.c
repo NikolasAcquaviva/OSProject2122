@@ -147,7 +147,7 @@ void SYSCALLExceptionHandler(){
     
 }
 
-void Die (pcb_t*p){
+void Die (pcb_t *p){
     outChild(p);
     if (p->p_prio == 1) removeProcQ(&HighPriorityReadyQueue);
     else removeProcQ(&LowPriorityReadyQueue);
@@ -213,35 +213,27 @@ void TERM_PROCESS(int pid, int a2, int a3){
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
-    if (currentProcess->p_prio == 1) {
-        if (currentProcess->p_semAdd == &semaddr){
-            *currentProcess->p_semAdd--;
-            if (&currentProcess->p_semAdd < 0){
-                int save = currentProcess->p_s.pc_epc;
-                currentProcess->p_s = *((state_t*) BIOSDATAPAGE);
-                currentProcess->p_s.pc_epc = save + WORDLEN;
-                GET_CPU_TIME(0, 0, 0);
-                insertBlocked(currentProcess->p_semAdd, currentProcess);
-                removeProcQ(&HighPriorityReadyQueue);
-                *currentProcess->p_semAdd++;
-                softBlockCount++;
-            }
-        }
+    //controlliamo che il semaforo si possa utilizzare
+    if(insertBlocked(semaddr,currentProcess)) PANIC();
+    //se si può utilizzare lo rimuoviamo dal semaforo per poi reinserirlo
+    //perché fare questo controllo implica un inserimento nel semaforo del 
+    //pcb (se il semaforo è libero e non va in PANIC)
+    outBlocked(currentProcess);
+    //decrementiamo valore semaforo
+    *currentProcess->p_semAdd--;
+    
+    if (*currentProcess->p_semAdd < 0){ //in questo caso si blocca il pcb sul semaforo
+        int save = currentProcess->p_s.pc_epc; //prendiamo il valore del PC che andrà incrementato di una word (per evitare infinite syscall loop)
+        currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //salviamo lo stato della bios data page nello stato del current
+        currentProcess->p_s.pc_epc = save + WORDLEN; //il PC lo settiamo a quello che c'era precedentemente incrementato di una word
+        GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
+        insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
+        if(currentProcess->p_prio) outProcQ(&HighPriorityReadyQueue, currentProcess); // in base alla priorità rimuoviamo il processo
+        else outProcQ(&LowPriorityReadyQueue, currentProcess); //dalla coda dei processi pronti (perché sarà bloccato) con la giusta priorità
+        softBlockCount++; // incrementiamo il numero di processi bloccati
+        scheduler(); // incrementiamo lo scheduler
     }
-    else {
-        *currentProcess->p_semAdd--;
-        if (&currentProcess->p_semAdd < 0){
-            int save = currentProcess->p_s.pc_epc;
-            currentProcess->p_s = *((state_t*) BIOSDATAPAGE);
-            currentProcess->p_s.pc_epc = save + WORDLEN;
-            GET_CPU_TIME(0, 0, 0);
-            insertBlocked(currentProcess->p_semAdd, currentProcess);
-            removeProcQ(&LowPriorityReadyQueue);
-            *currentProcess->p_semAdd++;
-            softBlockCount++;
-        }
-    }
-    scheduler();
+    //altrimenti il flusso ritorna al currentprocess
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
