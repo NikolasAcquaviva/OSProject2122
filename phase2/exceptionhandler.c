@@ -269,7 +269,8 @@ int GET_CPU_TIME(int a1, int a2, int a3){
 // The current process has to change its state from running to blocked
 // It has to be blocked on the ASL, and then the scheduler has to be called
 void WAIT_FOR_CLOCK(int a1, int a2, int a3){
-
+    // A passeren on the interval-timer semaphore
+    _PASSEREN((int*) INTERVALTMR, 0, 0);
 }
 
 // We've to return the support data structure for 
