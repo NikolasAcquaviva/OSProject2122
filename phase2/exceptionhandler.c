@@ -149,8 +149,8 @@ void SYSCALLExceptionHandler(){
 
 void Die (pcb_t*p){
     outChild(p);
-    if (p->p_prio == 1) removeProcQ(&HighPriorityReadyQueue);
-    else removeProcQ(&LowPriorityReadyQueue);
+    if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
+    else outProcQ(&LowPriorityReadyQueue, p);
     processCount--;
     if (p->p_semAdd != NULL){
         *p->p_semAdd++;
@@ -246,7 +246,13 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
     *currentProcess->p_semAdd++;
-
+    if (*semaddr < 0){
+        outBlocked(currentProcess);
+        softBlockCount--;
+        if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
+        else insertProcQ(&LowPriorityReadyQueue, currentProcess);
+    }
+    scheduler();
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
