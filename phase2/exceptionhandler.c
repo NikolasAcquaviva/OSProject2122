@@ -213,34 +213,31 @@ void TERM_PROCESS(int pid, int a2, int a3){
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
-    pcb_t* pcb = currentProcess;
-    if (pcb->p_prio == 1) {
-        list_for_each_entry(pcb, &HighPriorityReadyQueue, p_list){
-            if (*pcb->p_semAdd == &semaddr){
-                *pcb->p_semAdd--;
-                if (pcb->p_semAdd < 0){
-                    pcb_t* save = pcb->p_s.pc_epc;
-                    pcb->p_s = *((state_t*) BIOSDATAPAGE);
-                    pcb->p_s.pc_epc += WORDLEN;
-                    GET_CPU_TIME(0, 0, 0);
-                    insertBlocked(&pcb->p_semAdd, pcb);
-                    removeProcQ(&HighPriorityReadyQueue);
-                    *pcb->p_semAdd++;
-                    softBlockCount++;
-                }
+    if (currentProcess->p_prio == 1) {
+        if (currentProcess->p_semAdd == &semaddr){
+            *currentProcess->p_semAdd--;
+            if (&currentProcess->p_semAdd < 0){
+                int save = currentProcess->p_s.pc_epc;
+                currentProcess->p_s = *((state_t*) BIOSDATAPAGE);
+                currentProcess->p_s.pc_epc = save + WORDLEN;
+                GET_CPU_TIME(0, 0, 0);
+                insertBlocked(currentProcess->p_semAdd, currentProcess);
+                removeProcQ(&HighPriorityReadyQueue);
+                *currentProcess->p_semAdd++;
+                softBlockCount++;
             }
         }
     }
-    else list_for_each_entry(pcb, &LowPriorityReadyQueue, p_list){
-        *pcb->p_semAdd--;
-        if (pcb->p_semAdd < 0){
-            pcb_t* save = pcb->p_s.pc_epc;
-            pcb->p_s = *((state_t*) BIOSDATAPAGE);
-            pcb->p_s.pc_epc += WORDLEN;
+    else {
+        *currentProcess->p_semAdd--;
+        if (&currentProcess->p_semAdd < 0){
+            int save = currentProcess->p_s.pc_epc;
+            currentProcess->p_s = *((state_t*) BIOSDATAPAGE);
+            currentProcess->p_s.pc_epc = save + WORDLEN;
             GET_CPU_TIME(0, 0, 0);
-            insertBlocked(&pcb->p_semAdd, pcb);
+            insertBlocked(currentProcess->p_semAdd, currentProcess);
             removeProcQ(&LowPriorityReadyQueue);
-            *pcb->p_semAdd++;
+            *currentProcess->p_semAdd++;
             softBlockCount++;
         }
     }
