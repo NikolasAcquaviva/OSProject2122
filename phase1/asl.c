@@ -54,7 +54,7 @@ pcb_t* removeBlocked(int *semAdd){
 
     while(index->s_key != MAXINT){ //cerchiamo tra sema4 attivi
 		
-    	if(index-> == semAdd){
+    	if(index->s_key == semAdd){
 
     		//Rimuove il primo elemento dalla coda dei processi puntata da head. Ritorna NULL se la
 			//coda è vuota. Altrimenti ritorna il puntatore all’elemento rimosso dalla lista.
