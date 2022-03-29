@@ -77,9 +77,9 @@ int main() {
 	initProc->p_semAdd = NULL;
 	initProc->p_supportStruct = NULL;
 	initProc->p_parent = NULL; //"set all the process Tree fields to NULL"
-	initProc->p_list = INIT_LIST_HEAD(&(initProc->p_list)); //INIT_LIST_HEAD anzichè LIST_HEAD_INIT perchè la seconda restituisce una struct list head nuova, mentre noi dobbiamo inizializzare le preesistenti
-	initProc->p_child = INIT_LIST_HEAD(&(initProc->p_child)); //commento di nikolas: impossibile assegnare un valore di tipo (void*) a struct list head
-	initProc->p_sib = INIT_LIST_HEAD(&(initProc->p_sib));   //usare la funzione di lista per inizializzazione di lista vuota. riguardare come avevamo fatto nei moduli di fase 1 per praticita
+	INIT_LIST_HEAD(&(initProc->p_list)); //INIT_LIST_HEAD anzichè LIST_HEAD_INIT perchè la seconda restituisce una struct list head nuova, mentre noi dobbiamo inizializzare le preesistenti
+	INIT_LIST_HEAD(&(initProc->p_child)); //commento di nikolas: impossibile assegnare un valore di tipo (void*) a struct list head
+	INIT_LIST_HEAD(&(initProc->p_sib));   //usare la funzione di lista per inizializzazione di lista vuota. riguardare come avevamo fatto nei moduli di fase 1 per praticita
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità. gestire già la politica di assegnamento dei pid? (puntatore
 	// univoco a struttura pcb_t)
 	

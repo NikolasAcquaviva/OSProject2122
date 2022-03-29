@@ -108,7 +108,6 @@ trovarsi in una posizione arbitraria della coda). */
 			return tmp;
 		}
 	}
-
 	return NULL;
 }
 

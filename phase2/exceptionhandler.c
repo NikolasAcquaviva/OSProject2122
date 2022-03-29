@@ -147,6 +147,16 @@ void SYSCALLExceptionHandler(){
     
 }
 
+void Die (pcb_t*p){
+    outChild(p);
+    if (p->p_prio == 1) removeProcQ(&HighPriorityReadyQueue);
+    else removeProcQ(&LowPriorityReadyQueue);
+    processCount--;
+    if (*p->p_semAdd != NULL){
+        *p->p_semAdd++;
+        softBlockCount--;
+    }
+}
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
 /*
@@ -169,7 +179,7 @@ ritorno l'id del processo;
         else insertProcQ(&LowPriorityReadyQueue, nuovo);
         insertChild(currentProcess, nuovo);
         nuovo->p_time = 0;
-        nuovo->p_semAdd = NULL;
+        *nuovo->p_semAdd = NULL;
         return nuovo->p_pid;
     }
     else return -1;
@@ -184,24 +194,18 @@ void TERM_PROCESS(int pid, int a2, int a3){
         else {
             pcb_t* tmp = currentProcess;
             while(tmp->p_pid != pid){
-                tmp = container_of(&tmp->p_child, pcb_t, p_list);
+                tmp = container_of(&tmp->p_child.next, pcb_t, p_list);
             }
             pcb_t* fader = tmp;
-            tmp = container_of(&tmp->p_child, pcb_t, p_list);
-            outChild(fader);
-            if (fader->p_prio = 1) removeProcQ(&HighPriorityReadyQueue);
-            else removeProcQ(&LowPriorityReadyQueue);
-            processCount--;
+            tmp = container_of(&tmp->p_child.next, pcb_t, p_list);
+            Die(fader);
             if (tmp->p_semAdd != NULL){
                 pcb_t *exist = outBlocked(tmp);
-                if (exist->p_semAdd < 0) exist->p_semAdd++; 
+                if (&exist->p_semAdd < 0) *exist->p_semAdd++; 
             }
             pcb_t* fader = tmp;
-            tmp = container_of(&tmp->p_child, pcb_t, p_list);
-            outChild(fader);
-            if (tmp->p_prio = 1) removeProcQ(&HighPriorityReadyQueue);
-            else removeProcQ(&LowPriorityReadyQueue);
-            processCount--;
+            tmp = container_of(&tmp->p_child.next, pcb_t, p_list);
+            Die(fader);
             TERM_PROCESS(tmp->p_pid, 0, 0);
         }
     }
@@ -209,20 +213,43 @@ void TERM_PROCESS(int pid, int a2, int a3){
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
-    pcb_t* semaforo = currentProcess;
-    while (semaforo->p_semAdd != &semaddr){
-        semaforo = container_of(&semaforo->p_child, pcb_t, p_list);
+    pcb_t* pcb = currentProcess;
+    if (pcb->p_prio == 1) {
+        list_for_each_entry(pcb, &HighPriorityReadyQueue, p_list){
+            if (*pcb->p_semAdd == &semaddr){
+                *pcb->p_semAdd--;
+                if (pcb->p_semAdd < 0){
+                    pcb_t* save = pcb->p_s.pc_epc;
+                    pcb->p_s = *((state_t*) BIOSDATAPAGE);
+                    pcb->p_s.pc_epc += WORDLEN;
+                    GET_CPU_TIME(0, 0, 0);
+                    insertBlocked(&pcb->p_semAdd, pcb);
+                    removeProcQ(&HighPriorityReadyQueue);
+                    *pcb->p_semAdd++;
+                    softBlockCount++;
+                }
+            }
+        }
     }
-    semaforo->p_semAdd--;
-    if (semaforo->p_semAdd < 0){
-        insertBlocked(&semaforo->p_semAdd, semaforo);
-        semaforo->p_semAdd++;
+    else list_for_each_entry(pcb, &LowPriorityReadyQueue, p_list){
+        *pcb->p_semAdd--;
+        if (pcb->p_semAdd < 0){
+            pcb_t* save = pcb->p_s.pc_epc;
+            pcb->p_s = *((state_t*) BIOSDATAPAGE);
+            pcb->p_s.pc_epc += WORDLEN;
+            GET_CPU_TIME(0, 0, 0);
+            insertBlocked(&pcb->p_semAdd, pcb);
+            removeProcQ(&LowPriorityReadyQueue);
+            *pcb->p_semAdd++;
+            softBlockCount++;
+        }
     }
     scheduler();
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
-
+    pcb_t* pcb = currentProcess;
+    *pcb->p_semAdd++;
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
