@@ -11,7 +11,7 @@ extern int processCount;
 extern int maxPid;
 extern int softBlockCount;
 extern struct list_head HighPriorityReadyQueue;
-extern pcb_PTR lastHighPriorityProcessHasYielded;
+extern pcb_PTR lastProcessHasYielded;
 extern struct list_head LowPriorityReadyQueue; 
 extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
