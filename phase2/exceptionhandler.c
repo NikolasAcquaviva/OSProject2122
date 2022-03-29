@@ -219,9 +219,9 @@ void _PASSEREN(int *semaddr, int a2, int a3){
             if (*pcb->p_semAdd == &semaddr){
                 *pcb->p_semAdd--;
                 if (pcb->p_semAdd < 0){
-                    pcb_t* x = pcb->p_s.pc_epc;
-                    pcb->p_s = (STATE_PTR) BIOSDATAPAGE;
-                    BIOSDATAPAGE = x + WORDLEN;
+                    pcb_t* save = pcb->p_s.pc_epc;
+                    pcb->p_s = *((state_t*) BIOSDATAPAGE);
+                    pcb->p_s.pc_epc += WORDLEN;
                     GET_CPU_TIME(0, 0, 0);
                     insertBlocked(&pcb->p_semAdd, pcb);
                     removeProcQ(&HighPriorityReadyQueue);
@@ -234,9 +234,9 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     else list_for_each_entry(pcb, &LowPriorityReadyQueue, p_list){
         *pcb->p_semAdd--;
         if (pcb->p_semAdd < 0){
-            pcb_t* x = pcb->p_s.pc_epc;
-            pcb->p_s = container_of(BIOSDATAPAGE, pcb_t, state_t);
-            BIOSDATAPAGE = x + WORDLEN;
+            pcb_t* save = pcb->p_s.pc_epc;
+            pcb->p_s = *((state_t*) BIOSDATAPAGE);
+            pcb->p_s.pc_epc += WORDLEN;
             GET_CPU_TIME(0, 0, 0);
             insertBlocked(&pcb->p_semAdd, pcb);
             removeProcQ(&LowPriorityReadyQueue);
