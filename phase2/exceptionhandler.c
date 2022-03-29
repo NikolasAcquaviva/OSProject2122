@@ -141,8 +141,8 @@ void SYSCALLExceptionHandler(){
             non avere il loop infinito di syscalls
         */
 
-        LDST((STATE_PTR) BIOSDATAPAGE);
         currentProcess->p_s.pc_epc += WORDLEN;
+        LDST((STATE_PTR) BIOSDATAPAGE);
     }
     
 }
