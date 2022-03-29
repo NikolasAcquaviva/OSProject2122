@@ -1,5 +1,7 @@
 #include "../pandos_const.h"
+#include "../pandos_types.h"
 #include <umps3/umps/libumps.h>
+#include "../phase1/pcb.h"
 #include "exceptionhandler.h"
 #include "init.h"
 #include "scheduler.h"
@@ -91,34 +93,34 @@ void SYSCALLExceptionHandler(){
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
         switch (a0){
-        case '-1':
+        case CREATEPROCESS:
             currentProcess->p_s.reg_v0 = CREATE_PROCESS(a1,a2,a3);
             break;
-        case '-2':
+        case TERMPROCESS:
             TERM_PROCESS(a1,a2,a3);
             break;
-        case '-3':
+        case PASSEREN:
             _PASSEREN(a1,a2,a3);
             break;
-        case '-4':
+        case VERHOGEN:
             _VERHOGEN(a1,a2,a3);
             break;
-        case '-5':
+        case DOIO:
             currentProcess->p_s.reg_v0 = DO_IO(a1,a2,a3);
             break;
-        case '-6':
+        case GETTIME:
             currentProcess->p_s.reg_v0 = GET_CPU_TIME(a1,a2,a3);
             break;
-        case '-7':
+        case CLOCKWAIT:
             WAIT_FOR_CLOCK(a1,a2,a3);
             break;
-        case '-8':
+        case GETSUPPORTPTR:
             GET_SUPPORT_DATA(a1,a2,a3);
             break;
-        case '-9':
+        case GETPROCESSID:
             currentProcess->p_s.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
             break;
-        case '-10':
+        case YIELD:
             _YIELD(a1,a2,a3);
             break;
         default:
@@ -261,6 +263,9 @@ int GET_CPU_TIME(int a1, int a2, int a3){
     return currentProcess->p_time;
 }
 
+// Perform a P operation on the pseudo-clock semaphore, which is V-ed every 100ms
+// The current process has to change its state from running to blocked
+// It has to be blocked on the ASL, and then the scheduler has to be called
 void WAIT_FOR_CLOCK(int a1, int a2, int a3){
 
 }
@@ -284,10 +289,11 @@ void _YIELD(int a1, int a2, int a3){
     if(currentProcess->p_prio){ //coda ad alta priorità
         outProcQ(&HighPriorityReadyQueue,currentProcess);
         insertProcQ(&HighPriorityReadyQueue,currentProcess);
-        lastHighPriorityProcessHasYielded = currentProcess;
+        lastProcessHasYielded = currentProcess;
     }
     else{
         outProcQ(&LowPriorityReadyQueue,currentProcess);
         insertProcQ(&LowPriorityReadyQueue,currentProcess);
+        lastProcessHasYielded = currentProcess;
     }
 }
