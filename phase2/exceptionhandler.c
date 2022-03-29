@@ -252,7 +252,6 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
         if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
         else insertProcQ(&LowPriorityReadyQueue, currentProcess);
     }
-    scheduler();
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
