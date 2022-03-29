@@ -152,7 +152,7 @@ void Die (pcb_t*p){
     if (p->p_prio == 1) removeProcQ(&HighPriorityReadyQueue);
     else removeProcQ(&LowPriorityReadyQueue);
     processCount--;
-    if (*p->p_semAdd != NULL){
+    if (p->p_semAdd != NULL){
         *p->p_semAdd++;
         softBlockCount--;
     }
@@ -179,7 +179,7 @@ ritorno l'id del processo;
         else insertProcQ(&LowPriorityReadyQueue, nuovo);
         insertChild(currentProcess, nuovo);
         nuovo->p_time = 0;
-        *nuovo->p_semAdd = NULL;
+        nuovo->p_semAdd = NULL;
         return nuovo->p_pid;
     }
     else return -1;
@@ -245,8 +245,8 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
-    pcb_t* pcb = currentProcess;
-    *pcb->p_semAdd++;
+    *currentProcess->p_semAdd++;
+
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
