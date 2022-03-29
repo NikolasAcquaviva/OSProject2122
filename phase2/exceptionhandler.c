@@ -273,7 +273,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
     *currentProcess->p_semAdd++;
-    if (*semaddr < 0){
+    if (*semaddr-1 < 0){
         outBlocked(currentProcess);
         softBlockCount--;
         if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
