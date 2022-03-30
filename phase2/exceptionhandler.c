@@ -234,28 +234,6 @@ ritorno l'id del processo;
 
 
 void TERM_PROCESS(int pid, int a2, int a3){
-    /*if (!emptyChild(currentProcess)){
-        if (pid == 0){
-        TERM_PROCESS(currentProcess->p_pid, 0, 0);
-        }
-        else {
-            pcb_t* tmp = currentProcess;
-            while(tmp->p_pid != pid){
-                tmp = container_of(&tmp->p_child.next, pcb_t, p_list);
-            }
-            pcb_t* fader = tmp;
-            tmp = container_of(&tmp->p_child.next, pcb_t, p_list);
-            Die(fader);
-            if (tmp->p_semAdd != NULL){
-                pcb_t *exist = outBlocked(tmp);
-                if (&exist->p_semAdd < 0) *exist->p_semAdd++; 
-            }
-            pcb_t* fader = tmp;
-            tmp = container_of(&tmp->p_child.next, pcb_t, p_list);
-            Die(fader);
-            TERM_PROCESS(tmp->p_pid, 0, 0);
-        }
-    }*/
     if(pid == 0){
         Die(currentProcess,1); //Die performa un'operazione speciale solo se il pcb è root (1)
         pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
