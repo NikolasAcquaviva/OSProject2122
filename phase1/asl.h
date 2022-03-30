@@ -12,7 +12,7 @@
 #define MAX_PROC 20
 #define HIDDEN static
 
-
+extern semd_t semd_table[MAX_PROC];
 int insertBlocked(int *semAdd, pcb_t *p);
 pcb_t* removeBlocked(int *semAdd);
 pcb_t* outBlocked(pcb_t *p);

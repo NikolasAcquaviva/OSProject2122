@@ -6,9 +6,10 @@
 #include "../pandos_types.h"
 #include "../listx.h"
 
-
 #define TRUE 1
 #define FALSE 0
+
+extern pcb_t pcbFree_table[MAXPROC];
 
 void initPcbs();
 /*Inizializza la lista pcbFree in modo da 
