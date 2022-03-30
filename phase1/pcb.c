@@ -8,7 +8,7 @@ sono liberi o inutilizzati*/
 HIDDEN struct list_head pcbFree_h = LIST_HEAD_INIT(pcbFree_h);
 /*pcbFree_table[MAXPROC]: array
 di PCB con dimensione massima MAXPROC*/
-HIDDEN pcb_t pcbFree_table[MAXPROC];
+pcb_t pcbFree_table[MAXPROC];
 
 void initPcbs(){
 	//inizializzazione sentinella

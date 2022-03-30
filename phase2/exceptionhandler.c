@@ -2,6 +2,7 @@
 #include "../pandos_types.h"
 #include <umps3/umps/libumps.h>
 #include "../phase1/pcb.h"
+#include "../phase1/asl.h"
 #include "exceptionhandler.h"
 #include "init.h"
 #include "scheduler.h"
@@ -172,7 +173,36 @@ static void Die (pcb_t *p, int isRoot){
 
 //trova il pcb che ha come id un certo pid
 static pcb_PTR FindProcess(int pid){
+    //i pcb possono essere in running, ready o blocked state
+    //il caso running è escluso, la funzione viene chiamata dalla nsys2
+    //per terminare il processo che ha come id il valore pid
+    //quando pid è pari a 0 non si entra qui ma si termina il current process
+    //di conseguenza non ci resta che cercare nelle code ready o code dei semafori 
 
+    pcb_PTR tmp;
+    list_for_each_entry(tmp,&HighPriorityReadyQueue,p_list)
+        if(tmp->p_pid == pid) return tmp;
+    list_for_each_entry(tmp,&LowPriorityReadyQueue,p_list)
+        if(tmp->p_pid == pid) return tmp;
+    
+    //cerchiamo in tutti i semafori se nei processi bloccati c'è quello che ci interessa
+    for(int i = 0; i < MAX_PROC; i++){
+        pcb_PTR itr;
+        list_for_each_entry(itr,&semd_table[i].s_procq,p_list)
+            if(itr->p_pid == pid) return itr;
+    }
+
+    //cerchiamo sui semafori dei device
+    for(int i = 0; i < NoDEVICE; i++){
+        //solo se il semaforo ha processi bloccati sulla sua coda
+        if(deviceSemaphores[i]!=0){
+            for(int j = 0; j < MAXPROC; j++)
+                if(pcbFree_table[j].p_pid == pid) 
+                    return &pcbFree_table[j];
+        }
+    }
+    //NON SI PUÒ TERMINARE UN PROCESSO INESISTENTE
+    PANIC();
 }
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
