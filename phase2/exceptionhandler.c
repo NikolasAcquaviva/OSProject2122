@@ -256,6 +256,16 @@ void TERM_PROCESS(int pid, int a2, int a3){
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
+    //Quando si entra qui, il processo si bloccherà sull'ASL nei seguenti casi:
+    /*  1. Il valore del semaforo è negativo
+        2. Il semaforo è quello dell'interval timer
+        3. Il semaforo è quello che gestisce operazioni del terminale
+    */
+    //Verifichiamo se l'interrupt è acceso sul codice 7.
+    //Se accade l'operazione è di I/O(i.e operazione di terminale)
+    int Cause = getCAUSE();
+    int interrupt = (Cause << 16) >> 31; 
+    // è l'ultimo bit degli interrupt, di codice 7. Se vale 1 è un operazione di terminale
     //controlliamo che il semaforo si possa utilizzare
     if(insertBlocked(semaddr,currentProcess)) PANIC();
     //se si può utilizzare lo rimuoviamo dal semaforo per poi reinserirlo
@@ -265,7 +275,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     //decrementiamo valore semaforo
     *currentProcess->p_semAdd--;
     
-    if (*currentProcess->p_semAdd < 0){ //in questo caso si blocca il pcb sul semaforo
+    if (*currentProcess->p_semAdd < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
         int save = currentProcess->p_s.pc_epc; //prendiamo il valore del PC che andrà incrementato di una word (per evitare infinite syscall loop)
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //salviamo lo stato della bios data page nello stato del current
         currentProcess->p_s.pc_epc = save + WORDLEN; //il PC lo settiamo a quello che c'era precedentemente incrementato di una word
