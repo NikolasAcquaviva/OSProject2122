@@ -315,11 +315,14 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     // metto in pausa il processo chiamante
     _PASSEREN(cmdAddr, 0, 0);
     // inserisco cmdValue nel registro *cmdAddr
-    reg_*cmdAddr = cmdValue;
+    termreg_t *comando;
+    comando->recv_command = cmdValue;
     // sblocco il porcesso chiamante
     _VERHOGEN(cmdAddr, 0, 0);
     // ritorno il contenuto del registro di status
-    return STATUS;
+    // controllo se lo stato è trasmesso o ricevuto
+    if (cmdAddr) return comando->recv_status;
+    else return comando->transm_status;
 }
 
 // We've to return the accumulated processor time in 
