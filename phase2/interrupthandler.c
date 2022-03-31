@@ -34,7 +34,9 @@ void interruptHandler(){
             mask +=2;
         }
     }
-    
+}
+
+
 memaddr* getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
 return (memaddr*) (0x10000040 + (0x04 * (line-3)));
 }
