@@ -16,23 +16,23 @@ void GeneralExceptionHandler(){
     
     if(exCode == 0) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = InterruptExceptionHandler;
-        currentProcess->p_s.reg_t9 = InterruptExceptionHandler;
+        currentProcess->p_s.pc_epc = (memaddr) InterruptExceptionHandler;
+        currentProcess->p_s.reg_t9 = (memaddr) InterruptExceptionHandler;
     }
     else if(exCode <= 3) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = TLBExceptionHandler;
-        currentProcess->p_s.reg_t9 = TLBExceptionHandler;
+        currentProcess->p_s.pc_epc = (memaddr) TLBExceptionHandler;
+        currentProcess->p_s.reg_t9 = (memaddr) TLBExceptionHandler;
     }
     else if(exCode == 8) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = SYSCALLExceptionHandler;
-        currentProcess->p_s.reg_t9 = SYSCALLExceptionHandler;
+        currentProcess->p_s.pc_epc = (memaddr) SYSCALLExceptionHandler;
+        currentProcess->p_s.reg_t9 = (memaddr) SYSCALLExceptionHandler;
     }
     else if (exCode <= 12) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = TrapExceptionHandler;
-        currentProcess->p_s.reg_t9 = TrapExceptionHandler;
+        currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
+        currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
     }
 }
 
@@ -71,36 +71,36 @@ void SYSCALLExceptionHandler(){
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
     
     //prendiamo i registri
-    int a0 = currentProcess->p_s.reg_a0,
-        a1 = currentProcess->p_s.reg_a1,
-        a2 = currentProcess->p_s.reg_a2,
-        a3 = currentProcess->p_s.reg_a3;
+    unsigned int a0 = currentProcess->p_s.reg_a0,
+                 a1 = currentProcess->p_s.reg_a1,
+                 a2 = currentProcess->p_s.reg_a2,
+                 a3 = currentProcess->p_s.reg_a3;
     //check user mode
     int user = currentProcess->p_supportStruct->sup_exceptState[GENERALEXCEPT].status;
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
         currentProcess->p_s.cause = 10;
         currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = TrapExceptionHandler;
-        currentProcess->p_s.reg_t9 = TrapExceptionHandler;
+        currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
+        currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
         switch (a0){
         case CREATEPROCESS:
-            currentProcess->p_s.reg_v0 = CREATE_PROCESS(a1,a2,a3);
+            currentProcess->p_s.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
             break;
         case TERMPROCESS:
-            TERM_PROCESS(a1,a2,a3);
+            TERM_PROCESS(a1, a2, a3);
             break;
         case PASSEREN:
-            _PASSEREN(a1,a2,a3);
+            _PASSEREN((int*) a1, a2, a3);
             break;
         case VERHOGEN:
-            _VERHOGEN(a1,a2,a3);
+            _VERHOGEN((int*) a1, a2, a3);
             break;
         case DOIO:
-            currentProcess->p_s.reg_v0 = DO_IO(a1,a2,a3);
+            currentProcess->p_s.reg_v0 = DO_IO((int*) a1,a2,a3);
             break;
         case GETTIME:
             currentProcess->p_s.reg_v0 = GET_CPU_TIME(a1,a2,a3);
@@ -121,8 +121,8 @@ void SYSCALLExceptionHandler(){
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
             currentProcess->p_s.cause = 10;
             currentProcess->p_s.reg_sp = KERNELSTACK;
-            currentProcess->p_s.pc_epc = TrapExceptionHandler;
-            currentProcess->p_s.reg_t9 = TrapExceptionHandler;
+            currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
+            currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
             break;
         }
 
@@ -144,7 +144,7 @@ void SYSCALLExceptionHandler(){
 //funzione che performa le azioni necessarie al tempo di terminazione di un processo
 //Usata in casi di die portion of pass-up or die oppure nsys2
 static void Die (pcb_t *p, int isRoot){
-    int* startDevice, endDevice; //memorizzano l'indirizzo di memoria 
+    int *startDevice, *endDevice; //memorizzano l'indirizzo di memoria 
     // di inizio e fine dell'array dei device semaphores
     int isDevice; //ci dice se un semaforo è un device semaphore o meno
     if(isRoot) outChild(p); 
@@ -152,7 +152,7 @@ static void Die (pcb_t *p, int isRoot){
     
     //controlliamo il tipo del semaforo, isDevice è 1 se è un device semaphore
     startDevice = deviceSemaphores;
-    endDevice = deviceSemaphores[NoDEVICE-1]+32; 
+    endDevice = &(deviceSemaphores[NoDEVICE-1]) + 32; 
     //32 è la dimensione del tipo int, noDevice è la lunghezza del vettore
     //calcoliamo l'indirizzo di fine vettore 
 
@@ -203,6 +203,7 @@ static pcb_PTR FindProcess(int pid){
     }
     //NON SI PUÒ TERMINARE UN PROCESSO INESISTENTE
     PANIC();
+    return NULL; //non si arriverà mai qui ovviamente, ma è buona norma
 }
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
@@ -273,7 +274,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     //pcb (se il semaforo è libero e non va in PANIC)
     outBlocked(currentProcess);
     //decrementiamo valore semaforo
-    *currentProcess->p_semAdd--;
+    *(currentProcess->p_semAdd) -= 1;
     
     if (*currentProcess->p_semAdd < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
         int save = currentProcess->p_s.pc_epc; //prendiamo il valore del PC che andrà incrementato di una word (per evitare infinite syscall loop)
@@ -290,7 +291,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
-    *currentProcess->p_semAdd++; // eseguo una V operation sull'indirizzo ricevuto
+    (*currentProcess->p_semAdd) += 1; // eseguo una V operation sull'indirizzo ricevuto
     if (*semaddr-1 < 0){
         outBlocked(currentProcess); // rimuovo il processo dalla lista dei bloccati
         softBlockCount--;

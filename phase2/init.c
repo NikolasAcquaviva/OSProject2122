@@ -2,9 +2,11 @@
 
 #include "../pandos_const.h" //per dubbi cerca "?"
 #include "../pandos_types.h"
+#include "init.h"
 #include "pcb.h"
 #include "asl.h"
 #include "scheduler.h"
+#include <umps3/umps/libumps.h>
 
 #define NoDEVICE 49 //numero di device
 #define TRUE 1

@@ -5,6 +5,8 @@
 #include "init.h"
 #include "scheduler.h"
 #include "exceptionhandler.h"
+#include "interrupthandler.h"
+#include <umps3/umps/libumps.h>
 
 //variabili globali
 /* commentate poichè sono già definite negli header
@@ -25,7 +27,7 @@ memaddr *getInterruptLineAddr(int line){   //restituisce l'indirizzo del device 
 
 /*cercare un bit a 1 nei registri relativi*/
 /* MANAGING ALL INTERRUPTS */
-void interruptHandler(){
+void InterruptExceptionHandler(){
 
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
@@ -34,7 +36,7 @@ void interruptHandler(){
     //interruptmap = exception state's Cause register
     unsigned int interruptmap=((interrupt_state->cause & CAUSEMASK) >>8); //0xFF00 = CAUSEMASK
 
-    int line=getInterruptInt(interruptmap); //calcolare la linea che ha richiesto l'interrupt
+    int line = getInterruptInt(interruptmap); //calcolare la linea che ha richiesto l'interrupt
 
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
@@ -92,18 +94,13 @@ void interruptHandler(){
     }
 }
 
-void getInterruptInt(int map){  //calcolare la linea che ha richiesto l'interrupt
+int getInterruptInt(int map){  //calcolare la linea che ha richiesto l'interrupt
     int check=1; //2^0 = 1. gestiamo il caso ove la linea è 1
     for(int i=0; i<8; i++){
         if(map & check) return i;
         check*=2;
     }
     return -1;
-}
-
-int getInterruptPrio(memaddr* line_addr){    //decidere la priorità dell' interrupt 
-//Interrupt con numero di linea più bassa hanno priorità più alta, e dovrebbero essere gestiti per primi.
-
 }
 
 void NonTimerHandler(int line, int dev){

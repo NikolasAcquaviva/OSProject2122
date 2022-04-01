@@ -15,5 +15,5 @@ extern pcb_PTR lastProcessHasYielded;
 extern struct list_head LowPriorityReadyQueue; 
 extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
-
+extern void scheduler();
 #endif

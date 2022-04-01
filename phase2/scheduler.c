@@ -7,7 +7,7 @@
 #include "pcb.h"
 #include "asl.h"
 #include "init.h"
-
+#include <umps3/umps/libumps.h>
 /*
 extern struct list_head LowPriorityReadyQueue;
 extern struct list_head HighPriorityReadyQueue;
@@ -146,7 +146,7 @@ void scheduler() {
 		STCK(startTime);
 
 		//setto il process local timer
-		if (highPriorityProcessChosen) { setTIMER(TIME_CONVERT(NEVER)); }
+		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(NEVER)); 
 		else setTIMER(TIME_CONVERT(TIMESLICE));
 
 		//reset variabile, indifferentemente dal suo valore precedente

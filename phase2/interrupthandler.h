@@ -1,9 +1,10 @@
-#include "../pandos_const.h"
+#ifndef INTERRUPTHANDLER_H
+#define INTERRUPTHANDLER_H
+
 #include "../pandos_types.h"
-#include "pcb.h"
-#include "asl.h"
-#include "init.h"
-#include "scheduler.h"
 #include "exceptionhandler.h"
 
 memaddr *getInterruptLineAddr(int line);
+int getInterruptInt(int map);
+void NonTimerHandler(int line,int dev);
+#endif
