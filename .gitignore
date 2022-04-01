@@ -1,0 +1,11 @@
+#ignora tutti i file oggetto e .umps in qualsiasi directory
+**/*.[o|umps]
+*/*.[o|umps]
+#se in phase2_config avverrà la compilazione => non la carico nella nella repo
+phase2_config/
+phase2_config/*
+#eventuali cartelle out generate da make
+**/out/
+*/out/
+**/out/*
+*/out/*
