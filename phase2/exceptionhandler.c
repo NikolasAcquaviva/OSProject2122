@@ -215,17 +215,17 @@ gli assegno un id;
 lo inserisco come figlio del current;
 ritorno l'id del processo;
 */
-    pcb_t* nuovo = allocPcb();
-    if (nuovo != NULL){
+    pcb_t* nuovo = allocPcb(); // creo il processo
+    if (nuovo != NULL){ // gli assegno lo stato, la prio, la support e il pid
         nuovo->p_s = *statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = pidCounter;
         pidCounter++;
-        if (prio ==  1) insertProcQ(&HighPriorityReadyQueue, nuovo);
+        if (prio ==  1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);
-        insertChild(currentProcess, nuovo);
-        nuovo->p_time = 0;
+        insertChild(currentProcess, nuovo); // lo inserisco come figlio del processo corrente
+        nuovo->p_time = 0; // setto il tempo a 0
         nuovo->p_semAdd = NULL;
         return nuovo->p_pid;
     }
@@ -290,11 +290,11 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
-    *currentProcess->p_semAdd++;
+    *currentProcess->p_semAdd++; // eseguo una V operation sull'indirizzo ricevuto
     if (*semaddr-1 < 0){
-        outBlocked(currentProcess);
+        outBlocked(currentProcess); // rimuovo il processo dalla lista dei bloccati
         softBlockCount--;
-        if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
+        if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess); // lo inserisco nella lista corretta
         else insertProcQ(&LowPriorityReadyQueue, currentProcess);
     }
 }
