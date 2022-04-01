@@ -47,6 +47,10 @@ extern void test();
 extern void uTLB_RefillHandler();
 extern void GeneralExceptionHandler();
 
+void memcpy(void *dest, const void *src, int n){
+    for (int i = 0; i < n; i++) ((char *)dest)[i] = ((char *)src)[i];
+}
+
 
 int main() {
 

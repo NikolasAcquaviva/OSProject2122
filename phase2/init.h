@@ -16,4 +16,5 @@ extern struct list_head LowPriorityReadyQueue;
 extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
 extern void scheduler();
+extern void memcpy(void *dest, const void *src, int n);
 #endif
