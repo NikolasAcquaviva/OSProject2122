@@ -53,6 +53,8 @@ void interruptHandler(){
 
             if (blocked != NULL)  // equivalent of performing a continuos V operation on the interval timer semaphore
             {
+                /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
+                blocked->p_semAdd = NULL;
                 blocked->p_time += (end - start);
                 if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
                 else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
@@ -68,7 +70,8 @@ void interruptHandler(){
         else LDST((state_t*) BIOSDATAPAGE);
     }
 
-    else if(line >2){//controllo sulla linea che non sia un interrupt temporizzato
+    else if(line >2){ //controllo sulla linea che non sia un interrupt temporizzato
+
         memaddr* device= getInterruptLineAddr(line);
         int mask =1;
         for(int i =0; i < DEVPERINT; i++){
