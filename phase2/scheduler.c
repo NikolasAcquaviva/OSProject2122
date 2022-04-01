@@ -17,6 +17,7 @@ extern pcb_PTR currentProcess;
 */
 
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
+#define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
 //flags
 unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
