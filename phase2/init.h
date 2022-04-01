@@ -5,8 +5,7 @@
 #define TRUE 1
 #define FALSE 0
 
-//toDO: lasciare le variabili che davvero devono essere globali
-extern int pidCounter; //AGGIUNTO
+extern int pidCounter;
 extern int processCount;
 extern int maxPid;
 extern int softBlockCount;

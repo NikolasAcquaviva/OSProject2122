@@ -29,14 +29,14 @@ CFLAGS = $(CFLAGS_LANG) $(CFLAGS_MIPS) -I$(UMPS3_INCLUDE_DIR) -I$(UMPS3_INCLUDE_
 LDFLAGS = -G 0 -nostdlib -T $(UMPS3_DATA_DIR)/umpscore.ldscript
 
 VPATH = $(UMPS3_DATA_DIR):$(SRC_DIR):$(PHASE1_DIR):$(PHASE2_DIR):$(TESTING_DIR)
-OUTPUT_DIR = out
+OUTPUT_DIR = ../phase2_config
 UMPS3_OBJ = crtso.o libumps.o
 .PHONY : all clean
 
 all : kernel.core.umps
 
 kernel.core.umps : kernel
-	umps3-elf2umps -k out/$<
+	umps3-elf2umps -k ../phase2_config/$<
 
 kernel : asl.o p2test.o pcb.o exceptionhandler.o interrupthandler.o init.o scheduler.o crtso.o libumps.o
 	$(LD) -o $(addprefix $(OUTPUT_DIR)/, $@) $(addprefix $(OUTPUT_DIR)/obj/, $^) $(LDFLAGS)

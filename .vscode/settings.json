@@ -1,6 +1,7 @@
 {
     "files.associations": {
+        "exceptionhandler.h": "c",
         "pandos_const.h": "c",
-        "const.h": "c"
+        "init.h": "c"
     }
 }
