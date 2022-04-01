@@ -16,10 +16,16 @@ extern list_head LowPriorityReadyQueue;
 extern int deviceSemaphores[NoDEVICE];
 */
 
+cpu_t interruptstarttime, interruptendtime;
+
+
+memaddr *getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
+    return (memaddr *) (0x10000040 + (0x04 * (line-3)));
+}
+
 /*cercare un bit a 1 nei registri relativi*/
 /* MANAGING ALL INTERRUPTS */
 void interruptHandler(){
-    cpu_t interruptstarttime, interruptendtime;
 
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
@@ -57,7 +63,7 @@ void interruptHandler(){
             {
                 /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
                 blocked->p_semAdd = NULL;
-                blocked->p_time += (end - start);
+                blocked->p_time += (interruptendtime - interruptstarttime);
                 if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
                 else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
                 softBlockCount--;
@@ -84,11 +90,6 @@ void interruptHandler(){
             mask *=2;
         }
     }
-}
-
-
-memaddr* getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
-    return (memaddr*) (0x10000040 + (0x04 * (line-3)));
 }
 
 void getInterruptInt(int map){  //calcolare la linea che ha richiesto l'interrupt
@@ -153,7 +154,7 @@ void NonTimerHandler(int line, int dev){
     deviceSemaphores[semAdd]++;
 
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
-    pcb_PTR unblocked = removeBlocked(&deviceSemaphores[semAdd]);
+    pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
 
     /*Se c'era almeno un processo bloccato*/
     if (unlocked != NULL){
@@ -165,7 +166,7 @@ void NonTimerHandler(int line, int dev){
         unlocked->p_semAdd = NULL;
         
         /*Calcolo il nuovo tempo del processo*/
-        unblocked->p_time += (CURRENT_TOD - interruptstarttime);
+        unlocked->p_time += (CURRENT_TOD - interruptstarttime);
         
         /*Diminuisco il numero di processi SoftBlocked*/
         softBlockCount -= 1;
@@ -176,7 +177,7 @@ void NonTimerHandler(int line, int dev){
     }
 
     /*Se nessun processo era in esecuzione chiamo lo Scheduler*/
-    if (CurrentProcess == NULL) scheduler();
+    if (currentProcess == NULL) scheduler();
     /*Altrimenti carico il vecchio stato*/
     else LDST((state_t *) BIOSDATAPAGE);
 }

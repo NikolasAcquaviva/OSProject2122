@@ -18,4 +18,6 @@ static support_t* GET_SUPPORT_DATA(int a1, int a2, int a3);
 static int GET_PROCESS_ID(int parent, int a2, int a3);
 static void _YIELD(int a1, int a2, int a3);
 
+#define CAUSEMASK 0xFF
+
 #endif
