@@ -1,0 +1,15 @@
+#ignora tutti i file oggetto e .umps in qualsiasi directory
+**/*.[o|umps]
+*/*.[o|umps]
+#se in phase2_config avverrà la compilazione => non la carico nella nella repo
+phase[1|2|3]_config/*.*
+phase[1|2|3]_config/*
+.vscode/*.*
+.vscode/*
+#eventuali cartelle out generate da make
+**/out/
+*/out/
+**/out/*
+*/out/*
+**/out/*.*
+*/out/*.*
