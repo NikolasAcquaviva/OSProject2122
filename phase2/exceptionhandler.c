@@ -3,11 +3,10 @@
 #include <umps3/umps/libumps.h>
 #include "../phase1/pcb.h"
 #include "../phase1/asl.h"
+#include "scheduler.h"
 #include "exceptionhandler.h"
 #include "init.h"
-#include "scheduler.h"
 
-#define CAUSEMASK    0xFF
 
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
@@ -18,21 +17,25 @@ void GeneralExceptionHandler(){
         currentProcess->p_s.reg_sp = KERNELSTACK;
         currentProcess->p_s.pc_epc = (memaddr) InterruptExceptionHandler;
         currentProcess->p_s.reg_t9 = (memaddr) InterruptExceptionHandler;
+        InterruptExceptionHandler();
     }
     else if(exCode <= 3) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
         currentProcess->p_s.pc_epc = (memaddr) TLBExceptionHandler;
         currentProcess->p_s.reg_t9 = (memaddr) TLBExceptionHandler;
+        TLBExceptionHandler();
     }
     else if(exCode == 8) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
         currentProcess->p_s.pc_epc = (memaddr) SYSCALLExceptionHandler;
         currentProcess->p_s.reg_t9 = (memaddr) SYSCALLExceptionHandler;
+        SYSCALLExceptionHandler();
     }
     else if (exCode <= 12) {
         currentProcess->p_s.reg_sp = KERNELSTACK;
         currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
         currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
+        TrapExceptionHandler();
     }
 }
 
@@ -70,19 +73,23 @@ void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
     
+    state_t exceptState = *((state_t*) BIOSDATAPAGE);
+    
     //prendiamo i registri
-    unsigned int a0 = currentProcess->p_s.reg_a0,
-                 a1 = currentProcess->p_s.reg_a1,
-                 a2 = currentProcess->p_s.reg_a2,
-                 a3 = currentProcess->p_s.reg_a3;
+    int a0 = exceptState.reg_a0,
+        a1 = exceptState.reg_a1,
+        a2 = exceptState.reg_a2,
+        a3 = exceptState.reg_a3;
     //check user mode
-    int user = currentProcess->p_supportStruct->sup_exceptState[GENERALEXCEPT].status;
+    int user = exceptState.status;
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
+        klog_print("\nuser mode");
         currentProcess->p_s.cause = 10;
         currentProcess->p_s.reg_sp = KERNELSTACK;
         currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
         currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
+        TrapExceptionHandler();
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
@@ -123,6 +130,7 @@ void SYSCALLExceptionHandler(){
             currentProcess->p_s.reg_sp = KERNELSTACK;
             currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
             currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
+            TrapExceptionHandler();
             break;
         }
 
@@ -134,9 +142,10 @@ void SYSCALLExceptionHandler(){
             e incrementare di una word il program counter per 
             non avere il loop infinito di syscalls
         */
-
-        currentProcess->p_s.pc_epc += WORDLEN;
-        LDST((STATE_PTR) BIOSDATAPAGE);
+        klog_print("\nquasi fine syscall handler");
+        
+        exceptState.pc_epc =  exceptState.pc_epc + WORDLEN;
+        LDST((STATE_PTR) &exceptState);
     }
     
 }
@@ -262,30 +271,34 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         2. Il semaforo è quello dell'interval timer
         3. Il semaforo è quello che gestisce operazioni del terminale
     */
+
     //Verifichiamo se l'interrupt è acceso sul codice 7.
     //Se accade l'operazione è di I/O(i.e operazione di terminale)
     int Cause = getCAUSE();
     int interrupt = (Cause << 16) >> 31; 
     // è l'ultimo bit degli interrupt, di codice 7. Se vale 1 è un operazione di terminale
     //controlliamo che il semaforo si possa utilizzare
-    if(insertBlocked(semaddr,currentProcess)) PANIC();
+    
+    if(insertBlocked(semaddr,currentProcess) == TRUE) PANIC();
     //se si può utilizzare lo rimuoviamo dal semaforo per poi reinserirlo
     //perché fare questo controllo implica un inserimento nel semaforo del 
     //pcb (se il semaforo è libero e non va in PANIC)
-    outBlocked(currentProcess);
-    //decrementiamo valore semaforo
-    *(currentProcess->p_semAdd) -= 1;
     
-    if (*currentProcess->p_semAdd < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
-        int save = currentProcess->p_s.pc_epc; //prendiamo il valore del PC che andrà incrementato di una word (per evitare infinite syscall loop)
-        currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //salviamo lo stato della bios data page nello stato del current
-        currentProcess->p_s.pc_epc = save + WORDLEN; //il PC lo settiamo a quello che c'era precedentemente incrementato di una word
+    outBlocked(currentProcess);
+
+    //decrementiamo valore semaforo
+    *semaddr -= 1;
+    
+    if (*semaddr < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
+        //int save = currentProcess->p_s.pc_epc; //prendiamo il valore del PC che andrà incrementato di una word (per evitare infinite syscall loop)
+        currentProcess->p_s = *((state_t*) ((STATE_PTR) BIOSDATAPAGE)); //salviamo lo stato della bios data page nello stato del current
+        currentProcess->p_s.pc_epc = currentProcess->p_s.pc_epc + WORDLEN; //il PC lo settiamo a quello che c'era precedentemente incrementato di una word
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
-        if(currentProcess->p_prio) outProcQ(&HighPriorityReadyQueue, currentProcess); // in base alla priorità rimuoviamo il processo
-        else outProcQ(&LowPriorityReadyQueue, currentProcess); //dalla coda dei processi pronti (perché sarà bloccato) con la giusta priorità
+        //if(currentProcess->p_prio == 1) outProcQ(&HighPriorityReadyQueue, currentProcess); // in base alla priorità rimuoviamo il processo
+        //else outProcQ(&LowPriorityReadyQueue, currentProcess); //dalla coda dei processi pronti (perché sarà bloccato) con la giusta priorità
         softBlockCount++; // incrementiamo il numero di processi bloccati
-        scheduler(); // incrementiamo lo scheduler
+        scheduler(); // richiamiamo lo scheduler
     }
     //altrimenti il flusso ritorna al currentprocess
 }

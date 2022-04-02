@@ -28,7 +28,6 @@ cpu_t finishTime;
 
 void scheduler() {
 	if (currentProcess != NULL) { // => c'è già un processo in exec
-		//pg 32/158 per capire STCK(x) populate x
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
 		//STCK(x) => TOD/time scale
 		STCK(finishTime); //"ferma il cronometro e popola x"
@@ -155,9 +154,9 @@ void scheduler() {
 		//gli assegno un pid (?)
 		currentProcess->p_pid = pidCounter;
 		pidCounter += 1;
-
+		klog_print("fine scheduler");
 		//ed INFINE carico lo stato del processo nel processore
-		LDST(&(currentProcess->p_s));
+		LDST((STATE_PTR) &(currentProcess->p_s));
 
 	}
 	else{

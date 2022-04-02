@@ -16,4 +16,6 @@ extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
 extern void scheduler();
 extern void memcpy(void *dest, const void *src, int n);
+void klog_print(char *str);
+
 #endif

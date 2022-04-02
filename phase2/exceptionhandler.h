@@ -1,8 +1,7 @@
 #ifndef EXCEPTION_HANDLER_H
 #define EXCEPTION_HANDLER_H
 
-#include "scheduler.h"
-
+#define CAUSEMASK 0xFF
 void GeneralExceptionHandler();
 void PassUp_Or_Die(int index);
 void TLBExceptionHandler();
@@ -20,6 +19,4 @@ support_t* GET_SUPPORT_DATA(int a1, int a2, int a3);
 int GET_PROCESS_ID(int parent, int a2, int a3);
 void _YIELD(int a1, int a2, int a3);
 extern void scheduler();
-#define CAUSEMASK 0xFF
-
 #endif
