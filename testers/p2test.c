@@ -113,7 +113,7 @@ void print(char *msg) {
         klog_print("\nsono nel while");
         devregtr value = PRINTCHR | (((devregtr)*s) << 8);
         status         = SYSCALL(DOIO, (int)command, (int)value, 0);
-        klog_print("ho superato DOIO");
+        klog_print("\nho superato DOIO");
         if ((status & TERMSTATMASK) != RECVD) {
             PANIC();
         }
