@@ -156,14 +156,14 @@ void scheduler() {
 		currentProcess->p_pid = pidCounter;
 		pidCounter += 1;
 		//ed INFINE carico lo stato del processo nel processore
-		klog_print("nello scheduler carico lo stato");
+		klog_print("\nnello scheduler carico lo stato");
 		LDST(&(currentProcess->p_s));
 
 	}
 	else{
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			klog_print("wait???");
+			klog_print("\nwait???");
 			setTIMER(TIME_CONVERT(NEVER)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)

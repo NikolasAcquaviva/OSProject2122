@@ -244,8 +244,8 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     int Cause = getCAUSE();
     int interrupt = (Cause << 16) >> 31; 
     // è l'ultimo bit degli interrupt, di codice 7. Se vale 1 è un operazione di terminale
-    //controlliamo che il semaforo si possa utilizzare
     
+    //controlliamo che il semaforo si possa utilizzare
     if(insertBlocked(semaddr,currentProcess) == TRUE) PANIC();
     //se si può utilizzare lo rimuoviamo dal semaforo per poi reinserirlo
     //perché fare questo controllo implica un inserimento nel semaforo del 
@@ -257,18 +257,19 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     *semaddr -= 1;
     if (*semaddr < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
         klog_print("\nsono bloccato sulla asl");
-        state_t exceptState = *((state_t*) BIOSDATAPAGE);
-        exceptState.pc_epc = exceptState.reg_t9 = exceptState.pc_epc + WORDLEN;
-        currentProcess->p_s = exceptState; //salviamo lo stato della bios data page nello stato del current
+        state_t exceptState = *((state_t*) BIOSDATAPAGE); //save exception state
+        if(!(list_empty(&LowPriorityReadyQueue) && list_empty(&HighPriorityReadyQueue))){
+            exceptState.pc_epc += 4; //increment pc by a word
+            exceptState.reg_t9 = exceptState.pc_epc;
+        }
+        currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-        insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
-        if(currentProcess->p_prio == 1) outProcQ(&HighPriorityReadyQueue, currentProcess); // in base alla priorità rimuoviamo il processo
-        else outProcQ(&LowPriorityReadyQueue, currentProcess); //dalla coda dei processi pronti (perché sarà bloccato) con la giusta priorità
         softBlockCount++; // incrementiamo il numero di processi bloccati
+        insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         scheduler(); // richiamiamo lo scheduler
     }
     klog_print("\nesco da passeren riottenendo il flusso");
-    //altrimenti il flusso ritorna al currentprocess
+    //altrimenti il flusso ritorna al currentprocess (oppure lo scheduler ha fatto il suo lavoro, NSYS5)
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
@@ -290,7 +291,8 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     _PASSEREN(cmdAddr, 0, 0);
     // ritorno il contenuto del registro di status
     // controllo se lo stato è trasmesso o ricevuto
-    return cmd->transm_status;
+    klog_print("\nfinisco doio");
+    return (int) cmd->transm_status;
 }
 
 // We've to return the accumulated processor time in 
