@@ -13,30 +13,10 @@ void GeneralExceptionHandler(){
     memaddr Cause = getCAUSE(); //otteniamo il contenuto del registro cause
     int exCode = ((Cause & CAUSEMASK) >> 2); //codice eccezione dal registro cause
     
-    if(exCode == 0) {
-        currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = (memaddr) InterruptExceptionHandler;
-        currentProcess->p_s.reg_t9 = (memaddr) InterruptExceptionHandler;
-        InterruptExceptionHandler();
-    }
-    else if(exCode <= 3) {
-        currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = (memaddr) TLBExceptionHandler;
-        currentProcess->p_s.reg_t9 = (memaddr) TLBExceptionHandler;
-        TLBExceptionHandler();
-    }
-    else if(exCode == 8) {
-        currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = (memaddr) SYSCALLExceptionHandler;
-        currentProcess->p_s.reg_t9 = (memaddr) SYSCALLExceptionHandler;
-        SYSCALLExceptionHandler();
-    }
-    else if (exCode <= 12) {
-        currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
-        currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
-        TrapExceptionHandler();
-    }
+    if(exCode == 0) InterruptExceptionHandler();
+    else if(exCode <= 3) TLBExceptionHandler();
+    else if(exCode == 8) SYSCALLExceptionHandler();
+    else if (exCode <= 12) TrapExceptionHandler();
 }
 
 //Funzione Pass-up or Die per tutte le eccezioni diverse da Syscall con codice non positivo e Interrupts
@@ -44,7 +24,7 @@ void GeneralExceptionHandler(){
 void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
         //Siamo nel caso die
-        TERM_PROCESS(currentProcess->p_pid,0,0);
+        TERM_PROCESS(0,0,0);
     }
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
@@ -63,16 +43,9 @@ void TrapExceptionHandler(){
     PassUp_Or_Die(GENERALEXCEPT);
 }
 
-/*
-Cose da fare in SYSCALL:
-    2. Eseguire una delle 10 chiamate in base al codice passato come primo parametro
-    3. Inserire il valore di ritorno nel registro v0 del processo chiamante
-    4. Incrementare il PC di una word (4.0B) per proseguire il flusso (se bloccante)
-*/
 void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
-    
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
     
     //prendiamo i registri
@@ -85,17 +58,14 @@ void SYSCALLExceptionHandler(){
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
         klog_print("\nuser mode");
-        currentProcess->p_s.cause = 10;
-        currentProcess->p_s.reg_sp = KERNELSTACK;
-        currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
-        currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
-        TrapExceptionHandler();
+        exceptState.cause = 10;
+        GeneralExceptionHandler();
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
         switch (a0){
         case CREATEPROCESS:
-            currentProcess->p_s.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
+            exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
             break;
         case TERMPROCESS:
             TERM_PROCESS(a1, a2, a3);
@@ -107,10 +77,10 @@ void SYSCALLExceptionHandler(){
             _VERHOGEN((int*) a1, a2, a3);
             break;
         case DOIO:
-            currentProcess->p_s.reg_v0 = DO_IO((int*) a1,a2,a3);
+            exceptState.reg_v0 = DO_IO((int*) a1,a2,a3);
             break;
         case GETTIME:
-            currentProcess->p_s.reg_v0 = GET_CPU_TIME(a1,a2,a3);
+            exceptState.reg_v0 = GET_CPU_TIME(a1,a2,a3);
             break;
         case CLOCKWAIT:
             WAIT_FOR_CLOCK(a1,a2,a3);
@@ -119,18 +89,15 @@ void SYSCALLExceptionHandler(){
             GET_SUPPORT_DATA(a1,a2,a3);
             break;
         case GETPROCESSID:
-            currentProcess->p_s.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
+            exceptState.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
             break;
         case YIELD:
             _YIELD(a1,a2,a3);
             break;
         default:
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-            currentProcess->p_s.cause = 10;
-            currentProcess->p_s.reg_sp = KERNELSTACK;
-            currentProcess->p_s.pc_epc = (memaddr) TrapExceptionHandler;
-            currentProcess->p_s.reg_t9 = (memaddr) TrapExceptionHandler;
-            TrapExceptionHandler();
+            exceptState.cause = 10;
+            GeneralExceptionHandler();
             break;
         }
 
@@ -142,10 +109,9 @@ void SYSCALLExceptionHandler(){
             e incrementare di una word il program counter per 
             non avere il loop infinito di syscalls
         */
-        klog_print("\nquasi fine syscall handler");
-        
-        exceptState.pc_epc =  exceptState.pc_epc + WORDLEN;
-        LDST((STATE_PTR) &exceptState);
+        klog_print("\nfine handler\n");
+        exceptState.pc_epc += 4; 
+        LDST(&exceptState);
     }
     
 }
@@ -266,6 +232,7 @@ void TERM_PROCESS(int pid, int a2, int a3){
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
+    klog_print("\nentro in passeren");
     //Quando si entra qui, il processo si bloccherà sull'ASL nei seguenti casi:
     /*  1. Il valore del semaforo è negativo
         2. Il semaforo è quello dell'interval timer
@@ -288,18 +255,19 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 
     //decrementiamo valore semaforo
     *semaddr -= 1;
-    
     if (*semaddr < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
-        //int save = currentProcess->p_s.pc_epc; //prendiamo il valore del PC che andrà incrementato di una word (per evitare infinite syscall loop)
-        currentProcess->p_s = *((state_t*) ((STATE_PTR) BIOSDATAPAGE)); //salviamo lo stato della bios data page nello stato del current
-        currentProcess->p_s.pc_epc = currentProcess->p_s.pc_epc + WORDLEN; //il PC lo settiamo a quello che c'era precedentemente incrementato di una word
+        klog_print("\nsono bloccato sulla asl");
+        state_t exceptState = *((state_t*) BIOSDATAPAGE);
+        exceptState.pc_epc = exceptState.reg_t9 = exceptState.pc_epc + WORDLEN;
+        currentProcess->p_s = exceptState; //salviamo lo stato della bios data page nello stato del current
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
-        //if(currentProcess->p_prio == 1) outProcQ(&HighPriorityReadyQueue, currentProcess); // in base alla priorità rimuoviamo il processo
-        //else outProcQ(&LowPriorityReadyQueue, currentProcess); //dalla coda dei processi pronti (perché sarà bloccato) con la giusta priorità
+        if(currentProcess->p_prio == 1) outProcQ(&HighPriorityReadyQueue, currentProcess); // in base alla priorità rimuoviamo il processo
+        else outProcQ(&LowPriorityReadyQueue, currentProcess); //dalla coda dei processi pronti (perché sarà bloccato) con la giusta priorità
         softBlockCount++; // incrementiamo il numero di processi bloccati
         scheduler(); // richiamiamo lo scheduler
     }
+    klog_print("\nesco da passeren riottenendo il flusso");
     //altrimenti il flusso ritorna al currentprocess
 }
 
@@ -314,6 +282,7 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
+    klog_print("\n\nsono nel doio");
     // inserisco cmdValue nel registro *cmdAddr
     termreg_t *cmd = (termreg_t*) cmdAddr;
     cmd->recv_command = cmdValue;

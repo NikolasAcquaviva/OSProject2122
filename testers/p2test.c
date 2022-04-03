@@ -14,10 +14,10 @@
  *      Modified by Michael Goldweber on May 15, 2004
  *		Modified by Michael Goldweber on June 19, 2020
  */
-
 #include "pandos_const.h"
 #include "pandos_types.h"
 #include <umps3/umps/libumps.h>
+#include "../phase2/init.h"
 
 typedef unsigned int devregtr;
 
@@ -104,21 +104,22 @@ extern void p5mm();
 
 /* a procedure to print on terminal 0 */
 void print(char *msg) {
-
     char     *s       = msg;
     devregtr *base    = (devregtr *)(TERM0ADDR);
     devregtr *command = base + 3;
     devregtr  status;
-
     SYSCALL(PASSEREN, (int)&sem_term_mut, 0, 0); /* P(sem_term_mut) */
     while (*s != EOS) {
+        klog_print("\nsono nel while");
         devregtr value = PRINTCHR | (((devregtr)*s) << 8);
         status         = SYSCALL(DOIO, (int)command, (int)value, 0);
+        klog_print("ho superato DOIO");
         if ((status & TERMSTATMASK) != RECVD) {
             PANIC();
         }
         s++;
     }
+    klog_print("\nsono uscito dal while!!!");
     SYSCALL(VERHOGEN, (int)&sem_term_mut, 0, 0); /* V(sem_term_mut) */
 }
 
@@ -140,6 +141,7 @@ void uTLB_RefillHandler() {
 /*                 p1 -- the root process                            */
 /*                                                                   */
 void test() {
+    klog_print("\nvado in print");
     print("start p2test\n");
     SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0); /* V(sem_testsem)   */
 

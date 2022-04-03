@@ -27,6 +27,7 @@ cpu_t startTime;
 cpu_t finishTime;
 
 void scheduler() {
+	klog_print("\nsiamo entrati nello scheduler");
 	if (currentProcess != NULL) { // => c'è già un processo in exec
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
 		//STCK(x) => TOD/time scale
@@ -154,15 +155,15 @@ void scheduler() {
 		//gli assegno un pid (?)
 		currentProcess->p_pid = pidCounter;
 		pidCounter += 1;
-		klog_print("fine scheduler");
 		//ed INFINE carico lo stato del processo nel processore
-		LDST((STATE_PTR) &(currentProcess->p_s));
+		klog_print("nello scheduler carico lo stato");
+		LDST(&(currentProcess->p_s));
 
 	}
 	else{
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-
+			klog_print("wait???");
 			setTIMER(TIME_CONVERT(NEVER)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
