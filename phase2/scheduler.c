@@ -127,8 +127,13 @@ void scheduler() {
 	//altrimenti consuetudine
 	else {
 		if (list_empty(&HighPriorityReadyQueue)) {
-			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
-			highPriorityProcessChosen = FALSE; //pedante
+
+			//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
+			if (!list_empty(&HighPriorityReadyQueue)) {
+				currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
+				highPriorityProcessChosen = FALSE; //pedante
+			}
+			else {} //se anch'essa è vuota, cosa facciamo?
 		}
 		else {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
