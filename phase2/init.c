@@ -109,7 +109,7 @@ int deviceSemaphores[NoDEVICE];
 //variable could be defined somewhere else => specifichiamo che provengono dall'esterno
 
 
-
+//funzioni che prendo dall'esterno
 
 extern void test();
 extern void uTLB_RefillHandler();
@@ -137,7 +137,7 @@ int main() {
 	for (int i = 0; i < NoDEVICE; i++) deviceSemaphores[i] = 0;
 
 	//load interval timer globale. (Interval) timer è un vero e proprio dispositivo fisico che fa svolgere al kernel il context switch
-	LDIT(PSECOND); //100000 - ?
+	LDIT(PSECOND); //100000
 
 	pcb_PTR initProc = allocPcb(); 
 	initProc->p_time = 0;
@@ -176,5 +176,7 @@ int main() {
 }
 
 void memcpy(void *dest, const void *src, int n){
-    for (int i = 0; i < n; i++) ((char *)dest)[i] = ((char *)src)[i];
+    for (int i = 0; i < n; i++) {
+    	((char *)dest)[i] = ((char *)src)[i];
+    }
 }
