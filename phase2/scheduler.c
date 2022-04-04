@@ -19,13 +19,14 @@ extern pcb_PTR currentProcess;
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
-//flags
-unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
-//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
-
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
+
+	//flags
+	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
+	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
+
 	//variabile usata per gestire alcuni casi. TRUE se esiste almeno un processo tra le due code
 	int atLeastOneProcessInQueue = (!list_empty(&HighPriorityReadyQueue) || !list_empty(&LowPriorityReadyQueue)) ? 1 : 0;
 
@@ -37,6 +38,8 @@ void scheduler() {
 		//STCK(finishTime); //"ferma il cronometro e popola x"
 		currentProcess->p_time += CURRENT_TOD - startTime; 
 	}
+
+
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
@@ -149,15 +152,15 @@ void scheduler() {
 		STCK(startTime);
 
 		//setto il process local timer
-		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(NEVER)); 
+		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(1000000000)); 
 		else setTIMER(TIME_CONVERT(TIMESLICE));
 
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
 
-		//gli assegno un pid (?)
-		currentProcess->p_pid = pidCounter;
+		//gli assegno un pid
 		pidCounter += 1;
+		currentProcess->p_pid = pidCounter;
 		//ed INFINE carico lo stato del processo nel processore
 		klog_print("\nnello scheduler carico lo stato");
 		LDST(&(currentProcess->p_s));
@@ -167,11 +170,11 @@ void scheduler() {
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
 			klog_print("\nwait???");
-			setTIMER(TIME_CONVERT(NEVER)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(TIME_CONVERT(1000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
-			softBlockCount--; // non sarà più bloccato //Commento di Matteo: può rimanere cmq occupato in un'op di I/O!
-			outBlocked(currentProcess);
+			//softBlockCount--; // non sarà più bloccato //Commento di Matteo: può rimanere cmq occupato in un'op di IO
+			//outBlocked(currentProcess); //questa riga e la sopra DA RIMUOVERE
 		}
 		else if (processCount > 0 && softBlockCount == 0) PANIC(); //Deadlock
 	}

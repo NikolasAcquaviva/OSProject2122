@@ -1,6 +1,5 @@
 #include "../pandos_const.h" 
 #include "../pandos_types.h"
-#include "init.h"
 #include "pcb.h"
 #include "asl.h"
 #include "scheduler.h"
@@ -73,7 +72,7 @@ static void next_line(void) {
 
 //dichiarazione delle  variabili globali
 //come politica dei pid è stato scelto un contatore
-int pidCounter = 1; 
+int pidCounter;
 /* Number of started, but not yet terminated processes. */
 int processCount;
 /* Number of started, but not terminated processes that in are the
@@ -140,18 +139,20 @@ int main() {
 	LDIT(PSECOND); //100000
 
 	pcb_PTR initProc = allocPcb(); 
+
 	initProc->p_time = 0;
+	/*
 	initProc->p_semAdd = NULL;
 	initProc->p_supportStruct = NULL;
 	initProc->p_parent = NULL; //"set all the process Tree fields to NULL"
 	INIT_LIST_HEAD(&(initProc->p_list)); 
 	INIT_LIST_HEAD(&(initProc->p_child)); 
-	INIT_LIST_HEAD(&(initProc->p_sib));   
+	INIT_LIST_HEAD(&(initProc->p_sib));*/   
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità
 	
-	
+	pidCounter = 0;
+	pidCounter+=1; //prima di assegnare, incrementerò
 	initProc->p_pid = pidCounter; 
-	pidCounter+=1;
 
 	processCount+=1;
 
@@ -161,11 +162,11 @@ int main() {
 
 	RAMTOP(initState.reg_sp); //SP a ramtop
 
-    /*process needs to have interrupts enabled, the processor Local Timer enabled, kernel-mode on => Status register constants */
-    initState.status = IEPON | IMON | TEBITON; 
-
     initState.pc_epc = (memaddr) test; /*(exec) PC all'indirizzo della funzione test di p2test */
     initState.reg_t9 = (memaddr) test; //idiosincrasia dell'architettura
+
+    /*process needs to have interrupts enabled, the processor Local Timer enabled, kernel-mode on => Status register constants */
+    initState.status = IEPON | IMON | TEBITON;  //messo in fondo
 
     initProc->p_s = initState;
 
