@@ -28,12 +28,14 @@ cpu_t finishTime;
 void scheduler() {
 	//variabile usata per gestire alcuni casi. TRUE se esiste almeno un processo tra le due code
 	int atLeastOneProcessInQueue = (!list_empty(&HighPriorityReadyQueue) || !list_empty(&LowPriorityReadyQueue)) ? 1 : 0;
+
 	klog_print("\nsiamo entrati nello scheduler");
+
 	if (currentProcess != NULL) { // => c'è già un processo in exec
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
 		//STCK(x) => TOD/time scale
-		STCK(finishTime); //"ferma il cronometro e popola x"
-		currentProcess->p_time += finishTime - startTime; 
+		//STCK(finishTime); //"ferma il cronometro e popola x"
+		currentProcess->p_time += CURRENT_TOD - startTime; 
 	}
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
@@ -168,7 +170,7 @@ void scheduler() {
 			setTIMER(TIME_CONVERT(NEVER)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
-			softBlockCount--; // non sarà più bloccato
+			softBlockCount--; // non sarà più bloccato //Commento di Matteo: può rimanere cmq occupato in un'op di I/O!
 			outBlocked(currentProcess);
 		}
 		else if (processCount > 0 && softBlockCount == 0) PANIC(); //Deadlock
