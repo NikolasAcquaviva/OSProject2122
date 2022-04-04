@@ -25,8 +25,9 @@ unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il 
 
 cpu_t startTime;
 cpu_t finishTime;
-
 void scheduler() {
+	//variabile usata per gestire alcuni casi. TRUE se esiste almeno un processo tra le due code
+	int atLeastOneProcessInQueue = (!list_empty(&HighPriorityReadyQueue) || !list_empty(&LowPriorityReadyQueue)) ? 1 : 0;
 	klog_print("\nsiamo entrati nello scheduler");
 	if (currentProcess != NULL) { // => c'è già un processo in exec
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
@@ -34,8 +35,6 @@ void scheduler() {
 		STCK(finishTime); //"ferma il cronometro e popola x"
 		currentProcess->p_time += finishTime - startTime; 
 	}
-	//default values
-	currentProcess = NULL;
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
@@ -126,18 +125,14 @@ void scheduler() {
 	}
 	//altrimenti consuetudine
 	else {
-		if (list_empty(&HighPriorityReadyQueue)) {
-
-			//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
-			if (!list_empty(&HighPriorityReadyQueue)) {
-				currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
-				highPriorityProcessChosen = FALSE; //pedante
-			}
-			else {} //se anch'essa è vuota, cosa facciamo?
-		}
-		else {
+		if (!list_empty(&HighPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
-			highPriorityProcessChosen = TRUE;
+			highPriorityProcessChosen = TRUE;			
+		}
+		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
+		else if (!list_empty(&LowPriorityReadyQueue)) {
+			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
+			highPriorityProcessChosen = FALSE; //pedante
 		}
 	}
 	
@@ -145,7 +140,8 @@ void scheduler() {
 	lastProcessHasYielded = NULL;
 
 	//c'è effettivamente un processo che sta aspettando in una delle due code
-	if (currentProcess != NULL) {
+	//cambio questa condizione, entriamo qui solo se c'è un processo in almeno una delle due code
+	if (atLeastOneProcessInQueue == TRUE) {
 
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
@@ -165,13 +161,15 @@ void scheduler() {
 		LDST(&(currentProcess->p_s));
 
 	}
-	else{
+	else{ // c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
 			klog_print("\nwait???");
 			setTIMER(TIME_CONVERT(NEVER)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
+			softBlockCount--; // non sarà più bloccato
+			outBlocked(currentProcess);
 		}
 		else if (processCount > 0 && softBlockCount == 0) PANIC(); //Deadlock
 	}

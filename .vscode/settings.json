@@ -1,9 +1,6 @@
 {
     "files.associations": {
-        "exceptionhandler.h": "c",
-        "pandos_const.h": "c",
-        "init.h": "c",
-        "libumps.h": "c",
-        "scheduler.h": "c"
+        "pandos_types.h": "c",
+        "types.h": "c"
     }
 }

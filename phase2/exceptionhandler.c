@@ -4,6 +4,7 @@
 #include "../phase1/pcb.h"
 #include "../phase1/asl.h"
 #include "scheduler.h"
+#include "interrupthandler.h"
 #include "exceptionhandler.h"
 #include "init.h"
 
@@ -47,7 +48,7 @@ void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
-    
+
     //prendiamo i registri
     int a0 = exceptState.reg_a0,
         a1 = exceptState.reg_a1,
@@ -77,7 +78,7 @@ void SYSCALLExceptionHandler(){
             _VERHOGEN((int*) a1, a2, a3);
             break;
         case DOIO:
-            exceptState.reg_v0 = DO_IO((int*) a1,a2,a3);
+            exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
             break;
         case GETTIME:
             exceptState.reg_v0 = GET_CPU_TIME(a1,a2,a3);
@@ -96,6 +97,7 @@ void SYSCALLExceptionHandler(){
             break;
         default:
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
+            klog_print("\ncodice non valido");
             exceptState.cause = 10;
             GeneralExceptionHandler();
             break;
@@ -113,7 +115,6 @@ void SYSCALLExceptionHandler(){
         exceptState.pc_epc += 4; 
         LDST(&exceptState);
     }
-    
 }
 
 //funzione che performa le azioni necessarie al tempo di terminazione di un processo
@@ -233,35 +234,29 @@ void TERM_PROCESS(int pid, int a2, int a3){
 
 void _PASSEREN(int *semaddr, int a2, int a3){
     klog_print("\nentro in passeren");
-    //Quando si entra qui, il processo si bloccherà sull'ASL nei seguenti casi:
-    /*  1. Il valore del semaforo è negativo
-        2. Il semaforo è quello dell'interval timer
-        3. Il semaforo è quello che gestisce operazioni del terminale
-    */
-
-    //Verifichiamo se l'interrupt è acceso sul codice 7.
-    //Se accade l'operazione è di I/O(i.e operazione di terminale)
-    int Cause = getCAUSE();
-    int interrupt = (Cause << 16) >> 31; 
-    // è l'ultimo bit degli interrupt, di codice 7. Se vale 1 è un operazione di terminale
+    //Quando si entra qui, il processo si bloccherà sull'ASL se il valore del semaforo è negativo dopo il decremento
+    state_t exceptState = *((state_t*) BIOSDATAPAGE); //save exception state
     
     //controlliamo che il semaforo si possa utilizzare
     if(insertBlocked(semaddr,currentProcess) == TRUE) PANIC();
     //se si può utilizzare lo rimuoviamo dal semaforo per poi reinserirlo
     //perché fare questo controllo implica un inserimento nel semaforo del 
     //pcb (se il semaforo è libero e non va in PANIC)
-    
     outBlocked(currentProcess);
-
+    
     //decrementiamo valore semaforo
     *semaddr -= 1;
-    if (*semaddr < 0 || semaddr == (int*) INTERVALTMR || interrupt == 1){ //in questo caso si blocca il pcb sul semaforo
+    if (*semaddr < 0 || semaddr == (int*) INTERVALTMR){ //in questo caso si blocca il pcb sul semaforo
         klog_print("\nsono bloccato sulla asl");
-        state_t exceptState = *((state_t*) BIOSDATAPAGE); //save exception state
+        //incremento solo se c'è almeno un processo tra le due code
+        //altrimenti lo scheduler non caricherà lo stato con ldst ma si tornerà a questo flusso
+        //realizzando un doppio  incremento del pc(viene fatto un ulteriore incremento all'uscita del syscall handler)
         if(!(list_empty(&LowPriorityReadyQueue) && list_empty(&HighPriorityReadyQueue))){
+            klog_print("\n a quanto pare ce n'è almeno uno in code");
             exceptState.pc_epc += 4; //increment pc by a word
             exceptState.reg_t9 = exceptState.pc_epc;
-        }
+            }
+
         currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         softBlockCount++; // incrementiamo il numero di processi bloccati
@@ -284,15 +279,26 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
     klog_print("\n\nsono nel doio");
+    state_t exceptState = *((state_t*) BIOSDATAPAGE);
     // inserisco cmdValue nel registro *cmdAddr
     termreg_t *cmd = (termreg_t*) cmdAddr;
     cmd->recv_command = cmdValue;
     // metto in pausa il processo chiamante
-    _PASSEREN(cmdAddr, 0, 0);
+    *cmdAddr -= 1;
+    if(!(list_empty(&LowPriorityReadyQueue) && list_empty(&HighPriorityReadyQueue))){
+        klog_print("\n a quanto pare ce n'è almeno uno in code");
+        exceptState.pc_epc += 4; //increment pc by a word
+        exceptState.reg_t9 = exceptState.pc_epc;
+    }
+    currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
+    GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
+    softBlockCount++; // incrementiamo il numero di processi bloccati
+    insertBlocked(cmdAddr,currentProcess); //blocchiamo il pcb sul semaforo
+    scheduler(); // richiamiamo lo scheduler
     // ritorno il contenuto del registro di status
     // controllo se lo stato è trasmesso o ricevuto
     klog_print("\nfinisco doio");
-    return (int) cmd->transm_status;
+    return cmd->transm_status;
 }
 
 // We've to return the accumulated processor time in 

@@ -8,16 +8,6 @@
 #include "interrupthandler.h"
 #include <umps3/umps/libumps.h>
 
-//variabili globali
-/* commentate poichè sono già definite negli header
-extern int processCount;
-extern int softBlockCount;
-extern pcb_PTR currentProcess;
-extern list_head HighPriorityReadyQueue;
-extern list_head LowPriorityReadyQueue;
-extern int deviceSemaphores[NoDEVICE];
-*/
-
 cpu_t interruptstarttime, interruptendtime;
 
 
@@ -34,7 +24,7 @@ void InterruptExceptionHandler(){
 
     state_t* interrupt_state= (state_t*) BIOSDATAPAGE;
     //interruptmap = exception state's Cause register
-    unsigned int interruptmap=((interrupt_state->cause & CAUSEMASK) >>8); //0xFF00 = CAUSEMASK
+    unsigned int interruptmap=((interrupt_state->cause & CAUSEMASK) >> 8); //0xFF00 = CAUSEMASK
 
     int line = getInterruptInt(interruptmap); //calcolare la linea che ha richiesto l'interrupt
 
@@ -83,10 +73,10 @@ void InterruptExceptionHandler(){
     else if(line >2){ //controllo sulla linea che non sia un interrupt temporizzato
         /*DEVICE INTERRUPT */
         memaddr* device= getInterruptLineAddr(line);
-        // in case its a line >2 interrupt, we cycle through its devices to look for the one that we have to handle
+        // in case its a line > 2 interrupt, we cycle through its devices to look for the one that we have to handle
         //Ciclo 8 volte (devices per interrupt line)
         int mask =1;
-        for(int i =0; i < DEVPERINT; i++){
+        for(int i = 0; i < DEVPERINT; i++){
             /*Cerco il device corretto*/
             if(*device & mask) NonTimerHandler(line , i);
             mask *=2;
