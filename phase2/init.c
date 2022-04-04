@@ -80,20 +80,26 @@ int processCount;
 “blocked” state  due to an I/O or timer request */
 int softBlockCount;
 
+
+
 /* Tail pointer to a queue of pcbs (related to high priority processes) 
 that are in the “ready” state. */
 //ricordarsi che quando un processo ad alta priorità esegue una yield(), bisogna
 //cercare di far eseguire gli altri, anche se è il primo della high priority q
 struct list_head HighPriorityReadyQueue;
 
+/* Tail pointer to a queue of pcbs (related to low priority processes) 
+that are in the “ready” state. */
+struct list_head LowPriorityReadyQueue;
+
+
+
+
 pcb_PTR lastProcessHasYielded = NULL; //puntatore al pcb del processo associato.
 
 //NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere
 //quando un processo rilascia, ricordarsi di inserire il puntatore al pcb corrispondente dentro lastProcessHasYielded
 
-/* Tail pointer to a queue of pcbs (related to low priority processes) 
-that are in the “ready” state. */
-struct list_head LowPriorityReadyQueue;
 /* Pointer to the current pcb that is in running state */
 //the current (and only) executing process 
 pcb_PTR currentProcess;
