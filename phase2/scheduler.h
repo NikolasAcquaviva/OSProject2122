@@ -9,5 +9,6 @@
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 extern cpu_t startTime;
 extern cpu_t finishTime;
+void scheduler();
 
 #endif

@@ -7,7 +7,6 @@
 
 #include "../pandos_const.h" 
 #include "../pandos_types.h"
-#include "init.h"
 #include "pcb.h"
 #include "asl.h"
 #include "scheduler.h"
