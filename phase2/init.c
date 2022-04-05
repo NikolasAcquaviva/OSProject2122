@@ -92,9 +92,6 @@ struct list_head HighPriorityReadyQueue;
 that are in the “ready” state. */
 struct list_head LowPriorityReadyQueue;
 
-
-
-
 pcb_PTR lastProcessHasYielded = NULL; //puntatore al pcb del processo associato.
 
 //NULL = unsigned int 0 il quale indirizzo non potrà/dovrà esistere

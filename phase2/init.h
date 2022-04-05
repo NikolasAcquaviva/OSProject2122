@@ -12,7 +12,7 @@
 #include "asl.h"
 #include "scheduler.h"
 #include <umps3/umps/libumps.h>
-
+extern void scheduler();
 extern int pidCounter;
 extern int processCount;
 //extern int maxPid; questa variabile non è mai utilizzata in tutto il progetto nè è presente in init.c

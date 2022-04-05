@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "pandos_types.h": "c",
-        "types.h": "c"
+        "types.h": "c",
+        "init.h": "c",
+        "libumps.h": "c"
     }
 }

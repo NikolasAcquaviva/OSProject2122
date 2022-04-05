@@ -243,18 +243,8 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     //perché fare questo controllo implica un inserimento nel semaforo del 
     //pcb (se il semaforo è libero e non va in PANIC)
     outBlocked(currentProcess);
-    int firstPC = exceptState.pc_epc;
     //decrementiamo valore semaforo
     *semaddr -= 1;
-    if(!(list_empty(&LowPriorityReadyQueue) 
-        && list_empty(&HighPriorityReadyQueue))) klog_print("\nalmeno una non vuota");
-    currentProcess->p_s = exceptState;
-    insertBlocked(semaddr,currentProcess);
-    softBlockCount++;
-    scheduler();
-    int secondPC = exceptState.pc_epc;
-    if(firstPC != secondPC) klog_print("\nI PC SONO CAMBIATI!");
-    else klog_print("\n no problem");
     if (*semaddr < 0 || semaddr == (int*) INTERVALTMR){ //in questo caso si blocca il pcb sul semaforo
         klog_print("\nsono bloccato sulla asl");
         //incremento solo se c'è almeno un processo tra le due code
