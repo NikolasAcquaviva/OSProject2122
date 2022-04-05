@@ -11,7 +11,7 @@
 
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
-    memaddr Cause = getCAUSE(); //otteniamo il contenuto del registro cause
+    memaddr Cause = ((state_t*) BIOSDATAPAGE)->cause; //otteniamo il contenuto del registro cause
     int exCode = ((Cause & CAUSEMASK) >> 2); //codice eccezione dal registro cause
     
     if(exCode == 0) InterruptExceptionHandler();
@@ -278,26 +278,37 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
     klog_print("\n\nsono nel doio");
+    int numberDevice;
+    devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR;
+    for(int j = 0; j < 8; j++){
+        if( &(deviceRegs->devreg[4][j].term.transm_command) == (memaddr*) cmdAddr ){
+            klog_print("\ntrovato terminale");
+            numberDevice = j;
+        }
+    }
+    
+
+    //prendo il terminale che ha sollevato la doio
+    termreg_t term = deviceRegs->devreg[4][numberDevice].term;    
+    term.transm_command = cmdValue;
+    
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
-    // inserisco cmdValue nel registro *cmdAddr
-    termreg_t *cmd = (termreg_t*) cmdAddr;
-    cmd->recv_command = cmdValue;
     // metto in pausa il processo chiamante
-    *cmdAddr -= 1;
-    if(!(list_empty(&LowPriorityReadyQueue) && list_empty(&HighPriorityReadyQueue))){
+    if(!(list_empty(&LowPriorityReadyQueue) &&
+         list_empty(&HighPriorityReadyQueue))){
         klog_print("\n a quanto pare ce n'è almeno uno in code");
+        *cmdAddr -= 1;
         exceptState.pc_epc += 4; //increment pc by a word
         exceptState.reg_t9 = exceptState.pc_epc;
-    }
-    currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
-    GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-    softBlockCount++; // incrementiamo il numero di processi bloccati
-    insertBlocked(cmdAddr,currentProcess); //blocchiamo il pcb sul semaforo
-    scheduler(); // richiamiamo lo scheduler
-    // ritorno il contenuto del registro di status
-    // controllo se lo stato è trasmesso o ricevuto
+        currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
+        GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
+        softBlockCount++; // incrementiamo il numero di processi bloccati
+        insertBlocked(cmdAddr,currentProcess); //blocchiamo il pcb sul semaforo
+        scheduler(); // richiamiamo lo scheduler
+    }    
+   
     klog_print("\nfinisco doio");
-    return cmd->transm_status;
+    return term.transm_status;
 }
 
 // We've to return the accumulated processor time in 
