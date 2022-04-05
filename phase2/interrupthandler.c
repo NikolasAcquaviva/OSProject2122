@@ -165,6 +165,15 @@ void NonTimerHandler(int line, int dev){
 
     /*Se nessun processo era in esecuzione chiamo lo Scheduler*/
     if (currentProcess == NULL) scheduler();
+    /*Se il processo sbloccato ha priorità maggiore del processo in esecuzione*/
+    else if(unlocked->prio > currentProcess->prio){
+        currentProcess->p_s= (state_t*) BIOSDATAPAGE;   //copio lo stato del processore nel pcb del processo corrente
+        /*posiziono il processo nella coda Ready*/
+        if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
+        else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, currentProcess);
+        /*chiamo lo Scheduler*/
+        scheduler();
+    }
     /*Altrimenti carico il vecchio stato*/
     else LDST((state_t *) BIOSDATAPAGE);
 }
