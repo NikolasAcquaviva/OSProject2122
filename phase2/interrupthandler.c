@@ -167,7 +167,7 @@ void NonTimerHandler(int line, int dev){
     if (currentProcess == NULL) scheduler();
     /*Se il processo sbloccato ha priorità maggiore del processo in esecuzione*/
     else if(unlocked->p_prio > currentProcess->p_prio){
-        currentProcess->p_s= (state_t*) BIOSDATAPAGE;   //copio lo stato del processore nel pcb del processo corrente
+        currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
         /*posiziono il processo nella coda Ready*/
         if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
         else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, currentProcess);
