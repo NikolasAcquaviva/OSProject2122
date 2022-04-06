@@ -5,6 +5,6 @@
 #include "exceptionhandler.h"
 
 memaddr *getInterruptLineAddr(int line);
-int getInterruptInt(int map);
+int getInterruptInt(memaddr* map);
 void NonTimerHandler(int line,int dev);
 #endif

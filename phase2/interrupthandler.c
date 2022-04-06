@@ -24,8 +24,8 @@ void InterruptExceptionHandler(){
     state_t* iep_s = (state_t*) BIOSDATAPAGE;    //preleviamo l'exception state
     //int Cause = ((state_t*)BIOSDATAPAGE)->cause;
     //interruptmap = IP field of Cause register
-    int interruptmap = ((iep_s->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK
-    int line = getInterruptInt(interruptmap); //calcolare la linea che ha richiesto l'interrupt
+    memaddr interruptmap = ((iep_s->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK
+    int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
         klog_print("\nlinea 1");

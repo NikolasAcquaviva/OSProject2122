@@ -3,6 +3,7 @@
         "pandos_types.h": "c",
         "types.h": "c",
         "init.h": "c",
-        "libumps.h": "c"
+        "libumps.h": "c",
+        "exceptionhandler.h": "c"
     }
 }
