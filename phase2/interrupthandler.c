@@ -21,9 +21,10 @@ void InterruptExceptionHandler(){
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
 
-    int Cause = ((state_t*)BIOSDATAPAGE)->cause;
+    state_t* iep_s = (state_t*) BIOSDATAPAGE;    //preleviamo l'exception state
+    //int Cause = ((state_t*)BIOSDATAPAGE)->cause;
     //interruptmap = IP field of Cause register
-    int interruptmap = (Cause >> 8) & 255; //0xFF00 = CAUSEMASK
+    int interruptmap = ((iep_s->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK
     int line = getInterruptInt(interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
@@ -83,10 +84,11 @@ void InterruptExceptionHandler(){
     else klog_print("\nlinea negativa???");
 }
 
-int getInterruptInt(int map){  //calcolare la linea che ha richiesto l'interrupt
+int getInterruptInt(memaddr* map){  //calcolare la linea che ha richiesto l'interrupt
+    unsigned int p_map = *(map);
     int check=1; //2^0 = 1. gestiamo il caso ove la linea è 1
     for(int i=0; i<8; i++){
-        if(map & check) return i;
+        if(p_map & check) return i;
         check*=2;
     }
     return -1;

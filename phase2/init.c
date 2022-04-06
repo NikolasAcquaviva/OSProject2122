@@ -140,7 +140,7 @@ int main() {
 	initProc->p_time = 0;
 	/*
 	initProc->p_semAdd = NULL;
-	initProc->p_supportStruct = NULL;
+	initProc->p_supportStruct = NULL; slide pg 24/48 => dobbiamo indicare un suo gestore? Chi?
 	initProc->p_parent = NULL; //"set all the process Tree fields to NULL"
 	INIT_LIST_HEAD(&(initProc->p_list)); 
 	INIT_LIST_HEAD(&(initProc->p_child)); 
