@@ -29,7 +29,7 @@ void InterruptExceptionHandler(){
     else if (line == 1) { //PLT Interrupt
         klog_print("\nlinea 1");
         //currentProcess e startTime variabili globali
-        setTIMER(TIME_CONVERT(NEVER)); // setting the timer to a high value, ack interrupt
+        setTIMER(TIME_CONVERT(1000000000)); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
@@ -44,7 +44,7 @@ void InterruptExceptionHandler(){
         LDIT(PSECOND); //100000
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
-
+            klog_print("\nci entro mai qui??"); //non ci entro, sbagliato il numero del semaforo???
             STCK(interruptendtime);
             pcb_PTR blocked = removeBlocked(&(deviceSemaphores[NoDEVICE - 1]));
 
