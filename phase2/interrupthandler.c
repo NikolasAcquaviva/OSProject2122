@@ -84,10 +84,11 @@ void InterruptExceptionHandler(){
     else klog_print("\nlinea negativa???");
 }
 
-int getInterruptInt(int map){  //calcolare la linea che ha richiesto l'interrupt
+int getInterruptInt(memaddr* map){  //calcolare la linea che ha richiesto l'interrupt
+    unsigned int p_map = *(map);
     int check=1; //2^0 = 1. gestiamo il caso ove la linea è 1
     for(int i=0; i<8; i++){
-        if(map & check) return i;
+        if(p_map & check) return i;
         check*=2;
     }
     return -1;
