@@ -278,33 +278,77 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
     klog_print("\n\nsono nel doio");
-    int numberDevice;
+    int line, numberDevice, numberTermTransm, numberTermRecv,
+        findTermRec, findTermTransm, findDevice,
+        semDevIndex, semTermRIndex, semTermTIndex;
+    
+    line = numberDevice = numberTermRecv = numberTermTransm = 0;
+    findDevice = findTermRec = findTermTransm = semDevIndex = semTermRIndex = semTermTIndex = 0;
+    
     devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR;
-    for(int j = 0; j < 8; j++){
+    termreg_t termRec, termTransm;
+    dtpreg_t device;
+    for(int j = 0; j < 8; j++){ 
+        for(int i = 0; i < 4; i++){ 
+            if( &(deviceRegs->devreg[i][j].dtp.command) == (memaddr*) cmdAddr ){
+                klog_print("\ntrovato altro device");
+                line = i;
+                numberDevice = j;
+                findDevice = 1;
+            }
+        }
         if( &(deviceRegs->devreg[4][j].term.transm_command) == (memaddr*) cmdAddr ){
-            klog_print("\ntrovato terminale");
-            numberDevice = j;
+                klog_print("\ntrovato terminale trasmissione");
+                numberTermTransm = j;
+                findTermTransm = 1;
+            }
+        if( &(deviceRegs->devreg[4][j].term.recv_command) == (memaddr*) cmdAddr ){
+            klog_print("\ntrovato terminale ricezione");
+            numberTermRecv = j;
+            findTermRec = 1;
         }
     }
     //prendo il terminale che ha sollevato la doio
-    termreg_t term = deviceRegs->devreg[4][numberDevice].term; 
+    if(findTermRec == 1){
+        semTermRIndex = (4*8) + numberTermRecv; 
+        termRec = deviceRegs->devreg[4][numberTermRecv].term; 
+        deviceSemaphores[semTermRIndex]--;
+    }
+    else if(findTermTransm == 1){
+        semTermTIndex = (4*8) + numberTermTransm;
+        termTransm = deviceRegs->devreg[4][numberTermTransm].term;
+        deviceSemaphores[semTermRIndex]--;
+    }
+    else if(findDevice == 1){
+        semDevIndex = (line*8) + numberDevice;
+        device = deviceRegs->devreg[line][numberDevice].dtp;
+        deviceSemaphores[semDevIndex]--;
+    }
     //4 è linea 7 (quella dei terminali) decrementata di 3
     //8 numero di dispositivi su ogni linea
-    int semaphoreIndex = 4 * 8 + numberDevice;  
-
+      
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
     // metto in pausa il processo chiamante
     
-    deviceSemaphores[semaphoreIndex] -= 1;
     exceptState.pc_epc += 4; //increment pc by a word
     exceptState.reg_t9 = exceptState.pc_epc;
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     softBlockCount++; // incrementiamo il numero di processi bloccati
-    insertBlocked(&deviceSemaphores[semaphoreIndex],currentProcess); //blocchiamo il pcb sul semaforo
+    klog_print("\narrivo");
+    if(findDevice == 1) 
+        insertBlocked(&deviceSemaphores[semDevIndex],currentProcess); 
+    else if(findTermRec == 1) 
+        insertBlocked(&deviceSemaphores[semTermRIndex],currentProcess); 
+    else if(findTermTransm == 1) 
+        insertBlocked(&deviceSemaphores[semTermTIndex],currentProcess); 
+
     scheduler(); // richiamiamo lo scheduler   
     klog_print("\nfinisco doio");
-    return term.recv_status;
+    if(findDevice == 1) return device.status;
+    if(findTermRec == 1) return termRec.transm_status;
+    if(findTermTransm == 1) return termTransm.recv_status;
+    return 0;
 }
 
 // We've to return the accumulated processor time in 
