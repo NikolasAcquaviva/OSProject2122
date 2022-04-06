@@ -18,19 +18,16 @@ memaddr *getInterruptLineAddr(int line){   //restituisce l'indirizzo del device 
 /*cercare un bit a 1 nei registri relativi*/
 /* MANAGING ALL INTERRUPTS */
 void InterruptExceptionHandler(){
-
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
 
-    state_t* interrupt_state= (state_t*) BIOSDATAPAGE;
-    //interruptmap = exception state's Cause register
-    unsigned int interruptmap=((interrupt_state->cause & CAUSEMASK) >> 8); //0xFF00 = CAUSEMASK
-
+    int Cause = ((state_t*)BIOSDATAPAGE)->cause;
+    //interruptmap = IP field of Cause register
+    int interruptmap = (Cause >> 8) & 255; //0xFF00 = CAUSEMASK
     int line = getInterruptInt(interruptmap); //calcolare la linea che ha richiesto l'interrupt
-
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
-        
+        klog_print("\nlinea 1");
         //currentProcess e startTime variabili globali
         setTIMER(TIME_CONVERT(NEVER)); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
@@ -43,7 +40,7 @@ void InterruptExceptionHandler(){
     }
 
     else if (line == 2) { //System wide interval timer
-        
+        klog_print("\nlinea 2");
         LDIT(PSECOND); //100000
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
@@ -72,6 +69,7 @@ void InterruptExceptionHandler(){
 
     else if(line >2){ //controllo sulla linea che non sia un interrupt temporizzato
         /*DEVICE INTERRUPT */
+        klog_print("\nlinea maggiore di 2");
         memaddr* device= getInterruptLineAddr(line);
         // in case its a line > 2 interrupt, we cycle through its devices to look for the one that we have to handle
         //Ciclo 8 volte (devices per interrupt line)
@@ -82,6 +80,7 @@ void InterruptExceptionHandler(){
             mask *=2;
         }
     }
+    else klog_print("\nlinea negativa???");
 }
 
 int getInterruptInt(int map){  //calcolare la linea che ha richiesto l'interrupt
@@ -110,7 +109,7 @@ void NonTimerHandler(int line, int dev){
     }
     /*Terminali*/
     else if (line == 7){
-
+        klog_print("\nsono nella linea dei terminali");
         /* CASTING TO TERMINAL REGISTER */
         termreg_t* termreg = (termreg_t*) devreg;
 
@@ -145,7 +144,7 @@ void NonTimerHandler(int line, int dev){
 
     /*Se c'era almeno un processo bloccato*/
     if (unlocked != NULL){
-
+        klog_print("\n unlocked non e' null");
         /*Inserisco lo stato da ritornare nel registro v0*/
         unlocked->p_s.reg_v0 = status_toReturn;
 

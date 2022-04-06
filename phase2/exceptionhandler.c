@@ -286,29 +286,25 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
             numberDevice = j;
         }
     }
-    
-
     //prendo il terminale che ha sollevato la doio
-    termreg_t term = deviceRegs->devreg[4][numberDevice].term;    
-    term.transm_command = cmdValue;
-    
+    termreg_t term = deviceRegs->devreg[4][numberDevice].term; 
+    //4 è linea 7 (quella dei terminali) decrementata di 3
+    //8 numero di dispositivi su ogni linea
+    int semaphoreIndex = 4 * 8 + numberDevice;  
+
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
     // metto in pausa il processo chiamante
-    if(!(list_empty(&LowPriorityReadyQueue) &&
-         list_empty(&HighPriorityReadyQueue))){
-        klog_print("\n a quanto pare ce n'è almeno uno in code");
-        *cmdAddr -= 1;
-        exceptState.pc_epc += 4; //increment pc by a word
-        exceptState.reg_t9 = exceptState.pc_epc;
-        currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
-        GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-        softBlockCount++; // incrementiamo il numero di processi bloccati
-        insertBlocked(cmdAddr,currentProcess); //blocchiamo il pcb sul semaforo
-        scheduler(); // richiamiamo lo scheduler
-    }    
-   
+    
+    deviceSemaphores[semaphoreIndex] -= 1;
+    exceptState.pc_epc += 4; //increment pc by a word
+    exceptState.reg_t9 = exceptState.pc_epc;
+    currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
+    GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
+    softBlockCount++; // incrementiamo il numero di processi bloccati
+    insertBlocked(&deviceSemaphores[semaphoreIndex],currentProcess); //blocchiamo il pcb sul semaforo
+    scheduler(); // richiamiamo lo scheduler   
     klog_print("\nfinisco doio");
-    return term.transm_status;
+    return term.recv_status;
 }
 
 // We've to return the accumulated processor time in 
