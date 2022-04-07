@@ -15,7 +15,7 @@ extern int softBlockCount;
 extern int processCount;
 extern pcb_PTR currentProcess;
 */
-
+#define KUPBITON  0x8
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
@@ -156,7 +156,6 @@ void scheduler() {
 	
 	//resetto la flag
 	lastProcessHasYielded = NULL;
-
 	//c'è effettivamente un processo che sta aspettando in una delle due code
 	//cambio questa condizione, entriamo qui solo se c'è un processo in almeno una delle due code
 	if (atLeastOneProcessInQueue == TRUE) {
@@ -165,7 +164,7 @@ void scheduler() {
 		STCK(startTime);
 
 		//setto il process local timer
-		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(1000000000)); 
+		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(10000000000)); 
 		else setTIMER(TIME_CONVERT(TIMESLICE));
 
 		//reset variabile, indifferentemente dal suo valore precedente
@@ -185,7 +184,7 @@ void scheduler() {
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
 			klog_print("\nwait???");
-			setTIMER(TIME_CONVERT(1000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(TIME_CONVERT(100000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}

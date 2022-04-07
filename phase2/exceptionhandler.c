@@ -279,46 +279,55 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
     klog_print("\n\nsono nel doio"); 
     devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR;
-    dtpreg_t dev; termreg_t term;
+    dtpreg_t* dev; termreg_t* terminal;
     int line, numDevice, semIndex; 
     int isRecvTerm = 0; //per individuare se è di ricezione
     //politiche del devicesemaphores array
     //8 disk - 8 tape - 8 network - 8 printer - 8 transm term - 8 recv term - interval timer
     
+    //*cmdAddr = cmdValue;
     for(int j = 0; j < 8; j++){
         //terminali su linea 4
-        if(&(deviceRegs->devreg[4][j].term.transm_command) == cmdAddr){
+        if(&(deviceRegs->devreg[4][j].term.transm_command) == (memaddr*) cmdAddr){
+            klog_print("\ndentro if");
             line = 4; numDevice = j;
-            term = deviceRegs->devreg[4][j].term;
+            terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
+            terminal->transm_command = cmdValue;
         }
-        if(&(deviceRegs->devreg[4][j].term.recv_command) == cmdAddr){
+        if(&(deviceRegs->devreg[4][j].term.recv_command) == (memaddr*) cmdAddr){
             line = 4; numDevice = j; isRecvTerm = 1;
-            term = deviceRegs->devreg[4][j].term;
+            terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
+            terminal->recv_command = cmdValue;
         }
         //gli altri device fanno parte dello stesso gruppo
         for(int i = 0; i < 4; i++){
-            if(&(deviceRegs->devreg[i][j].dtp.command) == cmdAddr){
+            if(&(deviceRegs->devreg[i][j].dtp.command) == (memaddr*) cmdAddr){
                 line = i; numDevice = j; 
-                dev = deviceRegs->devreg[i][j].dtp;
+                dev = (dtpreg_t*) (0x10000054 + (line * 0x80) + (numDevice* 0x10));
+                dev->command = cmdValue;
             }
         }
     }
+    
+    
     //se è di ricezione siamo su linea 4, ma andiamo avanti di 8
     //perche abbiamo 16 device, i primi 8 di trasmissione
     if(isRecvTerm == 1) semIndex = line*8 + numDevice + 8;
     else semIndex = line*8 + numDevice;
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
-    exceptState.pc_epc += 4; //increment pc by a word
-    exceptState.reg_t9 = exceptState.pc_epc;
+    if((list_empty(&HighPriorityReadyQueue) && list_empty(&LowPriorityReadyQueue))){
+        exceptState.pc_epc += 4; //increment pc by a word
+        exceptState.reg_t9 = exceptState.pc_epc;
+    }
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     softBlockCount++; // incrementiamo il numero di processi bloccati
     insertBlocked(&deviceSemaphores[semIndex], currentProcess);
     scheduler(); // richiamiamo lo scheduler   
     klog_print("\nfinisco doio");
-    if(&(dev.command) == (memaddr*) cmdAddr) return dev.status;
-    else if(isRecvTerm == 1) return term.transm_status;
-    else return term.recv_status;
+    if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;
+    else if(isRecvTerm == 1) return terminal->recv_status;
+    else return terminal->transm_status;
 }
 
 // We've to return the accumulated processor time in 

@@ -99,6 +99,7 @@ void NonTimerHandler(int line, int dev){
     devreg_t* devreg = (devreg_t*) (0x10000054 + ((line - 3) * 0x80) + (dev * 0x10));
     //se il terminale riceve o trasmette un interrupt
     int isReadTerm = 0;
+    
     /*Stato da ritornare a v0*/
     unsigned int status_toReturn;
 
@@ -133,11 +134,12 @@ void NonTimerHandler(int line, int dev){
 
         /*Trovo il numero del device*/
         dev = 2*dev + isReadTerm;
+        
     }
 
+    
     /* FINDING DEVICE SEMAPHORE ADDRESS */
     int semAdd = (line - 3) * 8 + dev;
-
     /* INCREASING DEVICE SEMAPHORE VALUE */ /*Operazione V sul semaforo del device*/
     deviceSemaphores[semAdd]++;
 
@@ -163,7 +165,7 @@ void NonTimerHandler(int line, int dev){
         if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
         else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
     }
-
+    if(unlocked==NULL) klog_print("\nUNLOCKED NULL");
     /*Se nessun processo era in esecuzione chiamo lo Scheduler*/
     if (currentProcess == NULL) scheduler();
     /*Se il processo sbloccato ha priorità maggiore del processo in esecuzione*/
@@ -176,5 +178,5 @@ void NonTimerHandler(int line, int dev){
         scheduler();
     }
     /*Altrimenti carico il vecchio stato*/
-    else LDST((state_t *) BIOSDATAPAGE);
+    else LDST(&(currentProcess->p_s));
 }

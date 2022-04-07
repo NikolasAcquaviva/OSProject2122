@@ -113,26 +113,6 @@ void print(char *msg) {
         klog_print("\nsono nel while");
         devregtr value = PRINTCHR | (((devregtr)*s) << 8);
         status         = SYSCALL(DOIO, (int)command, (int)value, 0);
-        switch((status & TERMSTATMASK)){
-            case 0:
-                klog_print("\n0");
-                break;
-            case 1:
-                klog_print("\n1");
-                break;
-            case 2:
-                klog_print("\n2");
-                break;
-            case 3:
-                klog_print("\n3");
-                break;
-            case 4:
-                klog_print("\n4");
-                break;
-            default:
-                klog_print("\nouh");
-                break;
-        }
         if ((status & TERMSTATMASK) != RECVD) {
             PANIC();
         }
