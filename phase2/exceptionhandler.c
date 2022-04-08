@@ -48,7 +48,6 @@ void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
-
     //prendiamo i registri
     int a0 = exceptState.reg_a0,
         a1 = exceptState.reg_a1,
@@ -58,7 +57,6 @@ void SYSCALLExceptionHandler(){
     int user = exceptState.status;
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        klog_print("\nuser mode");
         exceptState.cause = 10;
         GeneralExceptionHandler();
     }
@@ -97,7 +95,6 @@ void SYSCALLExceptionHandler(){
             break;
         default:
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-            klog_print("\ncodice non valido");
             exceptState.cause = 10;
             GeneralExceptionHandler();
             break;
@@ -111,7 +108,6 @@ void SYSCALLExceptionHandler(){
             e incrementare di una word il program counter per 
             non avere il loop infinito di syscalls
         */
-        klog_print("\nfine handler\n");
         exceptState.pc_epc += 4; 
         LDST(&exceptState);
     }
@@ -199,9 +195,10 @@ ritorno l'id del processo;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = pidCounter;
         pidCounter++;
-        if (prio ==  1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
+        processCount++;
+        if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);
-        insertChild(currentProcess, nuovo); // lo inserisco come figlio del processo corrente
+        insertChild(nuovo, currentProcess); // lo inserisco come figlio del processo corrente
         nuovo->p_time = 0; // setto il tempo a 0
         nuovo->p_semAdd = NULL;
         return nuovo->p_pid;
@@ -233,12 +230,11 @@ void TERM_PROCESS(int pid, int a2, int a3){
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
-    klog_print("\nentro in passeren");
     //Quando si entra qui, il processo si bloccherà sull'ASL se il valore del semaforo è negativo dopo il decremento
     state_t exceptState = *((state_t*) BIOSDATAPAGE); //save exception state
     
     //controlliamo che il semaforo si possa utilizzare
-    if(insertBlocked(semaddr,currentProcess) == TRUE) PANIC();
+    if(insertBlocked(semaddr,currentProcess) == TRUE) {klog_print("\npanic in passeren"); PANIC();}
     //se si può utilizzare lo rimuoviamo dal semaforo per poi reinserirlo
     //perché fare questo controllo implica un inserimento nel semaforo del 
     //pcb (se il semaforo è libero e non va in PANIC)
@@ -246,38 +242,33 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     //decrementiamo valore semaforo
     *semaddr -= 1;
     if (*semaddr < 0 || semaddr == (int*) INTERVALTMR){ //in questo caso si blocca il pcb sul semaforo
-        klog_print("\nsono bloccato sulla asl");
         //incremento solo se c'è almeno un processo tra le due code
         //altrimenti lo scheduler non caricherà lo stato con ldst ma si tornerà a questo flusso
         //realizzando un doppio  incremento del pc(viene fatto un ulteriore incremento all'uscita del syscall handler)
-        if(!(list_empty(&LowPriorityReadyQueue) && list_empty(&HighPriorityReadyQueue))){
-            klog_print("\n a quanto pare ce n'è almeno uno in code");
-            exceptState.pc_epc += 4; //increment pc by a word
-            exceptState.reg_t9 = exceptState.pc_epc;
-            }
-
+        exceptState.pc_epc += 4; //increment pc by a word
+        exceptState.reg_t9 = exceptState.pc_epc;
         currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-        if(semaddr == (int*) INTERVALTMR) softBlockCount++; // incrementiamo il numero di processi bloccati
+        if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
+            softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         scheduler(); // richiamiamo lo scheduler
     }
-    klog_print("\nesco da passeren riottenendo il flusso");
     //altrimenti il flusso ritorna al currentprocess (oppure lo scheduler ha fatto il suo lavoro, NSYS5)
 }
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
-    (*currentProcess->p_semAdd) += 1; // eseguo una V operation sull'indirizzo ricevuto
-    if (*semaddr-1 < 0){
-        outBlocked(currentProcess); // rimuovo il processo dalla lista dei bloccati
-        softBlockCount--;
-        if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess); // lo inserisco nella lista corretta
-        else insertProcQ(&LowPriorityReadyQueue, currentProcess);
+    *semaddr += 1; // eseguo una V operation sull'indirizzo ricevuto
+    if ((*semaddr) - 1 < 0){
+        pcb_PTR unblocked = removeBlocked(semaddr); // rimuovo il processo dalla lista dei bloccati
+        if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
+            softBlockCount--;
+        if (unblocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unblocked); // lo inserisco nella lista corretta
+        else insertProcQ(&LowPriorityReadyQueue, unblocked);
     }
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
-    klog_print("\n\nsono nel doio"); 
     devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR;
     dtpreg_t* dev; termreg_t* terminal;
     int line, numDevice, semIndex; 
@@ -289,7 +280,6 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     for(int j = 0; j < 8; j++){
         //terminali su linea 4
         if(&(deviceRegs->devreg[4][j].term.transm_command) == (memaddr*) cmdAddr){
-            klog_print("\ndentro if");
             line = 4; numDevice = j;
             terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
             terminal->transm_command = cmdValue;
@@ -315,16 +305,15 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     if(isRecvTerm == 1) semIndex = line*8 + numDevice + 8;
     else semIndex = line*8 + numDevice;
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
-    if((list_empty(&HighPriorityReadyQueue) && list_empty(&LowPriorityReadyQueue))){
-        exceptState.pc_epc += 4; //increment pc by a word
-        exceptState.reg_t9 = exceptState.pc_epc;
-    }
+    
+    exceptState.pc_epc += 4; //increment pc by a word
+    exceptState.reg_t9 = exceptState.pc_epc;    
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     softBlockCount++; // incrementiamo il numero di processi bloccati
+    deviceSemaphores[semIndex]--;
     insertBlocked(&deviceSemaphores[semIndex], currentProcess);
     scheduler(); // richiamiamo lo scheduler   
-    klog_print("\nfinisco doio");
     if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;
     else if(isRecvTerm == 1) return terminal->recv_status;
     else return terminal->transm_status;
@@ -356,7 +345,7 @@ support_t* GET_SUPPORT_DATA(int a1, int a2, int a3){
 // get pid of current process if parent is equal to 0
 // get pid of the parent process otherwise
 int GET_PROCESS_ID(int parent, int a2, int a3){
-    if(parent) return currentProcess->p_parent->p_pid;
+    if(parent!=0) return currentProcess->p_parent->p_pid;
     else return currentProcess->p_pid;
 }
 

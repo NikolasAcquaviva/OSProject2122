@@ -30,10 +30,8 @@ void scheduler() {
 	//variabile usata per gestire alcuni casi. TRUE se esiste almeno un processo tra le due code
 	int atLeastOneProcessInQueue = (!list_empty(&HighPriorityReadyQueue) || !list_empty(&LowPriorityReadyQueue)) ? 1 : 0;
 
-	klog_print("\nsiamo entrati nello scheduler");
 
 	if (currentProcess != NULL) { // => c'è già un processo in exec
-		klog_print("\n1");
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
 		//STCK(x) => TOD/time scale
 		//STCK(finishTime); //"ferma il cronometro e popola x"
@@ -46,28 +44,22 @@ void scheduler() {
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
 	if (lastProcessHasYielded != NULL) {
-		klog_print("\n2");
 		if (lastProcessHasYielded->p_prio == 1){
-			klog_print("\n3");
 			pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue); //testa NON rimossa (peek)
 			//e se è il primo processo nella coda ad alta priorità pronto per essere eseguito (riconosciuto tramite suo puntatore pcb)
 			if (headHighPriorityQueue == lastProcessHasYielded) {
-				klog_print("\n4");
 				//controlla che non sia l'unico, ovvero che il suo next non sia la sentinella
 				//ma poichè non sappiamo l'indirizzo della sentinella, controlliamo che il next del next
 				//non sia il processo che ha rilasciato la risorsa (ovvero il processo stesso)
 				if (container_of(headHighPriorityQueue->p_list.next->next, pcb_t, p_list) == headHighPriorityQueue) { //
-					klog_print("\n5");
 					//controlla che la coda low priority NON sia vuota. Se non è vuota fai partire il suo primo processo in attesa
 					if (!list_empty(&LowPriorityReadyQueue)) {
-						klog_print("\n6");
 						currentProcess = removeProcQ(&LowPriorityReadyQueue);
 						highPriorityProcessChosen = FALSE;
 					}
 
 					//best effort: fai partire il processo che aveva rilasciato le risorse
 					else {
-						klog_print("\n7");
 						currentProcess = removeProcQ(&HighPriorityReadyQueue); //non utilizziamo headHighPriorityQueue perchè altrimenti
 						//non rimuoveremmo l'elemento dalla coda!
 						highPriorityProcessChosen = TRUE;
@@ -75,11 +67,9 @@ void scheduler() {
 				}
 				//altrimenti fai partire il secondo processo ad alta priorità ready
 				else {
-					klog_print("\n8");
 					currentProcess = container_of(headHighPriorityQueue->p_list.next, pcb_t, p_list);
 					//ricordarsi di rimuovere il secondo elemento (se è diverso da NULL)
 					if (currentProcess != NULL) { //pedante
-						klog_print("\n9");
 						outProcQ(&HighPriorityReadyQueue, currentProcess);
 						highPriorityProcessChosen = TRUE;
 					}
@@ -90,7 +80,6 @@ void scheduler() {
 			//quindi dal momento che abbiamo scartato l'ipotesi che il primo ed eventuale unico elemento sia il processo che ha svolto la yield,
 			//possiamo tranquillamente prendere il primo dalla high priority ready queue
 			else {
-				klog_print("\n10");
 				currentProcess = removeProcQ(&HighPriorityReadyQueue);
 				highPriorityProcessChosen = TRUE;
 			}
@@ -98,38 +87,30 @@ void scheduler() {
 
 
 		else if (lastProcessHasYielded->p_prio == 0){
-			klog_print("\n11");
 			if (!list_empty(&HighPriorityReadyQueue)){
-				klog_print("\n12");
 				currentProcess = removeProcQ(&HighPriorityReadyQueue);
 				highPriorityProcessChosen = TRUE;
 			}
 			else{
-				klog_print("\n13");
 				pcb_PTR headLowPriorityQueue = headProcQ(&LowPriorityReadyQueue); //testa NON rimossa (peek)
 
 				if (lastProcessHasYielded != headLowPriorityQueue){
-					klog_print("\n14");
 					currentProcess = removeProcQ(&LowPriorityReadyQueue);
 					highPriorityProcessChosen = FALSE;
 				}
 				//controllo che non sia l'unico a questo punto. (abbiamo la garanzia che la coda non sia vuota => necessariamente il primo)
 				else {
-					klog_print("\n15");
 					//se esiste almeno un secondo processo...
 					if (container_of(headLowPriorityQueue->p_list.next->next, pcb_t, p_list) != lastProcessHasYielded){
-						klog_print("\n16");
 						currentProcess = container_of(headLowPriorityQueue->p_list.next, pcb_t, p_list);
 						//ricordarsi di rimuovere il secondo elemento (se è diverso da NULL)
 						if (currentProcess != NULL) { //pedante
-							klog_print("\n17");
 							outProcQ(&LowPriorityReadyQueue, currentProcess);
 							highPriorityProcessChosen = FALSE;
 						}
 					}
 
 					else { //lastProcessHasYielded = head; è l'unico tra tutte due le code... best effort!
-						klog_print("\n18");
 						currentProcess = removeProcQ(&LowPriorityReadyQueue); //non utilizziamo headLowPriorityQueue perchè altrimenti
 						//non rimuoveremmo l'elemento dalla coda!
 						highPriorityProcessChosen = FALSE;
@@ -140,15 +121,12 @@ void scheduler() {
 	}
 	//altrimenti consuetudine
 	else {
-		klog_print("\n19");
 		if (!list_empty(&HighPriorityReadyQueue)) {
-			klog_print("\n20");
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
 			highPriorityProcessChosen = TRUE;			
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
-			klog_print("\n21");
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
 		}
@@ -159,7 +137,6 @@ void scheduler() {
 	//c'è effettivamente un processo che sta aspettando in una delle due code
 	//cambio questa condizione, entriamo qui solo se c'è un processo in almeno una delle due code
 	if (atLeastOneProcessInQueue == TRUE) {
-		klog_print("\n22");
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 
@@ -171,23 +148,20 @@ void scheduler() {
 		highPriorityProcessChosen = FALSE;
 
 		//gli assegno un pid
-		pidCounter += 1;
-		currentProcess->p_pid = pidCounter;
+		//pidCounter += 1;
+		//currentProcess->p_pid = pidCounter;
 		//ed INFINE carico lo stato del processo nel processore
-		klog_print("\nnello scheduler carico lo stato");
 		LDST(&(currentProcess->p_s));
 
 	}
 	else{
-		klog_print("\n23"); 
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			klog_print("\nwait???");
-			setTIMER(TIME_CONVERT(100000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(TIME_CONVERT(1000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
-		else if (processCount > 0 && softBlockCount == 0) PANIC(); //Deadlock
+		else if (processCount > 0 && softBlockCount == 0) {klog_print("\npanic in scheduler"); PANIC();} //Deadlock
 	}
 }

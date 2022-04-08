@@ -110,15 +110,14 @@ void print(char *msg) {
     devregtr  status;
     SYSCALL(PASSEREN, (int)&sem_term_mut, 0, 0); /* P(sem_term_mut) */
     while (*s != EOS) {
-        klog_print("\nsono nel while");
         devregtr value = PRINTCHR | (((devregtr)*s) << 8);
         status         = SYSCALL(DOIO, (int)command, (int)value, 0);
         if ((status & TERMSTATMASK) != RECVD) {
+            klog_print("\npanic in print");
             PANIC();
         }
         s++;
     }
-    klog_print("\nsono uscito dal while!!!");
     SYSCALL(VERHOGEN, (int)&sem_term_mut, 0, 0); /* V(sem_term_mut) */
 }
 
@@ -140,14 +139,13 @@ void uTLB_RefillHandler() {
 /*                 p1 -- the root process                            */
 /*                                                                   */
 void test() {
-    klog_print("\nvado in print");
     print("start p2test\n");
+    
     SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0); /* V(sem_testsem)   */
 
     print("p1 v(sem_testsem)\n");
 
     /* set up states of the other processes */
-
     STST(&hp_p1state);
     hp_p1state.reg_sp = hp_p1state.reg_sp - QPAGE;
     hp_p1state.pc_epc = hp_p1state.reg_t9 = (memaddr)hp_p1;
@@ -237,11 +235,9 @@ void test() {
     p2pid = SYSCALL(CREATEPROCESS, (int)&p2state, PROCESS_PRIO_LOW, (int)NULL); /* start p2     */
 
     print("p2 was started\n");
-
     SYSCALL(VERHOGEN, (int)&sem_startp2, 0, 0); /* V(sem_startp2)   */
-
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)     */
-
+    print("\ndopo passeren");
     /* make sure we really blocked */
     if (p1p2synch == 0) {
         print("error: p1/p2 synchronization bad\n");

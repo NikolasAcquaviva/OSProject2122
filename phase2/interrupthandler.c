@@ -28,7 +28,6 @@ void InterruptExceptionHandler(){
     int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
-        klog_print("\nlinea 1");
         //currentProcess e startTime variabili globali
         setTIMER(TIME_CONVERT(1000000000)); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
@@ -41,11 +40,9 @@ void InterruptExceptionHandler(){
     }
 
     else if (line == 2) { //System wide interval timer
-        klog_print("\nlinea 2");
         LDIT(PSECOND); //100000
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
-            klog_print("\nci entro mai qui??"); //non ci entro, sbagliato il numero del semaforo???
             STCK(interruptendtime);
             pcb_PTR blocked = removeBlocked(&(deviceSemaphores[NoDEVICE - 1]));
 
@@ -70,7 +67,6 @@ void InterruptExceptionHandler(){
 
     else if(line >2){ //controllo sulla linea che non sia un interrupt temporizzato
         /*DEVICE INTERRUPT */
-        klog_print("\nlinea maggiore di 2");
         memaddr* device= getInterruptLineAddr(line);
         // in case its a line > 2 interrupt, we cycle through its devices to look for the one that we have to handle
         //Ciclo 8 volte (devices per interrupt line)
@@ -81,7 +77,6 @@ void InterruptExceptionHandler(){
             mask *=2;
         }
     }
-    else klog_print("\nlinea negativa???");
 }
 
 int getInterruptInt(memaddr* map){  //calcolare la linea che ha richiesto l'interrupt
@@ -112,7 +107,6 @@ void NonTimerHandler(int line, int dev){
     }
     /*Terminali*/
     else if (line == 7){
-        klog_print("\nsono nella linea dei terminali");
         /* CASTING TO TERMINAL REGISTER */
         termreg_t* termreg = (termreg_t*) devreg;
 
@@ -133,13 +127,13 @@ void NonTimerHandler(int line, int dev){
         }
 
         /*Trovo il numero del device*/
-        dev = 2*dev + isReadTerm;
+        //dev = 2*dev + isReadTerm;
         
     }
 
     
     /* FINDING DEVICE SEMAPHORE ADDRESS */
-    int semAdd = (line - 3) * 8 + dev;
+    int semAdd = (line - 3) * 8 + dev + 8*isReadTerm;
     /* INCREASING DEVICE SEMAPHORE VALUE */ /*Operazione V sul semaforo del device*/
     deviceSemaphores[semAdd]++;
 
@@ -148,7 +142,6 @@ void NonTimerHandler(int line, int dev){
 
     /*Se c'era almeno un processo bloccato*/
     if (unlocked != NULL){
-        klog_print("\n unlocked non e' null");
         /*Inserisco lo stato da ritornare nel registro v0*/
         unlocked->p_s.reg_v0 = status_toReturn;
 
@@ -162,21 +155,28 @@ void NonTimerHandler(int line, int dev){
         softBlockCount -= 1;
         
         /*Inserisco il processo sbloccato nella readyQueue*/
-        if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
-        else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
+        
+        if(unlocked!=currentProcess){
+            if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
+            else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
+        }
+
+        if (currentProcess == NULL) scheduler();
+        //Se il processo sbloccato ha priorità maggiore del processo in esecuzione
+        
+        else if(unlocked->p_prio > currentProcess->p_prio){
+            currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
+            //posiziono il processo nella coda Ready
+            if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
+            else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, currentProcess);
+            //chiamo lo Scheduler
+            scheduler();
+        }
+        
+        /*Altrimenti carico il vecchio stato*/
+        else LDST(&currentProcess->p_s);
     }
-    if(unlocked==NULL) klog_print("\nUNLOCKED NULL");
-    /*Se nessun processo era in esecuzione chiamo lo Scheduler*/
-    if (currentProcess == NULL) scheduler();
-    /*Se il processo sbloccato ha priorità maggiore del processo in esecuzione*/
-    else if(unlocked->p_prio > currentProcess->p_prio){
-        currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
-        /*posiziono il processo nella coda Ready*/
-        if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
-        else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, currentProcess);
-        /*chiamo lo Scheduler*/
-        scheduler();
-    }
-    /*Altrimenti carico il vecchio stato*/
-    else LDST(&(currentProcess->p_s));
+    else if (currentProcess == NULL) scheduler();
+    else LDST((state_t*) BIOSDATAPAGE);
+    //se unlocked è null torna il controllo al currentprocess
 }

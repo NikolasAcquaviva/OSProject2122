@@ -104,14 +104,11 @@ extern void p5mm();
 
 /* a procedure to print on terminal 0 */
 void print(char *msg) {
-    klog_print("\nsono in print");
     char     *s       = msg;
     devregtr *base    = (devregtr *)(TERM0ADDR);
     devregtr *command = base + 3;
     devregtr  status;
-    klog_print("\nchiamo la passeren");
     SYSCALL(PASSEREN, (int)&sem_term_mut, 0, 0); /* P(sem_term_mut) */
-    klog_print("\nforse entro nel while");
     while (*s != EOS) {
         devregtr value = PRINTCHR | (((devregtr)*s) << 8);
         status         = SYSCALL(DOIO, (int)command, (int)value, 0);
@@ -141,7 +138,6 @@ void uTLB_RefillHandler() {
 /*                 p1 -- the root process                            */
 /*                                                                   */
 void test() {
-    klog_print("chiamo la print");
     print("start 0.1.c\n");
     SYSCALL(VERHOGEN, (int)&sem_testsem, 0, 0); /* V(sem_testsem)   */
 
