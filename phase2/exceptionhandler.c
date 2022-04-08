@@ -210,12 +210,16 @@ ritorno l'id del processo;
 void TERM_PROCESS(int pid, int a2, int a3){
     if(pid == 0){
         Die(currentProcess,1); //Die performa un'operazione speciale solo se il pcb è root (1)
+        klog_print("\nesco dalla prima die");
         pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
         list_for_each_entry(tmpChild,&currentProcess->p_child,p_child){
+            klog_print("\nentro nel primo for");
             list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) Die(tmpSib,0);
             //per ogni pcb sulla lista dei child, solo dopo aver terminato
             //tutti i fratelli, terminiamo il child stesso
+            klog_print("\nesco dal for interno");
             Die(tmpChild,0);
+            klog_print("\nesco dalla die dopo il for interno");
         }     
     }
     else{
