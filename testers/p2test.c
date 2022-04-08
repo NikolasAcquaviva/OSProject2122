@@ -242,7 +242,7 @@ void test() {
     if (p1p2synch == 0) {
         print("error: p1/p2 synchronization bad\n");
     }
-
+    print("\nprima di p3pid");
     p3pid = SYSCALL(CREATEPROCESS, (int)&p3state, PROCESS_PRIO_LOW, (int)NULL); /* start p3     */
 
     print("p3 is started\n");
@@ -354,7 +354,7 @@ void p2() {
     p1p2synch = 1; /* p1 will check this */
 
     SYSCALL(VERHOGEN, (int)&sem_endp2, 0, 0); /* V(sem_endp2)     */
-
+    print("\ndopo verhogen e prima di termprocess");
     SYSCALL(TERMPROCESS, 0, 0, 0); /* terminate p2 */
 
     /* just did a SYS2, so should not get to this point */
