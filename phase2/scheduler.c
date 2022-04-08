@@ -27,10 +27,6 @@ void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 
-	//variabile usata per gestire alcuni casi. TRUE se esiste almeno un processo tra le due code
-	int atLeastOneProcessInQueue = (!list_empty(&HighPriorityReadyQueue) || !list_empty(&LowPriorityReadyQueue)) ? 1 : 0;
-
-
 	if (currentProcess != NULL) { // => c'è già un processo in exec
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
 		//STCK(x) => TOD/time scale
@@ -136,7 +132,7 @@ void scheduler() {
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
 	//cambio questa condizione, entriamo qui solo se c'è un processo in almeno una delle due code
-	if (atLeastOneProcessInQueue == TRUE) {
+	if (currentProcess != NULL) {
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 
@@ -148,17 +144,17 @@ void scheduler() {
 		highPriorityProcessChosen = FALSE;
 
 		//gli assegno un pid
-		//pidCounter += 1;
+		
 		//currentProcess->p_pid = pidCounter;
+		//pidCounter += 1;
 		//ed INFINE carico lo stato del processo nel processore
 		LDST(&(currentProcess->p_s));
-
 	}
 	else{
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			setTIMER(TIME_CONVERT(1000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(TIME_CONVERT(100000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}

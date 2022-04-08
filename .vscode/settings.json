@@ -4,6 +4,7 @@
         "types.h": "c",
         "init.h": "c",
         "libumps.h": "c",
-        "exceptionhandler.h": "c"
+        "exceptionhandler.h": "c",
+        "listx.h": "c"
     }
 }

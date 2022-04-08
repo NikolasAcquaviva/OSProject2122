@@ -112,7 +112,7 @@ void NonTimerHandler(int line, int dev){
 
         //Se non è pronto a ricevere
         if (termreg->recv_status != READY){
-            
+            klog_print("\n non ready");
             /*Salvo lo status da ritornare*/
             status_toReturn = termreg->recv_status;
             termreg->recv_command = ACK;
@@ -164,7 +164,7 @@ void NonTimerHandler(int line, int dev){
         if (currentProcess == NULL) scheduler();
         //Se il processo sbloccato ha priorità maggiore del processo in esecuzione
         
-        else if(unlocked->p_prio > currentProcess->p_prio){
+        /*else if(unlocked->p_prio > currentProcess->p_prio){
             currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
             //posiziono il processo nella coda Ready
             if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
@@ -172,7 +172,7 @@ void NonTimerHandler(int line, int dev){
             //chiamo lo Scheduler
             scheduler();
         }
-        
+        */
         /*Altrimenti carico il vecchio stato*/
         else LDST(&currentProcess->p_s);
     }

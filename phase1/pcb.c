@@ -16,8 +16,8 @@ void initPcbs(){
 	//aggiunta dei pcb della table alla lista dei pcb liberi e aggiornamento dei campi
 	//p_list di ognuno perché puntino ai nodi della lista dei pcb liberi
 	for(int i = 0; i < MAXPROC; i++) {
-		list_add(&pcbFree_table[i].p_list, &pcbFree_h);
 		pcbFree_table[i].p_list = *pcbFree_h.next;
+		list_add(&pcbFree_table[i].p_list, &pcbFree_h);
 	}
 }
 

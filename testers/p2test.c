@@ -112,8 +112,8 @@ void print(char *msg) {
     while (*s != EOS) {
         devregtr value = PRINTCHR | (((devregtr)*s) << 8);
         status         = SYSCALL(DOIO, (int)command, (int)value, 0);
+
         if ((status & TERMSTATMASK) != RECVD) {
-            klog_print("\npanic in print");
             PANIC();
         }
         s++;
@@ -233,7 +233,6 @@ void test() {
 
     /* create process p2 */
     p2pid = SYSCALL(CREATEPROCESS, (int)&p2state, PROCESS_PRIO_LOW, (int)NULL); /* start p2     */
-
     print("p2 was started\n");
     SYSCALL(VERHOGEN, (int)&sem_startp2, 0, 0); /* V(sem_startp2)   */
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)     */

@@ -179,15 +179,15 @@ static pcb_PTR FindProcess(int pid){
 }
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
-/*
-creo il processo:
-decido se alta o bassa prio;
-genero il puntatore alla struttura di supporto;
-gli assegno un id;
-;
-lo inserisco come figlio del current;
-ritorno l'id del processo;
-*/
+    /*
+    creo il processo:
+    decido se alta o bassa prio;
+    genero il puntatore alla struttura di supporto;
+    gli assegno un id;
+    ;
+    lo inserisco come figlio del current;
+    ritorno l'id del processo;
+*/  
     pcb_t* nuovo = allocPcb(); // creo il processo
     if (nuovo != NULL){ // gli assegno lo stato, la prio, la support e il pid
         nuovo->p_s = *statep;
@@ -198,9 +198,7 @@ ritorno l'id del processo;
         processCount++;
         if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);
-        insertChild(currentProcess, nuovo); // lo inserisco come figlio del processo corrente
-        nuovo->p_time = 0; // setto il tempo a 0
-        nuovo->p_semAdd = NULL;
+        insertChild(currentProcess,nuovo);        
         return nuovo->p_pid;
     }
     else return -1;
@@ -211,23 +209,15 @@ void TERM_PROCESS(int pid, int a2, int a3){
     if(pid == 0){
         Die(currentProcess,1); //Die performa un'operazione speciale solo se il pcb è root (1)
         pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
-        
-        tmpChild = container_of(currentProcess->p_child.next, pcb_t, p_list);
-        if(tmpChild == NULL) klog_print("\n0 figli");
-        tmpChild = container_of(&tmpChild->p_child, pcb_t, p_list);
-        if(tmpChild == NULL) klog_print("\n1 figlio");
-        tmpChild = container_of(&tmpChild->p_child, pcb_t, p_list);
-        if(tmpChild == NULL) klog_print("\n2 figli");
-
-
+    
         list_for_each_entry(tmpChild,&currentProcess->p_child,p_child){
-            /*list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) {
+            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) {
                 Die(tmpSib,0);
             }
             //per ogni pcb sulla lista dei child, solo dopo aver terminato
             //tutti i fratelli, terminiamo il child stesso
             klog_print("\nesco dal for interno");
-            Die(tmpChild,0);*/
+            Die(tmpChild,0);
         } 
         klog_print("\noooh");    
     }
@@ -290,7 +280,6 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     //politiche del devicesemaphores array
     //8 disk - 8 tape - 8 network - 8 printer - 8 transm term - 8 recv term - interval timer
     
-    //*cmdAddr = cmdValue;
     for(int j = 0; j < 8; j++){
         //terminali su linea 4
         if(&(deviceRegs->devreg[4][j].term.transm_command) == (memaddr*) cmdAddr){
@@ -328,6 +317,9 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     deviceSemaphores[semIndex]--;
     insertBlocked(&deviceSemaphores[semIndex], currentProcess);
     scheduler(); // richiamiamo lo scheduler   
+    
+    if((terminal->transm_status & 0xFF) != 5) klog_print("\nnon puo fare");
+    else klog_print("\npuo stampare");
     if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;
     else if(isRecvTerm == 1) return terminal->recv_status;
     else return terminal->transm_status;

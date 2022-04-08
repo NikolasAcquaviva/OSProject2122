@@ -2,6 +2,7 @@
 #include "../pandos_types.h"
 #include "pcb.h"
 #include "asl.h"
+#include "listx.h"
 #include "scheduler.h"
 #include <umps3/umps/libumps.h>
 
@@ -136,21 +137,13 @@ int main() {
 	LDIT(PSECOND); //100000
 
 	pcb_PTR initProc = allocPcb(); 
-
-	initProc->p_time = 0;
-	/*
-	initProc->p_semAdd = NULL;
-	initProc->p_supportStruct = NULL; slide pg 24/48 => dobbiamo indicare un suo gestore? Chi?
-	initProc->p_parent = NULL; //"set all the process Tree fields to NULL"
-	INIT_LIST_HEAD(&(initProc->p_list)); 
-	INIT_LIST_HEAD(&(initProc->p_child)); 
-	INIT_LIST_HEAD(&(initProc->p_sib));*/   
+	
+	initProc->p_supportStruct = NULL; //slide pg 24/48 => dobbiamo indicare un suo gestore? Chi?
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità
 	
-	pidCounter = 0;
-	pidCounter+=1; //prima di assegnare, incrementerò
+	pidCounter=1; 
 	initProc->p_pid = pidCounter; 
-
+	pidCounter++;
 	processCount+=1;
 
 	/*init first process state */
