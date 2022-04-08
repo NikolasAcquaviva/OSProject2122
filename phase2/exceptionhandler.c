@@ -193,8 +193,8 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
         nuovo->p_s = *statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
+        pidCounter++; //prima di assegnare, incremento. Se l'ordine fosse l'opposto, prenderebbe il pidCounter del vecchio. pidCounter è globale
         nuovo->p_pid = pidCounter;
-        pidCounter++;
         processCount++;
         if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);
