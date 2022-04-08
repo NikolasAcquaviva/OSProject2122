@@ -227,6 +227,7 @@ void TERM_PROCESS(int pid, int a2, int a3){
             Die(tmpChild,0);
         }
     }
+    scheduler();
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){
