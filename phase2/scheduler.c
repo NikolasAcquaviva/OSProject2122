@@ -7,6 +7,7 @@
 #include "pcb.h"
 #include "asl.h"
 #include "init.h"
+#include "exceptionhandler.h"
 #include <umps3/umps/libumps.h>
 /*
 extern struct list_head LowPriorityReadyQueue;
@@ -15,14 +16,19 @@ extern int softBlockCount;
 extern int processCount;
 extern pcb_PTR currentProcess;
 */
-#define KUPBITON  0x8
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
+
+//umps3 supporta solo I/O asincrono, se ci sono altri processi
+//lo scheduler non li mandera anche se il currentprocess è bloccato
+//su un semaforo, se quest'ultimo è di un device di I/O
+extern int codiceEccezione; //usata per prendere il codice di syscall in un punto specifico dell'esecuzione (quando parte la doio)
 
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
 
+	if(codiceEccezione==DOIO) klog_print("\nscheduler con doio");
 	//flags
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
@@ -33,7 +39,6 @@ void scheduler() {
 		//STCK(finishTime); //"ferma il cronometro e popola x"
 		currentProcess->p_time += CURRENT_TOD - startTime; 
 	}
-
 
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
@@ -116,7 +121,7 @@ void scheduler() {
 		}
 	}
 	//altrimenti consuetudine
-	else {
+	else if(codiceEccezione != DOIO){
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
 			highPriorityProcessChosen = TRUE;			
@@ -131,7 +136,6 @@ void scheduler() {
 	//resetto la flag
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
-	//cambio questa condizione, entriamo qui solo se c'è un processo in almeno una delle due code
 	if (currentProcess != NULL) {
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
@@ -143,10 +147,6 @@ void scheduler() {
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
 
-		//gli assegno un pid
-		
-		//currentProcess->p_pid = pidCounter;
-		//pidCounter += 1;
 		//ed INFINE carico lo stato del processo nel processore
 		LDST(&(currentProcess->p_s));
 	}
@@ -154,7 +154,7 @@ void scheduler() {
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			setTIMER(TIME_CONVERT(100000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(TIME_CONVERT(1000000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}

@@ -8,7 +8,10 @@
 #include "exceptionhandler.h"
 #include "init.h"
 
-
+//serve per passare allo scheduler il caso in cui esso viene chiamato da una nsys5
+void setExcCode(int exC){
+    codiceEccezione = exC;
+}
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
     memaddr Cause = ((state_t*) BIOSDATAPAGE)->cause; //otteniamo il contenuto del registro cause
@@ -76,6 +79,7 @@ void SYSCALLExceptionHandler(){
             _VERHOGEN((int*) a1, a2, a3);
             break;
         case DOIO:
+            setExcCode(DOIO);
             exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
             break;
         case GETTIME:
@@ -193,8 +197,8 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
         nuovo->p_s = *statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
-        pidCounter++; //prima di assegnare, incremento. Se l'ordine fosse l'opposto, prenderebbe il pidCounter del vecchio. pidCounter è globale
         nuovo->p_pid = pidCounter;
+        pidCounter++;
         processCount++;
         if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);

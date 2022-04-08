@@ -174,7 +174,7 @@ void NonTimerHandler(int line, int dev){
         }
         */
         /*Altrimenti carico il vecchio stato*/
-        else LDST(&currentProcess->p_s);
+        else LDST((&currentProcess->p_s));
     }
     else if (currentProcess == NULL) scheduler();
     else LDST((state_t*) BIOSDATAPAGE);
