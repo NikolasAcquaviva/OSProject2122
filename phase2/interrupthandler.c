@@ -29,7 +29,7 @@ void InterruptExceptionHandler(){
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
         //currentProcess e startTime variabili globali
-        setTIMER(TIME_CONVERT(1000000000)); // setting the timer to a high value, ack interrupt
+        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
@@ -70,7 +70,7 @@ void InterruptExceptionHandler(){
         memaddr* device= getInterruptLineAddr(line);
         // in case its a line > 2 interrupt, we cycle through its devices to look for the one that we have to handle
         //Ciclo 8 volte (devices per interrupt line)
-        int mask =1;
+        int mask = 1;
         for(int i = 0; i < DEVPERINT; i++){
             /*Cerco il device corretto*/
             if(*device & mask) NonTimerHandler(line , i);

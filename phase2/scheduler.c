@@ -138,8 +138,8 @@ void scheduler() {
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 		//setto il process local timer
-		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(10000000000)); 
-		else setTIMER(TIME_CONVERT(TIMESLICE));
+		if (highPriorityProcessChosen) setTIMER(1000000000); 
+		else setTIMER(TIMESLICE);
 
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
@@ -152,7 +152,7 @@ void scheduler() {
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			setTIMER(TIME_CONVERT(1000000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(1000000); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
