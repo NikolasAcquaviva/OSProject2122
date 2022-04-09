@@ -65,6 +65,11 @@ void SYSCALLExceptionHandler(){
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
+        setExcCode(a0);
+        //se viene sollevata un'operazione di I/O,setto il valore
+        //lo scheduler lo usa per eseguire I/O sincrono
+        //lo risetto ogni volta che viene sollevata un eccezione
+        //altrimenti lo scheduler penserà che viene chiamato solo su operazioni I/O
         switch (a0){
         case CREATEPROCESS:
             exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
@@ -79,7 +84,6 @@ void SYSCALLExceptionHandler(){
             _VERHOGEN((int*) a1, a2, a3);
             break;
         case DOIO:
-            setExcCode(DOIO);
             exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
             break;
         case GETTIME:
@@ -200,9 +204,9 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
         nuovo->p_pid = pidCounter;
         pidCounter++;
         processCount++;
+        insertChild(currentProcess,nuovo);
         if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
-        else insertProcQ(&LowPriorityReadyQueue, nuovo);
-        insertChild(currentProcess,nuovo);        
+        else insertProcQ(&LowPriorityReadyQueue, nuovo);  
         return nuovo->p_pid;
     }
     else return -1;
@@ -256,10 +260,10 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         exceptState.pc_epc += 4; //increment pc by a word
         exceptState.reg_t9 = exceptState.pc_epc;
         currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
-        GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
+        GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         scheduler(); // richiamiamo lo scheduler
     }
     //altrimenti il flusso ritorna al currentprocess (oppure lo scheduler ha fatto il suo lavoro, NSYS5)
@@ -316,14 +320,12 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     exceptState.pc_epc += 4; //increment pc by a word
     exceptState.reg_t9 = exceptState.pc_epc;    
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
-    GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     softBlockCount++; // incrementiamo il numero di processi bloccati
     deviceSemaphores[semIndex]--;
     insertBlocked(&deviceSemaphores[semIndex], currentProcess);
+    GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     scheduler(); // richiamiamo lo scheduler   
     
-    if((terminal->transm_status & 0xFF) != 5) klog_print("\nnon puo fare");
-    else klog_print("\npuo stampare");
     if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;
     else if(isRecvTerm == 1) return terminal->recv_status;
     else return terminal->transm_status;
@@ -332,9 +334,8 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
 // We've to return the accumulated processor time in 
 // microseconds used by the requesting process
 int GET_CPU_TIME(int a1, int a2, int a3){
-    cpu_t currentTime; 
-    STCK(currentTime);
-    currentProcess->p_time = currentTime-startTime;
+    cpu_t currentTime; STCK(currentTime);
+    currentProcess->p_time += currentTime - startTime;
     return currentProcess->p_time;
 }
 
