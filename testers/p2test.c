@@ -236,7 +236,6 @@ void test() {
     print("p2 was started\n");
     SYSCALL(VERHOGEN, (int)&sem_startp2, 0, 0); /* V(sem_startp2)   */
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)     */
-    
     /* make sure we really blocked */
     if (p1p2synch == 0) {
         print("error: p1/p2 synchronization bad\n");
@@ -346,6 +345,7 @@ void p2() {
         if ((cpu_t2 - cpu_t1) < (MINLOOPTIME / (*((cpu_t *)TIMESCALEADDR))))
             print("error: not enough cpu time went by\n");
         print("p2 blew it!\n");
+        PANIC();
     }
 
     p1p2synch = 1; /* p1 will check this */

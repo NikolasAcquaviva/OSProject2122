@@ -33,19 +33,17 @@ extern int codiceEccezione; //usata per prendere il codice di syscall in un punt
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
-
-	if(codiceEccezione==DOIO) klog_print("\nscheduler con doio");
 	//flags
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 
-	if (currentProcess != NULL) { // => c'è già un processo in exec
+	/*if (currentProcess != NULL) { // => c'è già un processo in exec
 		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
 		//STCK(x) => TOD/time scale
 		//STCK(finishTime); //"ferma il cronometro e popola x"
-		currentProcess->p_time += CURRENT_TOD - startTime; 
+		currentProcess->p_time += CURRENT_TOD - startTime - currentProcess->p_time; 
 	}
-
+	*/
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
@@ -145,7 +143,6 @@ void scheduler() {
 	if (currentProcess != NULL) {
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
-
 		//setto il process local timer
 		if (highPriorityProcessChosen) setTIMER(10000000000); 
 		else setTIMER(TIMESLICE);
@@ -153,6 +150,7 @@ void scheduler() {
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
 
+		
 		//ed INFINE carico lo stato del processo nel processore
 		LDST(&(currentProcess->p_s));
 	}
