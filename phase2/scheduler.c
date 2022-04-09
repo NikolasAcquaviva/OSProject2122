@@ -17,6 +17,12 @@ extern int processCount;
 extern pcb_PTR currentProcess;
 */
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
+/*
+dopo domanda di Giulio del 9/4 alle 15:18 è inutile
+Giulio: Salve, SetTIMER considera già il timescale o carica semplicemente il valore inserito?
+Tutor: Considera gia' il timescale, basta passare il valore in microsecondi
+=> se vedete ulteriori TIME_CONVERT(x), cancellate TIME_CONVERT() e lasciate solo l'argomento
+*/
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
 //umps3 supporta solo I/O asincrono, se ci sono altri processi
