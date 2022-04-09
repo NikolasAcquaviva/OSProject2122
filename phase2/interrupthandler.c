@@ -14,7 +14,6 @@ cpu_t interruptstarttime, interruptendtime;
 memaddr *getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
     return (memaddr *) (0x10000040 + (0x04 * (line-3)));
 }
-
 /*cercare un bit a 1 nei registri relativi*/
 /* MANAGING ALL INTERRUPTS */
 void InterruptExceptionHandler(){
@@ -29,7 +28,7 @@ void InterruptExceptionHandler(){
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
         //currentProcess e startTime variabili globali
-        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
+        setTIMER(1000000); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
@@ -164,7 +163,7 @@ void NonTimerHandler(int line, int dev){
         if (currentProcess == NULL) scheduler();
         //Se il processo sbloccato ha priorità maggiore del processo in esecuzione
         
-        /*else if(unlocked->p_prio > currentProcess->p_prio){
+        else if(unlocked->p_prio > currentProcess->p_prio){
             currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
             //posiziono il processo nella coda Ready
             if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
@@ -172,9 +171,9 @@ void NonTimerHandler(int line, int dev){
             //chiamo lo Scheduler
             scheduler();
         }
-        */
+        
         /*Altrimenti carico il vecchio stato*/
-        else LDST((&currentProcess->p_s));
+        else LDST(((&currentProcess->p_s)));
     }
     else if (currentProcess == NULL) scheduler();
     else LDST((state_t*) BIOSDATAPAGE);

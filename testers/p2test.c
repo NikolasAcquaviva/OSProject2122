@@ -236,6 +236,7 @@ void test() {
     print("p2 was started\n");
     SYSCALL(VERHOGEN, (int)&sem_startp2, 0, 0); /* V(sem_startp2)   */
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)     */
+
     /* make sure we really blocked */
     if (p1p2synch == 0) {
         print("error: p1/p2 synchronization bad\n");
@@ -300,7 +301,7 @@ void p2() {
     int   i;              /* just to waste time  */
     cpu_t now1, now2;     /* times of day        */
     cpu_t cpu_t1, cpu_t2; /* cpu time used       */
-
+    
     SYSCALL(PASSEREN, (int)&sem_startp2, 0, 0); /* P(sem_startp2)   */
     print("p2 starts\n");
 
@@ -314,7 +315,7 @@ void p2() {
     for (i = 0; i <= MAXSEM; i++) {
         s[i] = 0;
     }
-
+    
     /* V, then P, all of the semaphores in the s[] array */
     for (i = 0; i <= MAXSEM; i++) {
         SYSCALL(VERHOGEN, (int)&s[i], 0, 0); /* V(S[I]) */
@@ -326,7 +327,6 @@ void p2() {
     print("p2 v's successfully\n");
 
     /* test of SYS6 */
-
     STCK(now1);                         /* time of day   */
     cpu_t1 = SYSCALL(GETTIME, 0, 0, 0); /* CPU time used */
 
@@ -351,7 +351,7 @@ void p2() {
     p1p2synch = 1; /* p1 will check this */
 
     SYSCALL(VERHOGEN, (int)&sem_endp2, 0, 0); /* V(sem_endp2)     */
-    print("\ndopo verhogen e prima di termprocess");
+    klog_print("\ninfinito");
     SYSCALL(TERMPROCESS, 0, 0, 0); /* terminate p2 */
 
     /* just did a SYS2, so should not get to this point */

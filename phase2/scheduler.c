@@ -9,41 +9,21 @@
 #include "init.h"
 #include "exceptionhandler.h"
 #include <umps3/umps/libumps.h>
-/*
-extern struct list_head LowPriorityReadyQueue;
-extern struct list_head HighPriorityReadyQueue;
-extern int softBlockCount;
-extern int processCount;
-extern pcb_PTR currentProcess;
-*/
+
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
-/*
-dopo domanda di Giulio del 9/4 alle 15:18 è inutile
-Giulio: Salve, SetTIMER considera già il timescale o carica semplicemente il valore inserito?
-Tutor: Considera gia' il timescale, basta passare il valore in microsecondi
-=> se vedete ulteriori TIME_CONVERT(x), cancellate TIME_CONVERT() e lasciate solo l'argomento
-*/
+
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
-//umps3 supporta solo I/O asincrono, se ci sono altri processi
-//lo scheduler non li mandera anche se il currentprocess è bloccato
-//su un semaforo, se quest'ultimo è di un device di I/O
 extern int codiceEccezione; //usata per prendere il codice di syscall in un punto specifico dell'esecuzione (quando parte la doio)
-
 cpu_t startTime;
 cpu_t finishTime;
+
 void scheduler() {
+	klog_print("\ninizio scheduler");
 	//flags
+	STCK(startTime);
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
-
-	/*if (currentProcess != NULL) { // => c'è già un processo in exec
-		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
-		//STCK(x) => TOD/time scale
-		//STCK(finishTime); //"ferma il cronometro e popola x"
-		currentProcess->p_time += CURRENT_TOD - startTime - currentProcess->p_time; 
-	}
-	*/
 
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
@@ -128,21 +108,20 @@ void scheduler() {
 	else if(codiceEccezione != DOIO){
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
-			highPriorityProcessChosen = TRUE;			
+			highPriorityProcessChosen = TRUE;
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
 		}
+
 	}
 	
 	//resetto la flag
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
 	if (currentProcess != NULL) {
-		//fisso il momento (in "clock tick") di partenza in cui parte
-		STCK(startTime);
 		//setto il process local timer
 		if (highPriorityProcessChosen) setTIMER(1000000000); 
 		else setTIMER(TIMESLICE);
@@ -150,7 +129,7 @@ void scheduler() {
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
 
-		
+		klog_print("\ncarico");
 		//ed INFINE carico lo stato del processo nel processore
 		LDST(&(currentProcess->p_s));
 	}
@@ -158,7 +137,8 @@ void scheduler() {
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			setTIMER(1000000); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			klog_print("\nwaiting");
+			setTIMER(1000000000); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
