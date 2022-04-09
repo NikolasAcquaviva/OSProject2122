@@ -29,7 +29,7 @@ void InterruptExceptionHandler(){
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
         //currentProcess e startTime variabili globali
-        setTIMER(TIME_CONVERT(1000000000)); // setting the timer to a high value, ack interrupt
+        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 

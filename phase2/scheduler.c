@@ -17,6 +17,12 @@ extern int processCount;
 extern pcb_PTR currentProcess;
 */
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
+/*
+dopo domanda di Giulio del 9/4 alle 15:18 è inutile
+Giulio: Salve, SetTIMER considera già il timescale o carica semplicemente il valore inserito?
+Tutor: Considera gia' il timescale, basta passare il valore in microsecondi
+=> se vedete ulteriori TIME_CONVERT(x), cancellate TIME_CONVERT() e lasciate solo l'argomento
+*/
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
 //umps3 supporta solo I/O asincrono, se ci sono altri processi
@@ -141,8 +147,8 @@ void scheduler() {
 		STCK(startTime);
 
 		//setto il process local timer
-		if (highPriorityProcessChosen) setTIMER(TIME_CONVERT(10000000000)); 
-		else setTIMER(TIME_CONVERT(TIMESLICE));
+		if (highPriorityProcessChosen) setTIMER(10000000000); 
+		else setTIMER(TIMESLICE);
 
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
@@ -154,7 +160,7 @@ void scheduler() {
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			setTIMER(TIME_CONVERT(1000000000000)); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(1000000000000); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
