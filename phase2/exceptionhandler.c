@@ -127,7 +127,7 @@ static void Die (pcb_t *p, int isRoot){
     int *startDevice, *endDevice; //memorizzano l'indirizzo di memoria 
     // di inizio e fine dell'array dei device semaphores
     int isDevice; //ci dice se un semaforo è un device semaphore o meno
-    if(isRoot == 1) outChild(p); 
+    if(isRoot) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
     
     //controlliamo il tipo del semaforo, isDevice è 1 se è un device semaphore
@@ -202,7 +202,6 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;
         nuovo->p_pid = pidCounter;
-        nuovo->p_time = 0;
         pidCounter++;
         processCount++;
         insertChild(currentProcess,nuovo);
@@ -253,13 +252,16 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     //decrementiamo valore semaforo
     /**semaddr -= 1;
     if (*semaddr < 0 || semaddr == (int*) INTERVALTMR){ //in questo caso si blocca il pcb sul semaforo
+        //incremento solo se c'è almeno un processo tra le due code
+        //altrimenti lo scheduler non caricherà lo stato con ldst ma si tornerà a questo flusso
+        //realizzando un doppio  incremento del pc(viene fatto un ulteriore incremento all'uscita del syscall handler)
         exceptState.pc_epc += 4; //increment pc by a word
         exceptState.reg_t9 = exceptState.pc_epc;
         currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount++; // incrementiamo il numero di processi bloccati
-        GET_CPU_TIME(0,0,0); // settiamo il tempo accumulato di cpu usato dal processo  
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
+        GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         scheduler(); // richiamiamo lo scheduler
     }
     //altrimenti il flusso ritorna al currentprocess (oppure lo scheduler ha fatto il suo lavoro, NSYS5)
@@ -345,8 +347,8 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     softBlockCount++; // incrementiamo il numero di processi bloccati
     deviceSemaphores[semIndex]--;
-    GET_CPU_TIME(0,0,0);
     insertBlocked(&deviceSemaphores[semIndex], currentProcess);
+    GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     scheduler(); // richiamiamo lo scheduler   
     
     if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;
@@ -357,9 +359,8 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
 // We've to return the accumulated processor time in 
 // microseconds used by the requesting process
 int GET_CPU_TIME(int a1, int a2, int a3){
-    cpu_t currentTime;
-    STCK(currentTime);
-    currentProcess->p_time += currentTime-startTime;
+    cpu_t currentTime; STCK(currentTime);
+    currentProcess->p_time += currentTime - startTime;
     return currentProcess->p_time;
 }
 
