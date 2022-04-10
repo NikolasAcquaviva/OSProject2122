@@ -38,7 +38,7 @@ all : kernel.core.umps
 kernel.core.umps : kernel
 	umps3-elf2umps -k ../phase2_config/$<
 
-kernel : asl.o p2test.o pcb.o exceptionhandler.o interrupthandler.o init.o scheduler.o crtso.o libumps.o
+kernel : asl.o p2test.0.2.o pcb.o exceptionhandler.o interrupthandler.o init.o scheduler.o crtso.o libumps.o
 	$(LD) -o $(addprefix $(OUTPUT_DIR)/, $@) $(addprefix $(OUTPUT_DIR)/obj/, $^) $(LDFLAGS)
 
 clean :
