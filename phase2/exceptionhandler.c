@@ -297,7 +297,7 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         scheduler(); // richiamiamo lo scheduler 
     }
-    else if(headBlocked(semaddr) == NULL){ // coda vuota
+    else if(headBlocked(semaddr) != NULL){ // coda vuota
         pcb_PTR unblocked = removeBlocked(semaddr); // rimuovo il processo dalla lista dei bloccati
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
