@@ -286,18 +286,14 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
     state_t exceptState = *((state_t*) BIOSDATAPAGE); //save exception state
-    
     if(*semaddr == 1) {
-        exceptState.pc_epc += 4; //increment pc by a word
-        exceptState.reg_t9 = exceptState.pc_epc;
-        currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount++; // incrementiamo il numero di processi bloccati
         GET_CPU_TIME(0,0,0); // settiamo il tempo accumulato di cpu usato dal processo  
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         scheduler(); // richiamiamo lo scheduler 
     }
-    else if(headBlocked(semaddr) != NULL){ // coda vuota
+    else if(headBlocked(semaddr) != NULL){ // coda non vuota
         pcb_PTR unblocked = removeBlocked(semaddr); // rimuovo il processo dalla lista dei bloccati
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
