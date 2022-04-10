@@ -142,8 +142,7 @@ static void Die (pcb_t *p, int isRoot){
     if (p->p_semAdd != NULL){
         //se l'indirizzo è compreso tra startdevice ed enddevice è l'indirizzo di un device semaphore
         isDevice = (p->p_semAdd >= startDevice && p->p_semAdd <= endDevice) ? 1 : 0;
-        if(isDevice == 1) softBlockCount--;  
-        else *p->p_semAdd++; 
+        isDevice == 1 ? softBlockCount-- : *p->p_semAdd++;    
     }
     else{ //lo rimuoviamo dalla coda dei processi pronti
         if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
@@ -221,16 +220,13 @@ void TERM_PROCESS(int pid, int a2, int a3){
         pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
     
         list_for_each_entry(tmpChild,&currentProcess->p_child,p_child){
-            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) {
-                Die(tmpSib,0);
-            }
             //per ogni pcb sulla lista dei child, solo dopo aver terminato
             //tutti i fratelli, terminiamo il child stesso
-            klog_print("\nesco dal for interno");
             Die(tmpChild,0);
+            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) {
+                Die(tmpSib,0);
+            } 
         } 
-        currentProcess = NULL;
-        klog_print("\noooh");    
     }
     else{
         pcb_PTR proc = FindProcess(pid); //proc->p_pid = pid
@@ -255,7 +251,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
     //pcb (se il semaforo è libero e non va in PANIC)
     outBlocked(currentProcess);
     //decrementiamo valore semaforo
-    *semaddr -= 1;
+    /**semaddr -= 1;
     if (*semaddr < 0 || semaddr == (int*) INTERVALTMR){ //in questo caso si blocca il pcb sul semaforo
         exceptState.pc_epc += 4; //increment pc by a word
         exceptState.reg_t9 = exceptState.pc_epc;
@@ -267,17 +263,48 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         scheduler(); // richiamiamo lo scheduler
     }
     //altrimenti il flusso ritorna al currentprocess (oppure lo scheduler ha fatto il suo lavoro, NSYS5)
-}
-
-void _VERHOGEN(int *semaddr, int a2, int a3){
-    *semaddr += 1; // eseguo una V operation sull'indirizzo ricevuto
-    if ((*semaddr) - 1 < 0){
+*/
+    if(*semaddr == 0){
+        exceptState.pc_epc += 4; //increment pc by a word
+        exceptState.reg_t9 = exceptState.pc_epc;
+        currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
+        if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
+            softBlockCount++; // incrementiamo il numero di processi bloccati
+        GET_CPU_TIME(0,0,0); // settiamo il tempo accumulato di cpu usato dal processo  
+        insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
+        scheduler(); // richiamiamo lo scheduler
+    }
+    else if(headBlocked(semaddr)!= NULL){ // almeno un processo bloccato in coda
         pcb_PTR unblocked = removeBlocked(semaddr); // rimuovo il processo dalla lista dei bloccati
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
         if (unblocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unblocked); // lo inserisco nella lista corretta
         else insertProcQ(&LowPriorityReadyQueue, unblocked);
     }
+    else *semaddr--;
+}
+
+void _VERHOGEN(int *semaddr, int a2, int a3){
+    state_t exceptState = *((state_t*) BIOSDATAPAGE); //save exception state
+    
+    if(*semaddr == 1) {
+        exceptState.pc_epc += 4; //increment pc by a word
+        exceptState.reg_t9 = exceptState.pc_epc;
+        currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
+        if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
+            softBlockCount++; // incrementiamo il numero di processi bloccati
+        GET_CPU_TIME(0,0,0); // settiamo il tempo accumulato di cpu usato dal processo  
+        insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
+        scheduler(); // richiamiamo lo scheduler 
+    }
+    else if(headBlocked(semaddr) == NULL){ // coda vuota
+        pcb_PTR unblocked = removeBlocked(semaddr); // rimuovo il processo dalla lista dei bloccati
+        if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
+            softBlockCount--;
+        if (unblocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unblocked); // lo inserisco nella lista corretta
+        else insertProcQ(&LowPriorityReadyQueue, unblocked);
+    }
+    else *semaddr++;
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){

@@ -19,7 +19,6 @@ cpu_t startTime;
 cpu_t finishTime;
 
 void scheduler() {
-	klog_print("\ninizio scheduler");
 	//flags
 	STCK(startTime);
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
@@ -129,7 +128,6 @@ void scheduler() {
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
 
-		klog_print("\ncarico");
 		//ed INFINE carico lo stato del processo nel processore
 		LDST(&(currentProcess->p_s));
 	}
@@ -137,7 +135,6 @@ void scheduler() {
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			klog_print("\nwaiting");
 			setTIMER(1000000000); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
