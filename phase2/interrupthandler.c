@@ -112,7 +112,6 @@ void NonTimerHandler(int line, int dev){
 
         //Se non è pronto a ricevere
         if (termreg->recv_status != READY){
-            klog_print("\n non ready");
             /*Salvo lo status da ritornare*/
             status_toReturn = termreg->recv_status;
             termreg->recv_command = ACK;

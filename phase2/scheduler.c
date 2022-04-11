@@ -37,14 +37,7 @@ void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 
-	/*if (currentProcess != NULL) { // => c'è già un processo in exec
-		//TOD = counter incremented by one after every processor cycle = tempo di vita del processore
-		//STCK(x) => TOD/time scale
-		//STCK(finishTime); //"ferma il cronometro e popola x"
-		currentProcess->p_time += CURRENT_TOD - startTime - currentProcess->p_time; 
-	}
-	*/
-
+	pcb_PTR old = currentProcess;
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
@@ -136,7 +129,6 @@ void scheduler() {
 			highPriorityProcessChosen = FALSE; //pedante
 		}
 	}
-	
 	//resetto la flag
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
@@ -151,7 +143,7 @@ void scheduler() {
 		highPriorityProcessChosen = FALSE;
 
 		//ed INFINE carico lo stato del processo nel processore
-		LDST(&(currentProcess->p_s));
+		LDST(&currentProcess->p_s);
 	}
 	else{
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
