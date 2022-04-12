@@ -196,7 +196,7 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
     ;
     lo inserisco come figlio del current;
     ritorno l'id del processo;
-*/  
+    */  
     pcb_t* nuovo = allocPcb(); // creo il processo
     if (nuovo != NULL){ // gli assegno lo stato, la prio, la support e il pid
         nuovo->p_s = *statep;
@@ -258,12 +258,12 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         scheduler();
     }
     else if(headBlocked(semaddr) != NULL){
+        klog_print("\nentro sicuramente qui");
         pcb_PTR exit = removeBlocked(semaddr);
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
         if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
         else insertProcQ(&LowPriorityReadyQueue,exit);
-
     }
     else (*semaddr)--;
 }

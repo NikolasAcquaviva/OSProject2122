@@ -237,7 +237,6 @@ void test() {
     print("p2 was started\n");
 
     SYSCALL(VERHOGEN, (int)&sem_startp2, 0, 0); /* V(sem_startp2)   */
-
     SYSCALL(VERHOGEN, (int)&sem_endp2, 0, 0); /* V(sem_endp2) (blocking V!)     */
     
     /* make sure we really blocked */
@@ -299,7 +298,6 @@ void test() {
     PANIC(); /* PANIC !!!     */
 }
 
-
 /* p2 -- semaphore and cputime-SYS test process */
 void p2() {
     int   i;              /* just to waste time  */
@@ -354,7 +352,7 @@ void p2() {
     }
 
     p1p2synch = 1; /* p1 will check this */
-
+    print("sto per sbloccare ed inserire in coda p1\n");
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)    unblocking P ! */
     SYSCALL(TERMPROCESS, 0, 0, 0); /* terminate p2 */
 

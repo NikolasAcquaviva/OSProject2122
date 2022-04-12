@@ -9,20 +9,9 @@
 #include "init.h"
 #include "exceptionhandler.h"
 #include <umps3/umps/libumps.h>
-/*
-extern struct list_head LowPriorityReadyQueue;
-extern struct list_head HighPriorityReadyQueue;
-extern int softBlockCount;
-extern int processCount;
-extern pcb_PTR currentProcess;
-*/
+
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
-/*
-dopo domanda di Giulio del 9/4 alle 15:18 è inutile
-Giulio: Salve, SetTIMER considera già il timescale o carica semplicemente il valore inserito?
-Tutor: Considera gia' il timescale, basta passare il valore in microsecondi
-=> se vedete ulteriori TIME_CONVERT(x), cancellate TIME_CONVERT() e lasciate solo l'argomento
-*/
+
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
 //umps3 supporta solo I/O asincrono, se ci sono altri processi
@@ -37,7 +26,6 @@ void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; //introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 
-	pcb_PTR old = currentProcess;
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
@@ -119,20 +107,29 @@ void scheduler() {
 	}
 	//altrimenti consuetudine
 	else if(codiceEccezione != DOIO){
+		pcb_PTR o = currentProcess;
+		if(codiceEccezione==TERMPROCESS) klog_print("\ncodice eccezione diverso da doio");
 		if (!list_empty(&HighPriorityReadyQueue)) {
+			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda ad alta priorita");
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
 			highPriorityProcessChosen = TRUE;			
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
+			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda a bassa priorita");
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
+		}
+		if(codiceEccezione==TERMPROCESS){
+			if(o == currentProcess) klog_print("\nnon e' cambiato");
+			else klog_print("\ne' cambiato");
 		}
 	}
 	//resetto la flag
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
 	if (currentProcess != NULL) {
+		if(codiceEccezione==TERMPROCESS) klog_print("\nfra poco carico");
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 		//setto il process local timer
@@ -146,6 +143,7 @@ void scheduler() {
 		LDST(&currentProcess->p_s);
 	}
 	else{
+		if(codiceEccezione==TERMPROCESS) klog_print("\nelse finale!!?!?!?!");
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
@@ -153,6 +151,6 @@ void scheduler() {
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
-		else if (processCount > 0 && softBlockCount == 0) {klog_print("\npanic in scheduler"); PANIC();} //Deadlock
+		else if (processCount > 0 && softBlockCount == 0) {if(codiceEccezione==TERMPROCESS) klog_print("\npanic in scheduler"); PANIC();} //Deadlock
 	}
 }
