@@ -112,12 +112,14 @@ void scheduler() {
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda ad alta priorita");
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
+			outProcQ(&HighPriorityReadyQueue, currentProcess);
 			highPriorityProcessChosen = TRUE;			
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
 			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda a bassa priorita");
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
+			outProcQ(&LowPriorityReadyQueue, currentProcess);
 			highPriorityProcessChosen = FALSE; //pedante
 		}
 		if(codiceEccezione==TERMPROCESS){
