@@ -160,7 +160,7 @@ int main() {
 
     initProc->p_s = initState;
 
-    insertProcQ(&(LowPriorityReadyQueue), initProc);
+    insertProcQ(&LowPriorityReadyQueue, initProc);
 	scheduler();
 
 	return 0;
