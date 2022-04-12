@@ -262,6 +262,8 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         pcb_PTR exit = removeBlocked(semaddr);
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
+        if (list_empty(&LowPriorityReadyQueue) == 1) klog_print("\ne' vuota");
+        else klog_print("\nnon lo e'");
         if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
         else insertProcQ(&LowPriorityReadyQueue,exit);
     }
@@ -287,8 +289,7 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
             if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
             else insertProcQ(&LowPriorityReadyQueue,exit);  
     }
-    else (*semaddr)++;
-        
+    else (*semaddr)++;   
 }
 
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
