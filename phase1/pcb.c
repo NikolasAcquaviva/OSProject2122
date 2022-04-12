@@ -96,7 +96,7 @@ all’elemento rimosso dalla lista */
 }
 
 pcb_t* outProcQ(struct list_head *head, pcb_t *p){ //9
-/*Rimuove il PCB puntato da p dalla coda dei
+/* Rimuove il PCB puntato da p dalla coda dei
 processi puntata da head. Se p non è presente
 nella coda, restituisce NULL. (NOTA: p può
 trovarsi in una posizione arbitraria della coda). */
