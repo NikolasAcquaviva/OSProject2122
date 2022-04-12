@@ -20,7 +20,6 @@ memaddr *getInterruptLineAddr(int line){   //restituisce l'indirizzo del device 
 void InterruptExceptionHandler(){
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
-
     state_t* iep_s = (state_t*) BIOSDATAPAGE;    //preleviamo l'exception state
     //int Cause = ((state_t*)BIOSDATAPAGE)->cause;
     //interruptmap = IP field of Cause register
@@ -28,8 +27,10 @@ void InterruptExceptionHandler(){
     int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
+        klog_print("\nokokokok");
+        
         //currentProcess e startTime variabili globali
-        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
+        setTIMER(100000); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 

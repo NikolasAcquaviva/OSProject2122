@@ -112,14 +112,50 @@ void scheduler() {
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda ad alta priorita");
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
-			outProcQ(&HighPriorityReadyQueue, currentProcess);
 			highPriorityProcessChosen = TRUE;			
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
 			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda a bassa priorita");
+			if(codiceEccezione==TERMPROCESS){
+				struct list_head *head;
+				int i = 0;
+				list_for_each(head,&LowPriorityReadyQueue) i++;
+				switch(i){
+					case 0:
+						klog_print("\nvuota");
+						break;
+					case 1:
+						klog_print("\n1 elemento");
+						break;
+					case 2:
+						klog_print("\n2 elementi");
+						break;
+					default:
+						klog_print("\n piu di 2 elementi");
+						break;
+				}
+			}
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
-			outProcQ(&LowPriorityReadyQueue, currentProcess);
+			if(codiceEccezione==TERMPROCESS){
+				struct list_head *head;
+				int i = 0;
+				list_for_each(head,&LowPriorityReadyQueue) i++;
+				switch(i){
+					case 0:
+						klog_print("\nvuota");
+						break;
+					case 1:
+						klog_print("\n1 elemento");
+						break;
+					case 2:
+						klog_print("\n2 elementi");
+						break;
+					default:
+						klog_print("\n piu di 2 elementi");
+						break;
+				}
+			}
 			highPriorityProcessChosen = FALSE; //pedante
 		}
 		if(codiceEccezione==TERMPROCESS){

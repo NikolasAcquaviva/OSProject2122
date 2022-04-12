@@ -238,6 +238,8 @@ void TERM_PROCESS(int pid, int a2, int a3){
         }
     }
     */
+    outProcQ(&LowPriorityReadyQueue,currentProcess);
+    klog_print("\ntermprocess");
     scheduler();
     
 }
@@ -262,10 +264,41 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         pcb_PTR exit = removeBlocked(semaddr);
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
-        if (list_empty(&LowPriorityReadyQueue) == 1) klog_print("\ne' vuota");
-        else klog_print("\nnon lo e'");
+        struct list_head *head;
+        int i = 0;
+        list_for_each(head,&LowPriorityReadyQueue) i++;
+        switch(i){
+            case 0:
+                klog_print("\nvuota");
+                break;
+            case 1:
+                klog_print("\n1 elemento");
+                break;
+            case 2:
+                klog_print("\n2 elementi");
+                break;
+            default:
+                klog_print("\n piu di 2 elementi");
+                break;
+        }
         if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
         else insertProcQ(&LowPriorityReadyQueue,exit);
+        i = 0;
+        list_for_each(head,&LowPriorityReadyQueue) i++;
+        switch(i){
+            case 0:
+                klog_print("\nvuota");
+                break;
+            case 1:
+                klog_print("\n1 elemento");
+                break;
+            case 2:
+                klog_print("\n2 elementi");
+                break;
+            default:
+                klog_print("\n piu di 2 elementi");
+                break;
+        }
     }
     else (*semaddr)--;
 }
