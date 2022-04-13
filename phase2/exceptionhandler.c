@@ -213,6 +213,8 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
         nuovo->p_pid = pidCounter;
         pidCounter++;
         processCount++;
+        nuovo->p_time = 0;
+        nuovo->p_semAdd = NULL;
         insertChild(currentProcess,nuovo);
         if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);  
@@ -374,12 +376,12 @@ int GET_PROCESS_ID(int parent, int a2, int a3){
 void _YIELD(int a1, int a2, int a3){
     if (currentProcess != NULL){
         if(currentProcess->p_prio){ //coda ad alta priorità
-            outProcQ(&HighPriorityReadyQueue,currentProcess); //perchè outProcQ?
+            //outProcQ(&HighPriorityReadyQueue,currentProcess); //perchè outProcQ?
             insertProcQ(&HighPriorityReadyQueue,currentProcess);
             lastProcessHasYielded = currentProcess;
         }
         else{
-            outProcQ(&LowPriorityReadyQueue,currentProcess);
+            //outProcQ(&LowPriorityReadyQueue,currentProcess);
             insertProcQ(&LowPriorityReadyQueue,currentProcess);
             lastProcessHasYielded = currentProcess;
         }
