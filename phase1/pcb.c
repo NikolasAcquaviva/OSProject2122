@@ -16,7 +16,6 @@ void initPcbs(){
 	//aggiunta dei pcb della table alla lista dei pcb liberi e aggiornamento dei campi
 	//p_list di ognuno perché puntino ai nodi della lista dei pcb liberi
 	for(int i = 0; i < MAXPROC; i++) {
-		pcbFree_table[i].p_list = *pcbFree_h.next;
 		list_add(&pcbFree_table[i].p_list, &pcbFree_h);
 	}
 }
@@ -125,7 +124,7 @@ void insertChild(pcb_t *prnt, pcb_t *p){ //11
 Inserisce il PCB puntato da p come figlio
 del PCB puntato da prnt.
 */
-	list_add(&p->p_list,&prnt->p_child);
+	list_add(&p->p_sib,&prnt->p_child);
 	p->p_parent = prnt;
 }
 
@@ -136,7 +135,13 @@ pcb_t* removeChild(pcb_t *p) { //12
 Rimuove il primo figlio del PCB puntato
 da p. Se p non ha figli, restituisce NULL.
 */
-	if (list_empty(&p->p_child)) return NULL;
+	if(list_empty(&p->p_child)) return NULL;
+	pcb_t *firstChild = container_of(p->p_child.next, pcb_t, p_sib);
+	list_del(p->p_child.next);
+	INIT_LIST_HEAD(&firstChild->p_sib);
+	firstChild->p_parent = NULL;
+	return firstChild;
+	/*if (list_empty(&p->p_child)) return NULL;
 	else{
 		pcb_t *tmp = container_of(p->p_child.next, pcb_t, p_list);
 		// tmp = pcb primo figlio
@@ -160,7 +165,7 @@ da p. Se p non ha figli, restituisce NULL.
 			list_del(toRemove);
 			return tmp;
 		}
-	}
+	}*/
 }
 
 
@@ -177,10 +182,10 @@ necessariamente il primo figlio del
 padre).
 */
 	if (p->p_parent == NULL) return NULL;
-	else if (&p->p_parent->p_child == &p->p_list) return removeChild(p->p_parent);
 	else{
-		pcb_t *exit = p;
-		list_del(&p->p_list);
-		return exit;
+		list_del(&p->p_sib);
+		INIT_LIST_HEAD(&p->p_sib);
+		p->p_parent = NULL;
+		return p;
 	}
 }

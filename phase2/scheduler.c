@@ -116,46 +116,7 @@ void scheduler() {
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
-			if(codiceEccezione==TERMPROCESS) klog_print("\ncoda a bassa priorita");
-			if(codiceEccezione==TERMPROCESS){
-				struct list_head *head;
-				int i = 0;
-				list_for_each(head,&LowPriorityReadyQueue) i++;
-				switch(i){
-					case 0:
-						klog_print("\nvuota");
-						break;
-					case 1:
-						klog_print("\n1 elemento");
-						break;
-					case 2:
-						klog_print("\n2 elementi");
-						break;
-					default:
-						klog_print("\n piu di 2 elementi");
-						break;
-				}
-			}
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
-			if(codiceEccezione==TERMPROCESS){
-				struct list_head *head;
-				int i = 0;
-				list_for_each(head,&LowPriorityReadyQueue) i++;
-				switch(i){
-					case 0:
-						klog_print("\nvuota");
-						break;
-					case 1:
-						klog_print("\n1 elemento");
-						break;
-					case 2:
-						klog_print("\n2 elementi");
-						break;
-					default:
-						klog_print("\n piu di 2 elementi");
-						break;
-				}
-			}
 			highPriorityProcessChosen = FALSE; //pedante
 		}
 		if(codiceEccezione==TERMPROCESS){
@@ -167,7 +128,6 @@ void scheduler() {
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
 	if (currentProcess != NULL) {
-		if(codiceEccezione==TERMPROCESS) klog_print("\nfra poco carico");
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 		//setto il process local timer
@@ -181,7 +141,6 @@ void scheduler() {
 		LDST(&currentProcess->p_s);
 	}
 	else{
-		if(codiceEccezione==TERMPROCESS) klog_print("\nelse finale!!?!?!?!");
 		// c'è un solo processo, bloccato sulla asl, 0 in coda
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
