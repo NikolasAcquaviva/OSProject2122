@@ -385,7 +385,7 @@ void _YIELD(int a1, int a2, int a3){
             insertProcQ(&LowPriorityReadyQueue,currentProcess);
             lastProcessHasYielded = currentProcess;
         }
-        processCount--; //supponiamo che ci siano n+1 processi che vogliono accedere ad una stessa risorsa => il prima si accaparrà la
+        //processCount--; //supponiamo che ci siano n+1 processi che vogliono accedere ad una stessa risorsa => il prima si accaparrà la
         //risorsa subito; gli altri n processi rimasti mandati/lanciati in esecuzione rimarranno in attesa bloccati sul semaforo della risorsa
         //=> ci saranno n +1 processi attivi, uno in esecuzione ed n in attesa
         scheduler(); //non c'è più nessun processo in esecuzione => chiamiamo lo scheduler
