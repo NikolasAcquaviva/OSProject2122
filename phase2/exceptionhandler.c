@@ -127,7 +127,16 @@ static void Die (pcb_t *p, int isRoot){
     int *startDevice, *endDevice; //memorizzano l'indirizzo di memoria 
     // di inizio e fine dell'array dei device semaphores
     int isDevice; //ci dice se un semaforo è un device semaphore o meno
-    if(isRoot) outChild(p); 
+    
+    /*
+        CORREGGERE QUESTO   
+    if(isRoot==1) {
+        if(p->p_parent == NULL) ;
+        else if(p->p_parent->p_child.next==&p->p_list) {klog_print("\nciao"); removeChild(p->p_parent);}
+        else list_del(&p->p_list);    
+    }
+
+    */
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
     
     //controlliamo il tipo del semaforo, isDevice è 1 se è un device semaphore
@@ -142,14 +151,20 @@ static void Die (pcb_t *p, int isRoot){
     if (p->p_semAdd != NULL){
         //se l'indirizzo è compreso tra startdevice ed enddevice è l'indirizzo di un device semaphore
         isDevice = (p->p_semAdd >= startDevice && p->p_semAdd <= endDevice) ? 1 : 0;
-        isDevice == 1 ? softBlockCount-- : (*p->p_semAdd)++;   
-        outBlocked(p); 
+        if(isDevice == 1) softBlockCount--;
+        else if(headBlocked(p->p_semAdd) != NULL){
+            pcb_PTR exit = removeBlocked(p->p_semAdd);
+            if(exit->p_prio==1) insertProcQ(&HighPriorityReadyQueue,exit);
+            else insertProcQ(&LowPriorityReadyQueue,exit);
+        }
+        else (*p->p_semAdd)++;
     }
     else if(p != currentProcess){ //lo rimuoviamo dalla coda dei processi pronti
         if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
         else outProcQ(&LowPriorityReadyQueue, p);
     }
     processCount--;
+    
 }
 
 //trova il pcb che ha come id un certo pid
@@ -215,7 +230,8 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
 
 
 void TERM_PROCESS(int pid, int a2, int a3){
-    /*if(pid == 0){
+   
+    if(pid == 0){
         Die(currentProcess,1); //Die performa un'operazione speciale solo se il pcb è root (1)
         pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
     
@@ -237,11 +253,8 @@ void TERM_PROCESS(int pid, int a2, int a3){
             Die(tmpChild,0);
         }
     }
-    */
-    outProcQ(&LowPriorityReadyQueue,currentProcess);
-    klog_print("\ntermprocess");
+    klog_print("\nvado in scheduler");
     scheduler();
-    
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){    
@@ -264,41 +277,9 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         pcb_PTR exit = removeBlocked(semaddr);
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;
-        struct list_head *head;
-        int i = 0;
-        list_for_each(head,&LowPriorityReadyQueue) i++;
-        switch(i){
-            case 0:
-                klog_print("\nvuota");
-                break;
-            case 1:
-                klog_print("\n1 elemento");
-                break;
-            case 2:
-                klog_print("\n2 elementi");
-                break;
-            default:
-                klog_print("\n piu di 2 elementi");
-                break;
-        }
         if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
         else insertProcQ(&LowPriorityReadyQueue,exit);
-        i = 0;
-        list_for_each(head,&LowPriorityReadyQueue) i++;
-        switch(i){
-            case 0:
-                klog_print("\nvuota");
-                break;
-            case 1:
-                klog_print("\n1 elemento");
-                break;
-            case 2:
-                klog_print("\n2 elementi");
-                break;
-            default:
-                klog_print("\n piu di 2 elementi");
-                break;
-        }
+        setTIMER(1000000000);
     }
     else (*semaddr)--;
 }
@@ -316,11 +297,11 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
         scheduler();
     }
     else if(headBlocked(semaddr) != NULL){
-            pcb_PTR exit = removeBlocked(semaddr);
-            if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
-                softBlockCount--;
-            if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
-            else insertProcQ(&LowPriorityReadyQueue,exit);  
+        pcb_PTR exit = removeBlocked(semaddr);
+        if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
+            softBlockCount--;
+        if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
+        else insertProcQ(&LowPriorityReadyQueue,exit); 
     }
     else (*semaddr)++;   
 }

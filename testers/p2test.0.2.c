@@ -352,7 +352,6 @@ void p2() {
     }
 
     p1p2synch = 1; /* p1 will check this */
-    print("sto per sbloccare ed inserire in coda p1\n");
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)    unblocking P ! */
     SYSCALL(TERMPROCESS, 0, 0, 0); /* terminate p2 */
 

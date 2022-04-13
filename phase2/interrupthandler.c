@@ -27,20 +27,21 @@ void InterruptExceptionHandler(){
     int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
-        klog_print("\nokokokok");
+        if(codiceEccezione==PASSEREN) klog_print("\nlinea1");
         
         //currentProcess e startTime variabili globali
-        setTIMER(100000); // setting the timer to a high value, ack interrupt
+        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
         if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
-        else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, currentProcess); //re-insert the process in the readyqueue
+        else insertProcQ(&LowPriorityReadyQueue, currentProcess); //re-insert the process in the readyqueue
         scheduler();
     
     }
 
     else if (line == 2) { //System wide interval timer
+        if(codiceEccezione==PASSEREN) klog_print("\nlinea2");
         LDIT(PSECOND); //100000
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
