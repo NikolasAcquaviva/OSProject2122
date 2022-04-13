@@ -18,7 +18,7 @@
 #include "pandos_const.h"
 #include "pandos_types.h"
 #include <umps3/umps/libumps.h>
-
+#include "../phase2/init.h"
 typedef unsigned int devregtr;
 
 /* hardware constants */
@@ -100,7 +100,7 @@ void p5sys(), p8root(), child1(), child2(), p8leaf1(), p8leaf2(), p8leaf3(), p8l
 
 extern void p5gen();
 extern void p5mm();
-
+extern void klog_print(char* msg);
 
 /* a procedure to print on terminal 0 */
 void print(char *msg) {
@@ -696,7 +696,6 @@ void p9() {
 void p10() {
     print("p10 starts\n");
     int ppid = SYSCALL(GETPROCESSID, 1, 0, 0);
-
     if (ppid != p9pid) {
         print("Inconsistent process id for p9!\n");
         PANIC();

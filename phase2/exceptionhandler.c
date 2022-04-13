@@ -28,9 +28,11 @@ void GeneralExceptionHandler(){
 void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
         //Siamo nel caso die
+        klog_print("\ncaso die");
         TERM_PROCESS(0,0,0);
     }
     else{
+        klog_print("\ncaso passup");
         //salviamo lo stato nel giusto campo della struttura di supporto
         currentProcess->p_supportStruct->sup_exceptState[index] = *((state_t*) BIOSDATAPAGE);
         //carichiamo il context dal giusto campo della struttura di supporto
@@ -40,10 +42,12 @@ void PassUp_Or_Die(int index){
 }
 
 void TLBExceptionHandler(){
+    klog_print("\ntlb");
     PassUp_Or_Die(PGFAULTEXCEPT);
 }
 
 void TrapExceptionHandler(){
+    klog_print("\ntrap");
     PassUp_Or_Die(GENERALEXCEPT);
 }
 
@@ -145,19 +149,13 @@ static void Die (pcb_t *p, int isRoot){
         //se l'indirizzo è compreso tra startdevice ed enddevice è l'indirizzo di un device semaphore
         isDevice = (p->p_semAdd >= startDevice && p->p_semAdd <= endDevice) ? 1 : 0;
         if(isDevice == 1) softBlockCount--;
-        else if(headBlocked(p->p_semAdd) != NULL){
-            pcb_PTR exit = removeBlocked(p->p_semAdd);
-            if(exit->p_prio==1) insertProcQ(&HighPriorityReadyQueue,exit);
-            else insertProcQ(&LowPriorityReadyQueue,exit);
-        }
-        else (*p->p_semAdd)++;
+        outBlocked(p);
     }
     else if(p != currentProcess){ //lo rimuoviamo dalla coda dei processi pronti
         if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
         else outProcQ(&LowPriorityReadyQueue, p);
     }
     processCount--;
-    
 }
 
 //trova il pcb che ha come id un certo pid
@@ -173,23 +171,27 @@ static pcb_PTR FindProcess(int pid){
         if(tmp->p_pid == pid) return tmp;
     list_for_each_entry(tmp,&LowPriorityReadyQueue,p_list)
         if(tmp->p_pid == pid) return tmp;
-    
+    klog_print("\npasso 1");
     //cerchiamo in tutti i semafori se nei processi bloccati c'è quello che ci interessa
     for(int i = 0; i < MAX_PROC; i++){
         pcb_PTR itr;
         list_for_each_entry(itr,&semd_table[i].s_procq,p_list)
-            if(itr->p_pid == pid) return itr;
+            if(itr->p_pid == pid) {
+                return itr;
+            }
+    }
+    klog_print("\npasso 2");
+    //cerchiamo sui semafori dei device
+    for(int i = 0; i < MAX_PROC; i++){
+        //solo se il semaforo ha processi bloccati sulla sua coda
+        for(int j = 0; j < NoDEVICE; j++)
+            if(pcbFree_table[i].p_pid == pid && 
+                pcbFree_table[i].p_semAdd == &deviceSemaphores[j]){ 
+                return &pcbFree_table[i];
+            }
     }
 
-    //cerchiamo sui semafori dei device
-    for(int i = 0; i < NoDEVICE; i++){
-        //solo se il semaforo ha processi bloccati sulla sua coda
-        if(deviceSemaphores[i]!=0){
-            for(int j = 0; j < MAXPROC; j++)
-                if(pcbFree_table[j].p_pid == pid) 
-                    return &pcbFree_table[j];
-        }
-    }
+    klog_print("\npasso 3");
     //NON SI PUÒ TERMINARE UN PROCESSO INESISTENTE
     PANIC();
     return NULL; //non si arriverà mai qui ovviamente, ma è buona norma
@@ -223,20 +225,20 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
 
 void RecursiveDie(pcb_PTR proc){
     //sappiamo che ha almeno un figlio ma il controllo va fatto per ricorsione
-    if(!list_empty(&proc->p_child)) RecursiveDie(container_of(&proc->p_child,pcb_t,p_sib));
-    struct list_head *head = &proc->p_sib; struct list_head *iter;
+    if(!list_empty(&proc->p_child)) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
+    struct list_head *head = &proc->p_parent->p_child; struct list_head *iter;
     list_for_each(iter,head) Die(container_of(iter,pcb_t,p_sib),0);
 }
 
 void TERM_PROCESS(int pid, int a2, int a3){
     if(pid == 0){
+        if(!list_empty(&currentProcess->p_child)) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
         Die(currentProcess,1);
-        if(!list_empty(&currentProcess->p_child)) RecursiveDie(currentProcess);
     }
     else{
         pcb_PTR proc = FindProcess(pid); //proc->p_pid = pid
+        if(!list_empty(&proc->p_child)) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
         Die(proc,1);
-        if(!list_empty(&proc->p_child)) RecursiveDie(proc);
     }    
     scheduler();
 }
@@ -319,7 +321,6 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
         }
     }
     
-    
     //se è di ricezione siamo su linea 4, ma andiamo avanti di 8
     //perche abbiamo 16 device, i primi 8 di trasmissione
     if(isRecvTerm == 1) semIndex = line*8 + numDevice + 8;
@@ -372,7 +373,11 @@ int GET_PROCESS_ID(int parent, int a2, int a3){
 // take out the current process from its queue
 // and reinsert enqueuing it in the queue
 void _YIELD(int a1, int a2, int a3){
-    if(currentProcess->p_prio){ //coda ad alta priorità
+    state_t exceptState = *((state_t*)BIOSDATAPAGE);
+    exceptState.pc_epc += 4;
+    exceptState.reg_t9 = exceptState.pc_epc;
+    currentProcess->p_s = exceptState;
+    if(currentProcess->p_prio==1){ //coda ad alta priorità
         outProcQ(&HighPriorityReadyQueue,currentProcess);
         insertProcQ(&HighPriorityReadyQueue,currentProcess);
         lastProcessHasYielded = currentProcess;
@@ -382,4 +387,5 @@ void _YIELD(int a1, int a2, int a3){
         insertProcQ(&LowPriorityReadyQueue,currentProcess);
         lastProcessHasYielded = currentProcess;
     }
+    scheduler();
 }
