@@ -60,7 +60,7 @@ void SYSCALLExceptionHandler(){
     int user = exceptState.status;
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        exceptState.cause = 10;
+        exceptState.cause = exceptState.cause | 40;
         GeneralExceptionHandler();
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
@@ -103,7 +103,7 @@ void SYSCALLExceptionHandler(){
             break;
         default:
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-            exceptState.cause = 10;
+            exceptState.cause = exceptState.cause | 40;
             GeneralExceptionHandler();
             break;
         }
@@ -128,15 +128,8 @@ static void Die (pcb_t *p, int isRoot){
     // di inizio e fine dell'array dei device semaphores
     int isDevice; //ci dice se un semaforo è un device semaphore o meno
     
-    /*
-        CORREGGERE QUESTO   
-    if(isRoot==1) {
-        if(p->p_parent == NULL) ;
-        else if(p->p_parent->p_child.next==&p->p_list) {klog_print("\nciao"); removeChild(p->p_parent);}
-        else list_del(&p->p_list);    
-    }
-
-    */
+    
+    if(isRoot==1) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
     
     //controlliamo il tipo del semaforo, isDevice è 1 se è un device semaphore
@@ -228,32 +221,23 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
     else return -1;
 }
 
+void RecursiveDie(pcb_PTR proc){
+    //sappiamo che ha almeno un figlio ma il controllo va fatto per ricorsione
+    if(!list_empty(&proc->p_child)) RecursiveDie(container_of(&proc->p_child,pcb_t,p_sib));
+    struct list_head *head = &proc->p_sib; struct list_head *iter;
+    list_for_each(iter,head) Die(container_of(iter,pcb_t,p_sib),0);
+}
 
 void TERM_PROCESS(int pid, int a2, int a3){
-   
     if(pid == 0){
-        Die(currentProcess,1); //Die performa un'operazione speciale solo se il pcb è root (1)
-        pcb_PTR tmpChild,tmpSib; // per iterare sulle liste di figli e fratelli
-    
-        list_for_each_entry(tmpChild,&currentProcess->p_child,p_child){
-            //per ogni pcb sulla lista dei child, solo dopo aver terminato
-            //tutti i fratelli, terminiamo il child stesso
-            Die(tmpChild,0);
-            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) {
-                Die(tmpSib,0);
-            } 
-        } 
+        Die(currentProcess,1);
+        if(!list_empty(&currentProcess->p_child)) RecursiveDie(currentProcess);
     }
     else{
         pcb_PTR proc = FindProcess(pid); //proc->p_pid = pid
-        Die(proc,1); 
-        pcb_PTR tmpChild,tmpSib; 
-        list_for_each_entry(tmpChild,&proc->p_child,p_child){
-            list_for_each_entry(tmpSib,&tmpChild->p_sib,p_sib) Die(tmpSib,0);
-            Die(tmpChild,0);
-        }
-    }
-    klog_print("\nvado in scheduler");
+        Die(proc,1);
+        if(!list_empty(&proc->p_child)) RecursiveDie(proc);
+    }    
     scheduler();
 }
 
@@ -279,7 +263,6 @@ void _PASSEREN(int *semaddr, int a2, int a3){
             softBlockCount--;
         if(exit->p_prio == 1) insertProcQ(&HighPriorityReadyQueue,exit);
         else insertProcQ(&LowPriorityReadyQueue,exit);
-        setTIMER(1000000000);
     }
     else (*semaddr)--;
 }
