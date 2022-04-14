@@ -238,12 +238,8 @@ void test() {
 
     
     SYSCALL(VERHOGEN, (int)&sem_startp2, 0, 0); /* V(sem_startp2)   */
-<<<<<<< HEAD
 
     SYSCALL(VERHOGEN, (int)&sem_endp2, 0, 0); /* V(sem_endp2) (blocking V!)     */
-=======
-    SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)     */
->>>>>>> parent of fbaa555... dopo la terminazione torna infinitamente nella terminazione di p2
     /* make sure we really blocked */
     if (p1p2synch == 0) {
         print("error: p1/p2 synchronization bad\n");
@@ -359,13 +355,8 @@ void p2() {
 
     p1p2synch = 1; /* p1 will check this */
 
-<<<<<<< HEAD
     SYSCALL(PASSEREN, (int)&sem_endp2, 0, 0); /* P(sem_endp2)    unblocking P ! */
 
-=======
-    SYSCALL(VERHOGEN, (int)&sem_endp2, 0, 0); /* V(sem_endp2)     */
-    print("\ndopo verhogen e prima di termprocess");
->>>>>>> parent of fbaa555... dopo la terminazione torna infinitamente nella terminazione di p2
     SYSCALL(TERMPROCESS, 0, 0, 0); /* terminate p2 */
 
     /* just did a SYS2, so should not get to this point */

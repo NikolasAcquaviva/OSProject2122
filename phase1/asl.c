@@ -106,7 +106,7 @@ pcb_t* outBlocked(pcb_t *p){
 
     		//Rimuove il PCB puntato da p dalla coda dei processi puntata da head. Se p non è presente nella coda, restituisce NULL.
     		pcb_PTR toReturn = outProcQ(&(index->s_procq), p); //abbiamo la garanzia che il sema4 abbia almeno un processo che aspetta per la risorsa(altrimenti sarebbe stato rimosso)
-    		
+    		toReturn->p_semAdd = NULL;
     		//se dopo aver tolto p non ci sono più processi in attesa su quel semaforo => libero il semaforo
     		if (emptyProcQ(&(index->s_procq))){
 
