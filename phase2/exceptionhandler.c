@@ -205,6 +205,8 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
         nuovo->p_pid = pidCounter;
         pidCounter++;
         processCount++;
+        nuovo->p_time = 0;
+        nuovo->p_semAdd = NULL;
         insertChild(currentProcess,nuovo);
         if (prio == 1) insertProcQ(&HighPriorityReadyQueue, nuovo); // decido in quale queue inserirlo
         else insertProcQ(&LowPriorityReadyQueue, nuovo);  
