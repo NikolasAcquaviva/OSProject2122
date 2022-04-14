@@ -21,7 +21,6 @@ extern pcb_PTR lastProcessHasYielded;
 extern struct list_head LowPriorityReadyQueue; 
 extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
-//extern void scheduler(); questa funzione appartiene a scheduler.c, non init! (altrimenti ci sono due signature)
 extern void memcpy(void *dest, const void *src, int n);
 void klog_print(char *str); //funzione non globale bensì facente parte di un modulo
 

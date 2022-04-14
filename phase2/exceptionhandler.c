@@ -1,5 +1,6 @@
 #include "../pandos_const.h"
 #include "../pandos_types.h"
+#include <umps3/umps/cp0.h>
 #include <umps3/umps/libumps.h>
 #include "../phase1/pcb.h"
 #include "../phase1/asl.h"
@@ -7,6 +8,7 @@
 #include "interrupthandler.h"
 #include "exceptionhandler.h"
 #include "init.h"
+
 
 //serve per passare allo scheduler il caso in cui esso viene chiamato da una nsys5
 void setExcCode(int exC){
@@ -28,11 +30,9 @@ void GeneralExceptionHandler(){
 void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
         //Siamo nel caso die
-        klog_print("\ncaso die");
         TERM_PROCESS(0,0,0);
     }
     else{
-        klog_print("\ncaso passup");
         //salviamo lo stato nel giusto campo della struttura di supporto
         currentProcess->p_supportStruct->sup_exceptState[index] = *((state_t*) BIOSDATAPAGE);
         //carichiamo il context dal giusto campo della struttura di supporto
@@ -42,12 +42,10 @@ void PassUp_Or_Die(int index){
 }
 
 void TLBExceptionHandler(){
-    klog_print("\ntlb");
     PassUp_Or_Die(PGFAULTEXCEPT);
 }
 
 void TrapExceptionHandler(){
-    klog_print("\ntrap");
     PassUp_Or_Die(GENERALEXCEPT);
 }
 
@@ -64,7 +62,7 @@ void SYSCALLExceptionHandler(){
     int user = exceptState.status;
     user = (user << 28) >> 31;
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        exceptState.cause = exceptState.cause | 40;
+        exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
         GeneralExceptionHandler();
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
@@ -107,7 +105,7 @@ void SYSCALLExceptionHandler(){
             break;
         default:
             //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-            exceptState.cause = exceptState.cause | 40;
+            exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
             GeneralExceptionHandler();
             break;
         }
@@ -128,34 +126,24 @@ void SYSCALLExceptionHandler(){
 //funzione che performa le azioni necessarie al tempo di terminazione di un processo
 //Usata in casi di die portion of pass-up or die oppure nsys2
 static void Die (pcb_t *p, int isRoot){
-    int *startDevice, *endDevice; //memorizzano l'indirizzo di memoria 
-    // di inizio e fine dell'array dei device semaphores
-    int isDevice; //ci dice se un semaforo è un device semaphore o meno
-    
-    
-    if(isRoot==1) outChild(p); 
+    if(isRoot==1 && p->p_parent!=NULL) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
-    
-    //controlliamo il tipo del semaforo, isDevice è 1 se è un device semaphore
-    startDevice = deviceSemaphores;
-    endDevice = &(deviceSemaphores[NoDEVICE-1]) + 32; 
-    //32 è la dimensione del tipo int, noDevice è la lunghezza del vettore
-    //calcoliamo l'indirizzo di fine vettore 
-
-    //se p è bloccato incrementiamo il valore del semaforo
-    //oppure decrementiamo il numero di processi softblock
-    //se è bloccato rispettivamente su un semaforo binario o su un devicesemaphore
     if (p->p_semAdd != NULL){
-        //se l'indirizzo è compreso tra startdevice ed enddevice è l'indirizzo di un device semaphore
-        isDevice = (p->p_semAdd >= startDevice && p->p_semAdd <= endDevice) ? 1 : 0;
-        if(isDevice == 1) softBlockCount--;
+        for(int i = 0; i < NoDEVICE; i++){
+            if(p->p_semAdd==&deviceSemaphores[i]) {
+                softBlockCount--;
+                break;
+            }
+        }
         outBlocked(p);
     }
     else if(p != currentProcess){ //lo rimuoviamo dalla coda dei processi pronti
         if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
         else outProcQ(&LowPriorityReadyQueue, p);
     }
+    freePcb(p);
     processCount--;
+    if(processCount==0) currentProcess = NULL;  
 }
 
 //trova il pcb che ha come id un certo pid
@@ -165,13 +153,14 @@ static pcb_PTR FindProcess(int pid){
     //per terminare il processo che ha come id il valore pid
     //quando pid è pari a 0 non si entra qui ma si termina il current process
     //di conseguenza non ci resta che cercare nelle code ready o code dei semafori 
-
     pcb_PTR tmp;
-    list_for_each_entry(tmp,&HighPriorityReadyQueue,p_list)
+    list_for_each_entry(tmp,&HighPriorityReadyQueue,p_list){
         if(tmp->p_pid == pid) return tmp;
-    list_for_each_entry(tmp,&LowPriorityReadyQueue,p_list)
+    }    
+    list_for_each_entry(tmp,&LowPriorityReadyQueue,p_list){
         if(tmp->p_pid == pid) return tmp;
-    klog_print("\npasso 1");
+    }
+    klog_print("\nquaaaa");
     //cerchiamo in tutti i semafori se nei processi bloccati c'è quello che ci interessa
     for(int i = 0; i < MAX_PROC; i++){
         pcb_PTR itr;
@@ -180,7 +169,6 @@ static pcb_PTR FindProcess(int pid){
                 return itr;
             }
     }
-    klog_print("\npasso 2");
     //cerchiamo sui semafori dei device
     for(int i = 0; i < MAX_PROC; i++){
         //solo se il semaforo ha processi bloccati sulla sua coda
@@ -190,8 +178,6 @@ static pcb_PTR FindProcess(int pid){
                 return &pcbFree_table[i];
             }
     }
-
-    klog_print("\npasso 3");
     //NON SI PUÒ TERMINARE UN PROCESSO INESISTENTE
     PANIC();
     return NULL; //non si arriverà mai qui ovviamente, ma è buona norma
@@ -225,26 +211,31 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
 
 void RecursiveDie(pcb_PTR proc){
     //sappiamo che ha almeno un figlio ma il controllo va fatto per ricorsione
-    if(!list_empty(&proc->p_child)) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
     struct list_head *head = &proc->p_parent->p_child; struct list_head *iter;
-    list_for_each(iter,head) Die(container_of(iter,pcb_t,p_sib),0);
+    list_for_each(iter,head){
+        pcb_PTR tmp = container_of(iter,pcb_t,p_sib);
+        if(!list_empty(&tmp->p_child)) 
+            RecursiveDie(container_of(tmp->p_child.next,pcb_t,p_sib));
+        Die(proc,0);
+    }
+    
 }
 
 void TERM_PROCESS(int pid, int a2, int a3){
     if(pid == 0){
-        if(!list_empty(&currentProcess->p_child)) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
+        if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
         Die(currentProcess,1);
     }
     else{
         pcb_PTR proc = FindProcess(pid); //proc->p_pid = pid
-        if(!list_empty(&proc->p_child)) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
+        if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
         Die(proc,1);
-    }    
+    }   
     scheduler();
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){    
-    if(insertBlocked(semaddr,currentProcess) == TRUE) {klog_print("\npanic in passeren"); PANIC();}
+    if(insertBlocked(semaddr,currentProcess) == TRUE) PANIC();
     outBlocked(currentProcess);
     
     if((*semaddr) == 0){
@@ -259,7 +250,6 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         scheduler();
     }
     else if(headBlocked(semaddr) != NULL){
-        klog_print("\nentro sicuramente qui");
         pcb_PTR exit = removeBlocked(semaddr);
         if(semaddr >= deviceSemaphores && semaddr <= &(deviceSemaphores[NoDEVICE-1])+32)
             softBlockCount--;

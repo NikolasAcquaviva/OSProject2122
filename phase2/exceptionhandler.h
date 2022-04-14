@@ -2,6 +2,7 @@
 #define EXCEPTION_HANDLER_H
 
 #define CAUSEMASK 0xFF
+
 int codiceEccezione;
 void GeneralExceptionHandler();
 void PassUp_Or_Die(int index);
