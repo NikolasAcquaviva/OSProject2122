@@ -5,6 +5,7 @@
         "init.h": "c",
         "libumps.h": "c",
         "exceptionhandler.h": "c",
-        "listx.h": "c"
+        "listx.h": "c",
+        "cp0.h": "c"
     }
 }

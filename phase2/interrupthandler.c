@@ -27,7 +27,6 @@ void InterruptExceptionHandler(){
     int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
-        klog_print("\nlinea1");
         
         //currentProcess e startTime variabili globali
         setTIMER(1000000); // setting the timer to a high value, ack interrupt
@@ -40,7 +39,6 @@ void InterruptExceptionHandler(){
     }
 
     else if (line == 2) { //System wide interval timer
-        klog_print("\nlinea2");
         LDIT(PSECOND); //100000
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
@@ -164,7 +162,7 @@ void NonTimerHandler(int line, int dev){
         if (currentProcess == NULL) scheduler();
         //Se il processo sbloccato ha priorità maggiore del processo in esecuzione
         
-        /*else if(unlocked->p_prio > currentProcess->p_prio){
+        else if(unlocked->p_prio > currentProcess->p_prio){
             currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
             //posiziono il processo nella coda Ready
             if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
@@ -172,7 +170,7 @@ void NonTimerHandler(int line, int dev){
             //chiamo lo Scheduler
             scheduler();
         }
-        */
+        
         /*Altrimenti carico il vecchio stato*/
         else LDST((&currentProcess->p_s));
     }
