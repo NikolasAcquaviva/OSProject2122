@@ -34,11 +34,12 @@ void PassUp_Or_Die(int index){
     }
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
-        currentProcess->p_supportStruct->sup_exceptState[index] = *((state_t*) BIOSDATAPAGE);
-        //carichiamo il context dal giusto campo della struttura di supporto
-        context_t rightContext = currentProcess->p_supportStruct->sup_exceptContext[index];
-        LDCXT(rightContext.stackPtr, rightContext.status, rightContext.pc);
-    }
+        state_t exceptState = *((state_t*)BIOSDATAPAGE);
+        currentProcess->p_supportStruct->sup_exceptState[index] = exceptState;
+        LDCXT(currentProcess->p_supportStruct->sup_exceptContext[index].stackPtr,
+              currentProcess->p_supportStruct->sup_exceptContext[index].status,
+              currentProcess->p_supportStruct->sup_exceptContext[index].pc);
+        }
 }
 
 void TLBExceptionHandler(){
@@ -73,41 +74,41 @@ void SYSCALLExceptionHandler(){
         //lo risetto ogni volta che viene sollevata un eccezione
         //altrimenti lo scheduler penserà che viene chiamato solo su operazioni I/O
         switch (a0){
-        case CREATEPROCESS:
-            exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
-            break;
-        case TERMPROCESS:
-            TERM_PROCESS(a1, a2, a3);
-            break;
-        case PASSEREN:
-            _PASSEREN((int*) a1, a2, a3);
-            break;
-        case VERHOGEN:
-            _VERHOGEN((int*) a1, a2, a3);
-            break;
-        case DOIO:
-            exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
-            break;
-        case GETTIME:
-            exceptState.reg_v0 = GET_CPU_TIME(a1,a2,a3);
-            break;
-        case CLOCKWAIT:
-            WAIT_FOR_CLOCK(a1,a2,a3);
-            break;
-        case GETSUPPORTPTR:
-            GET_SUPPORT_DATA(a1,a2,a3);
-            break;
-        case GETPROCESSID:
-            exceptState.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
-            break;
-        case YIELD:
-            _YIELD(a1,a2,a3);
-            break;
-        default:
-            //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-            exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
-            GeneralExceptionHandler();
-            break;
+            case CREATEPROCESS:
+                exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
+                break;
+            case TERMPROCESS:
+                TERM_PROCESS(a1, a2, a3);
+                break;
+            case PASSEREN:
+                _PASSEREN((int*) a1, a2, a3);
+                break;
+            case VERHOGEN:
+                _VERHOGEN((int*) a1, a2, a3);
+                break;
+            case DOIO:
+                exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
+                break;
+            case GETTIME:
+                exceptState.reg_v0 = GET_CPU_TIME(a1,a2,a3);
+                break;
+            case CLOCKWAIT:
+                WAIT_FOR_CLOCK(a1,a2,a3);
+                break;
+            case GETSUPPORTPTR:
+                exceptState.reg_v0 = (memaddr) GET_SUPPORT_DATA(a1,a2,a3);
+                break;
+            case GETPROCESSID:
+                exceptState.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
+                break;
+            case YIELD:
+                _YIELD(a1,a2,a3);
+                break;
+            default:
+                //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
+                exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
+                GeneralExceptionHandler();
+                break;
         }
 
         /*
@@ -128,12 +129,18 @@ void SYSCALLExceptionHandler(){
 static void Die (pcb_t *p, int isRoot){
     if(isRoot==1 && p->p_parent!=NULL) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
+    int found = 0;
     if (p->p_semAdd != NULL){
         for(int i = 0; i < NoDEVICE; i++){
             if(p->p_semAdd==&deviceSemaphores[i]) {
                 softBlockCount--;
+                found = 1;
                 break;
             }
+        }
+        if(found == 0 && (*p->p_semAdd)==0){
+            if(headBlocked(p->p_semAdd) == NULL) (*p->p_semAdd)++;
+            else removeBlocked(p->p_semAdd);
         }
         outBlocked(p);
     }
@@ -153,34 +160,31 @@ static pcb_PTR FindProcess(int pid){
     //per terminare il processo che ha come id il valore pid
     //quando pid è pari a 0 non si entra qui ma si termina il current process
     //di conseguenza non ci resta che cercare nelle code ready o code dei semafori 
-    pcb_PTR tmp;
+    pcb_PTR tmp, process;
     list_for_each_entry(tmp,&HighPriorityReadyQueue,p_list){
-        if(tmp->p_pid == pid) return tmp;
+        if(tmp->p_pid == pid) process = tmp;
     }    
     list_for_each_entry(tmp,&LowPriorityReadyQueue,p_list){
-        if(tmp->p_pid == pid) return tmp;
+        if(tmp->p_pid == pid) process = tmp;
     }
-    klog_print("\nquaaaa");
+    
     //cerchiamo in tutti i semafori se nei processi bloccati c'è quello che ci interessa
     for(int i = 0; i < MAX_PROC; i++){
         pcb_PTR itr;
-        list_for_each_entry(itr,&semd_table[i].s_procq,p_list)
-            if(itr->p_pid == pid) {
-                return itr;
-            }
+        list_for_each_entry(itr,&semd_table[i].s_procq,p_list){
+            if(itr->p_pid == pid) process = itr;
+        }
     }
     //cerchiamo sui semafori dei device
     for(int i = 0; i < MAX_PROC; i++){
-        //solo se il semaforo ha processi bloccati sulla sua coda
-        for(int j = 0; j < NoDEVICE; j++)
+        for(int j = 0; j < NoDEVICE; j++){
             if(pcbFree_table[i].p_pid == pid && 
                 pcbFree_table[i].p_semAdd == &deviceSemaphores[j]){ 
-                return &pcbFree_table[i];
+                process = &pcbFree_table[i];
             }
+        }
     }
-    //NON SI PUÒ TERMINARE UN PROCESSO INESISTENTE
-    PANIC();
-    return NULL; //non si arriverà mai qui ovviamente, ma è buona norma
+    return process;
 }
 
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
@@ -227,7 +231,7 @@ void TERM_PROCESS(int pid, int a2, int a3){
         Die(currentProcess,1);
     }
     else{
-        pcb_PTR proc = FindProcess(pid); //proc->p_pid = pid
+        pcb_PTR proc = FindProcess(pid); 
         if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
         Die(proc,1);
     }   

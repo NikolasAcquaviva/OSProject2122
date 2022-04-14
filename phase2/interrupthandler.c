@@ -29,7 +29,7 @@ void InterruptExceptionHandler(){
     else if (line == 1) { //PLT Interrupt
         
         //currentProcess e startTime variabili globali
-        setTIMER(1000000); // setting the timer to a high value, ack interrupt
+        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
@@ -123,9 +123,6 @@ void NonTimerHandler(int line, int dev){
             status_toReturn = termreg->transm_status;
             termreg->transm_command = ACK;
         }
-
-        /*Trovo il numero del device*/
-        //dev = 2*dev + isReadTerm;
         
     }
 
@@ -176,5 +173,4 @@ void NonTimerHandler(int line, int dev){
     }
     else if (currentProcess == NULL) scheduler();
     else LDST((state_t*) BIOSDATAPAGE);
-    //se unlocked è null torna il controllo al currentprocess
 }
