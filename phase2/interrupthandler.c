@@ -131,7 +131,6 @@ void NonTimerHandler(int line, int dev){
     int semAdd = (line - 3) * 8 + dev + 8*isReadTerm;
     /* INCREASING DEVICE SEMAPHORE VALUE */ /*Operazione V sul semaforo del device*/
     deviceSemaphores[semAdd]++;
-
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
     pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
 

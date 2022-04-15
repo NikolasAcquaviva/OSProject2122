@@ -1,7 +1,3 @@
-// cerca AGGIUNTO o MODIFICATO per vedere cosa ho modificato dopo il cambio di politica dei pid
-
-//toDO: ricordarsi di settare la flag globale lastProcessHasYielded quando si esegue la syscall YIELD
-//setSTATUS/TIMER pg 71/158
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "pcb.h"
@@ -11,14 +7,15 @@
 #include <umps3/umps/libumps.h>
 
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
-
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
 //umps3 supporta solo I/O asincrono, se ci sono altri processi
 //lo scheduler non li mandera anche se il currentprocess è bloccato
 //su un semaforo, se quest'ultimo è di un device di I/O
-extern int codiceEccezione; //usata per prendere il codice di syscall in un punto specifico dell'esecuzione (quando parte la doio)
 
+//usata per prendere il codice di syscall in un punto specifico dell'esecuzione (quando parte la doio)
+
+extern int codiceEccezione; 
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
@@ -26,13 +23,15 @@ void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; 
 	//introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
+	
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
 	if (lastProcessHasYielded != NULL) {
 		if (lastProcessHasYielded->p_prio == 1){
-			pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue); //testa NON rimossa (peek)
-			//e se è il primo processo nella coda ad alta priorità pronto per essere eseguito (riconosciuto tramite suo puntatore pcb)
+			pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue);
+			//e se è l'unico processo nella coda ad alta priorità pronto per essere eseguito
+			//si prova a dispatchare un processo a bassa priorita, se esiste
 			if (headHighPriorityQueue == lastProcessHasYielded) {
 				if (!list_empty(&LowPriorityReadyQueue)) {
 					currentProcess = removeProcQ(&LowPriorityReadyQueue);
@@ -40,7 +39,7 @@ void scheduler() {
 				}
 				//best effort: fai partire il processo che aveva rilasciato le risorse
 				else {
-					currentProcess = removeProcQ(&HighPriorityReadyQueue); //non utilizziamo headHighPriorityQueue perchè altrimenti
+					currentProcess = removeProcQ(&HighPriorityReadyQueue); 
 					highPriorityProcessChosen = TRUE;
 				}
 			}
@@ -50,6 +49,9 @@ void scheduler() {
 			} 	
 		}
 
+		//se un processo a bassa priorita ha yieldato, a prescindere seguiamo la classica politica
+		//poiché a prescindere che estraiamo dalla coda ad alta o bassa priorità
+		//estrarremo lo stesso processo che ha yieldato solo se siamo costretti(unico processo attivo)
 		else{
 			if (!list_empty(&HighPriorityReadyQueue)){
 				currentProcess = removeProcQ(&HighPriorityReadyQueue);
@@ -62,6 +64,8 @@ void scheduler() {
 		}
 	}
 	//altrimenti consuetudine
+	//estraiamo un nuovo processo solo se non stiamo eseguendo I/O
+	//operazioni di I/O sincrone
 	else if(codiceEccezione != DOIO){
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
@@ -72,6 +76,7 @@ void scheduler() {
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
 		}
+		else currentProcess = NULL;
 	}
 	//resetto la flag
 	lastProcessHasYielded = NULL;
