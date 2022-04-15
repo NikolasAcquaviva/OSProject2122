@@ -85,7 +85,7 @@ void scheduler() {
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 		//setto il process local timer
-		if (highPriorityProcessChosen) setTIMER(1000000000); 
+		if (highPriorityProcessChosen) setTIMER(NEVER); 
 		else setTIMER(TIMESLICE);
 
 		//reset variabile, indifferentemente dal suo valore precedente

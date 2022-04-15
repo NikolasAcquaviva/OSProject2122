@@ -29,7 +29,7 @@ void InterruptExceptionHandler(){
     else if (line == 1) { //PLT Interrupt
         
         //currentProcess e startTime variabili globali
-        setTIMER(1000000000); // setting the timer to a high value, ack interrupt
+        setTIMER(NEVER); // setting the timer to a high value, ack interrupt
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
