@@ -140,7 +140,11 @@ static void Die (pcb_t *p, int isRoot){
         }
         if(found == 0 && (*p->p_semAdd)==0){
             if(headBlocked(p->p_semAdd) == NULL) (*p->p_semAdd)++;
-            else removeBlocked(p->p_semAdd);
+            else {
+                pcb_PTR rev = removeBlocked(p->p_semAdd);
+                if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, rev);
+                else outProcQ(&LowPriorityReadyQueue, rev);
+            }
         }
         outBlocked(p);
     }
