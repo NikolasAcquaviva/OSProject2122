@@ -373,13 +373,8 @@ void _YIELD(int a1, int a2, int a3){
     exceptState.pc_epc += 4;
     exceptState.reg_t9 = exceptState.pc_epc;
     currentProcess->p_s = exceptState;
-    if(currentProcess->p_prio==1){ //coda ad alta priorità
-        insertProcQ(&HighPriorityReadyQueue,currentProcess);
-        lastProcessHasYielded = currentProcess;
-    }
-    else{
-        insertProcQ(&LowPriorityReadyQueue,currentProcess);
-        lastProcessHasYielded = currentProcess;
-    }
+    if(currentProcess->p_prio==1) insertProcQ(&HighPriorityReadyQueue,currentProcess);
+    else insertProcQ(&LowPriorityReadyQueue,currentProcess);
+    lastProcessHasYielded = currentProcess;
     scheduler();
 }
