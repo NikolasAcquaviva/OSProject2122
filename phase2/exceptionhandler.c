@@ -231,17 +231,33 @@ void RecursiveDie(pcb_PTR proc){
     
 }
 
+//controllo se figlio è un discendente di padre
+int __isMyRoot(pcb_PTR padre, pcb_PTR figlio){
+    //casi base
+    if (figlio->p_parent == NULL) return FALSE;
+    else if (figlio->p_parent == padre) return TRUE;
+    //ricorsione
+    else return __isMyRoot(padre, figlio->p_parent);
+}
+
 void TERM_PROCESS(int pid, int a2, int a3){
+    //un processo x fa terminare durante la sua esecuzione il processo y, e poichè l'architettura è monoprocessore, il processo y si troverà in una coda
+    int startScheduler = TRUE;
     if(pid == 0){
         if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
         Die(currentProcess,1);
+        startScheduler = TRUE; //poichè eliminiamo il processo corrente, ne manderemo un altro in esecuzione
     }
     else{
         pcb_PTR proc = FindProcess(pid); 
         if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
         Die(proc,1);
-    }   
-    scheduler();
+        //il processo terminato può essere il padre del processo corrente, e assieme al processo terminato vengono terminati anche i suoi figli
+        if (__isMyRoot(proc, currentProcess) == TRUE) startScheduler = TRUE; //poichè eliminiamo il processo corrente, ne manderemo un altro in esecuzione
+        else startScheduler = FALSE;
+    }
+    if (startScheduler == TRUE) scheduler();
+    //altrimenti prosegue il processo corrente
 }
 
 void _PASSEREN(int *semaddr, int a2, int a3){    
