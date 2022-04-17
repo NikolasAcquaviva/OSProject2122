@@ -2,7 +2,7 @@ Cartella contenente lavori relativi alla fase 1 e 2 del progetto di Sistemi Oper
 
 In phasek è possibile trovare i sorgenti e il makefile della fase k-esima.
 
-In docs si trovano alcuni dei documenti che sono stati consultati per realizzare il progetto
+In docs si trovano alcuni dei documenti che sono stati consultati per realizzare il progetto, la documentazione della fase 2(documentation)
 
 In testers ci sono i file di test e correlati
 

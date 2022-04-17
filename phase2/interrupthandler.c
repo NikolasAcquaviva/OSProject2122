@@ -8,10 +8,9 @@
 #include "interrupthandler.h"
 #include <umps3/umps/libumps.h>
 
-cpu_t interruptstarttime, interruptendtime;
 
 
-memaddr *getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
+static memaddr* getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
     return (memaddr *) (0x10000040 + (0x04 * (line-3)));
 }
 

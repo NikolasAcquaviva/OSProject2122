@@ -4,7 +4,8 @@
 #include "../pandos_types.h"
 #include "exceptionhandler.h"
 
-memaddr *getInterruptLineAddr(int line);
+cpu_t interruptstarttime, interruptendtime;
 int getInterruptInt(memaddr* map);
+void InterruptExcpetionHandler();
 void NonTimerHandler(int line,int dev);
 #endif

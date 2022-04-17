@@ -22,7 +22,7 @@ void GeneralExceptionHandler(){
 
 //Funzione Pass-up or Die per tutte le eccezioni diverse da Syscall con codice non positivo e Interrupts
 //Serve l'indice per distinguere tra page fault o eccezione generale
-void PassUp_Or_Die(int index){
+static void PassUp_Or_Die(int index){
     if(currentProcess->p_supportStruct == NULL){
         //Siamo nel caso die
         TERM_PROCESS(0,0,0);
@@ -149,7 +149,6 @@ static void Die (pcb_t *p, int isRoot){
     }
     freePcb(p);
     processCount--;
-    if(processCount==0) currentProcess = NULL;  
 }
 
 //trova il pcb che ha come id un certo pid
@@ -214,7 +213,7 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
     else return -1;
 }
 
-void RecursiveDie(pcb_PTR proc){
+static void RecursiveDie(pcb_PTR proc){
     //sappiamo che ha almeno un figlio ma il controllo va fatto per ricorsione
     struct list_head *head = &proc->p_parent->p_child; struct list_head *iter;
     list_for_each(iter,head){
@@ -227,7 +226,7 @@ void RecursiveDie(pcb_PTR proc){
 }
 
 //controllo se figlio è un discendente di padre
-int __isMyRoot(pcb_PTR padre, pcb_PTR figlio){
+static int __isMyRoot(pcb_PTR padre, pcb_PTR figlio){
     //casi base
     if (figlio->p_parent == NULL) return FALSE;
     else if (figlio->p_parent == padre) return TRUE;

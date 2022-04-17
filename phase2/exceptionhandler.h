@@ -5,7 +5,6 @@
 
 int codiceEccezione;
 void GeneralExceptionHandler();
-void PassUp_Or_Die(int index);
 void TLBExceptionHandler();
 void TrapExceptionHandler();
 extern void InterruptExceptionHandler();

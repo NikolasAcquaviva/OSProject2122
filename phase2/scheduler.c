@@ -13,13 +13,12 @@
 //lo scheduler non li mandera anche se il currentprocess è bloccato
 //su un semaforo, se quest'ultimo è di un device di I/O
 
-//usata per prendere il codice di syscall in un punto specifico dell'esecuzione (quando parte la doio)
+//usata per prendere il codice di syscall in un punto specifico dell'esecuzione 
 
 extern int codiceEccezione; 
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
-	//flags
 	unsigned int highPriorityProcessChosen = FALSE; 
 	//introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
