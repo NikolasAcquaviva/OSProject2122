@@ -21,20 +21,18 @@ void InterruptExceptionHandler(){
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
     state_t* iep_s = (state_t*) BIOSDATAPAGE;    //preleviamo l'exception state
-    //int Cause = ((state_t*)BIOSDATAPAGE)->cause;
-    //interruptmap = IP field of Cause register
     memaddr interruptmap = ((iep_s->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK
     int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
-        
-        //currentProcess e startTime variabili globali
         setTIMER(NEVER); // setting the timer to a high value, ack interrupt
+        
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
         if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
         else insertProcQ(&LowPriorityReadyQueue, currentProcess); //re-insert the process in the readyqueue
+        setSTATUS(ALLOFF);
         scheduler();
     }
 
@@ -48,17 +46,16 @@ void InterruptExceptionHandler(){
             if (blocked != NULL)  // equivalent of performing a continuos V operation on the interval timer semaphore
             {
                 /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
-                blocked->p_semAdd = NULL;
                 blocked->p_time += (interruptendtime - interruptstarttime);
-                if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
-                else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
+                if (blocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
+                else if (blocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
                 softBlockCount--;
             }
         }
         
         //adjust the semaphore value
         deviceSemaphores[NoDEVICE-1] = 0;
-
+        setSTATUS(ALLOFF);
         /*torna al processo in esecuzione se esiste, oppure rientro nello scheduler*/
         if (currentProcess == NULL) scheduler(); /* passing control to the current process (if there is one) */
         else LDST((state_t*) BIOSDATAPAGE);
@@ -129,8 +126,6 @@ void NonTimerHandler(int line, int dev){
     
     /* FINDING DEVICE SEMAPHORE ADDRESS */
     int semAdd = (line - 3) * 8 + dev + 8*isReadTerm;
-    /* INCREASING DEVICE SEMAPHORE VALUE */ /*Operazione V sul semaforo del device*/
-    deviceSemaphores[semAdd]++;
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
     pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
 
@@ -139,9 +134,6 @@ void NonTimerHandler(int line, int dev){
         /*Inserisco lo stato da ritornare nel registro v0*/
         unlocked->p_s.reg_v0 = status_toReturn;
 
-        /*Il processo non è più bloccato da un semaforo*/
-        unlocked->p_semAdd = NULL;
-        
         /*Calcolo il nuovo tempo del processo*/
         unlocked->p_time += (CURRENT_TOD - interruptstarttime);
         
@@ -149,27 +141,15 @@ void NonTimerHandler(int line, int dev){
         softBlockCount -= 1;
         
         /*Inserisco il processo sbloccato nella readyQueue*/
-        
         if(unlocked!=currentProcess){
             if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
             else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
         }
-
+        setSTATUS(ALLOFF);
         if (currentProcess == NULL) scheduler();
-        //Se il processo sbloccato ha priorità maggiore del processo in esecuzione
-        
-        else if(unlocked->p_prio > currentProcess->p_prio){
-            currentProcess->p_s = *((state_t*) BIOSDATAPAGE);   //copio lo stato del processore nel pcb del processo corrente
-            //posiziono il processo nella coda Ready
-            if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
-            else if (currentProcess->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, currentProcess);
-            //chiamo lo Scheduler
-            scheduler();
-        }
-        
         /*Altrimenti carico il vecchio stato*/
         else LDST((&currentProcess->p_s));
     }
     else if (currentProcess == NULL) scheduler();
-    else LDST((state_t*) BIOSDATAPAGE);
+    else LDST(&currentProcess->p_s);
 }

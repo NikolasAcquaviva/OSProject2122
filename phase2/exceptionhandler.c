@@ -9,11 +9,6 @@
 #include "exceptionhandler.h"
 #include "init.h"
 
-
-//serve per passare allo scheduler il caso in cui esso viene chiamato da una nsys5
-void setExcCode(int exC){
-    codiceEccezione = exC;
-}
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
     memaddr Cause = ((state_t*) BIOSDATAPAGE)->cause; //otteniamo il contenuto del registro cause
@@ -68,7 +63,7 @@ void SYSCALLExceptionHandler(){
     }
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
     else{
-        setExcCode(a0);
+        codiceEccezione = a0;
         //se viene sollevata un'operazione di I/O,setto il valore
         //lo scheduler lo usa per eseguire I/O sincrono
         //lo risetto ogni volta che viene sollevata un eccezione

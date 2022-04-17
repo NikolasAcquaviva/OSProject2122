@@ -66,7 +66,7 @@ void scheduler() {
 	//altrimenti consuetudine
 	//estraiamo un nuovo processo solo se non stiamo eseguendo I/O
 	//operazioni di I/O sincrone
-	else if(codiceEccezione != DOIO){
+	else if(codiceEccezione!=DOIO){
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
 			highPriorityProcessChosen = TRUE;			

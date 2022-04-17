@@ -60,7 +60,7 @@ pcb_t* removeBlocked(int *semAdd){
     		//Rimuove il primo elemento dalla coda dei processi puntata da head. Ritorna NULL se la
 			//coda è vuota. Altrimenti ritorna il puntatore all’elemento rimosso dalla lista.
     		pcb_PTR toReturn = removeProcQ(&(index->s_procq));
-
+			toReturn->p_semAdd = NULL;
     		//se dopo aver tolto p non ci sono più processi in attesa su quel semaforo => libero il semaforo
     		if (emptyProcQ(&(index->s_procq))){
 
