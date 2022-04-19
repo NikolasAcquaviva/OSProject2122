@@ -95,7 +95,7 @@ void scheduler() {
 	else{
 		if (processCount == 0) HALT();
 		else if (processCount > 0 && softBlockCount > 0){
-			setTIMER(1000000000); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
+			setTIMER(NEVER); //"either disable the PLT through the STATUS register or load it with a very large value" => 2)
 			setSTATUS(IECON | IMON); //enabling interrupts
 			WAIT(); //idle processor (waiting for interrupts)
 		}
