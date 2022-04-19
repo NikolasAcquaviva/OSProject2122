@@ -390,5 +390,6 @@ void _YIELD(int a1, int a2, int a3){
     if(currentProcess->p_prio==1) insertProcQ(&HighPriorityReadyQueue,currentProcess);
     else insertProcQ(&LowPriorityReadyQueue,currentProcess);
     lastProcessHasYielded = currentProcess;
+    currentProcess = NULL;
     scheduler();
 }
