@@ -106,11 +106,9 @@ void SYSCALLExceptionHandler(){
         }
 
         /*
-            Se arrivo qui significa che sono entrato in uno dei casi
-            in cui la syscall aveva un codice nel range negativo ed 
-            inoltre non termina il processo.
+            Siamo al punto di ritorno dalla syscall.
             Dobbiamo caricare lo stato salvato nella bios data page
-            e incrementare di una word il program counter per 
+            dopo aver incrementato di una word il program counter per 
             non avere il loop infinito di syscalls
         */
         exceptState.pc_epc += 4; 
@@ -120,7 +118,6 @@ void SYSCALLExceptionHandler(){
 
 //check whether a semaphore is a device semaphore
 static int isDevice(int* semaddr){
-    if(semaddr == (int*) INTERVALTMR) return 1;
     for(int i = 0; i < NoDEVICE; i++){
         if(semaddr == &deviceSemaphores[i])
             return 1;
@@ -133,19 +130,25 @@ static int isDevice(int* semaddr){
 static void Die (pcb_t *p, int isRoot){
     if(isRoot==1) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
+    
+    //se il pcb da terminare è bloccato, aggiustiamo il valore
+    //del semaforo o la variabile softblock in base al tipo del semaforo
     if (p->p_semAdd != NULL){
         if(isDevice(p->p_semAdd) == 1) softBlockCount--;
-        else if(*p->p_semAdd == 0 &&
-                headBlocked(p->p_semAdd) == NULL) *p->p_semAdd = 1;
+        else if(*p->p_semAdd == 0 && headBlocked(p->p_semAdd) == NULL) *p->p_semAdd = 1;
         outBlocked(p);
         p->p_semAdd = NULL;
     }
-    if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
+    //rimuoviamo il pcb dalle code di priorita altrimenti
+    else if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
     else outProcQ(&LowPriorityReadyQueue, p);
+    //decrementiamo il numero di processi e liberiamo il pcb
     processCount--;
     freePcb(p);
 }
 
+//rimozione di tutti i processi appartenenti al sottoalbero 
+//di un dato processo, proc è il primo figlio di tale processo
 static void RecursiveDie(pcb_PTR proc){
     struct list_head *head = &proc->p_parent->p_child; struct list_head *iter;
     list_for_each(iter,head){
@@ -186,6 +189,7 @@ static pcb_PTR FindProcess(int pid){
                 return &pcbFree_table[i];
         }
     }
+    //se non troviamo il processo(i.e non esiste)
     PANIC();
     return NULL;
 }
@@ -228,7 +232,9 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
 }
 
 void TERM_PROCESS(int pid, int a2, int a3){
-    //un processo x fa terminare durante la sua esecuzione il processo y, e poichè l'architettura è monoprocessore, il processo y si troverà in una coda
+    //chiamiamo lo scheduler in tutti i casi tranne quello in cui
+    //il currentprocess non viene terminato 
+    //(pid != 0  && current non appartenente al sottoalbero del processo terminato) 
     int startScheduler = TRUE;
     if(pid == 0){
         Die(currentProcess,1);
@@ -371,10 +377,11 @@ int GET_PROCESS_ID(int parent, int a2, int a3){
 // and reinsert enqueuing it in the queue
 void _YIELD(int a1, int a2, int a3){
     state_t exceptState = *((state_t*)BIOSDATAPAGE);
+    exceptState.pc_epc += 4;
+    exceptState.reg_t9 = exceptState.pc_epc;  
     currentProcess->p_s = exceptState;
     if(currentProcess->p_prio==1) insertProcQ(&HighPriorityReadyQueue,currentProcess);
     else insertProcQ(&LowPriorityReadyQueue,currentProcess);
     lastProcessHasYielded = currentProcess;
-    currentProcess = NULL;
     scheduler();
 }

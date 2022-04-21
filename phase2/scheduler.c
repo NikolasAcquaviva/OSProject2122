@@ -17,10 +17,11 @@
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
-	unsigned int highPriorityProcessChosen = FALSE; 
-	int extracted = 0;
 	//introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
+	unsigned int highPriorityProcessChosen = FALSE; 
+	//vale 0 se entrambe le code di processi pronti sono vuote, 1 altrimenti
+	int extracted = 0;
 	
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
