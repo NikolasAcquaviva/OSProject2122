@@ -13,13 +13,12 @@
 //lo scheduler non li mandera anche se il currentprocess è bloccato
 //su un semaforo, se quest'ultimo è di un device di I/O
 
-//usata per prendere il codice di syscall in un punto specifico dell'esecuzione 
 
-extern int codiceEccezione; 
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; 
+	int extracted = 0;
 	//introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 	
@@ -28,6 +27,7 @@ void scheduler() {
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
 	if (lastProcessHasYielded != NULL) {
 		if (lastProcessHasYielded->p_prio == 1){
+			extracted = 1;
 			pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue);
 			//e se è l'unico processo nella coda ad alta priorità pronto per essere eseguito
 			//si prova a dispatchare un processo a bassa priorita, se esiste
@@ -37,15 +37,10 @@ void scheduler() {
 					highPriorityProcessChosen = FALSE;
 				}
 				//best effort: fai partire il processo che aveva rilasciato le risorse
-				else {
-					currentProcess = removeProcQ(&HighPriorityReadyQueue); 
-					highPriorityProcessChosen = TRUE;
-				}
+				else highPriorityProcessChosen = TRUE;	
 			}
 			//altrimenti fai partire il secondo processo ad alta priorità ready
-			else {
-				currentProcess = removeProcQ(&HighPriorityReadyQueue);
-			} 	
+			else currentProcess = removeProcQ(&HighPriorityReadyQueue);
 		}
 
 		//se un processo a bassa priorita ha yieldato, a prescindere seguiamo la classica politica
@@ -55,32 +50,35 @@ void scheduler() {
 			if (!list_empty(&HighPriorityReadyQueue)){
 				currentProcess = removeProcQ(&HighPriorityReadyQueue);
 				highPriorityProcessChosen = TRUE;
+				extracted = 1;
 			}
-			else{
+			else if(!list_empty(&LowPriorityReadyQueue)){
 				currentProcess = removeProcQ(&LowPriorityReadyQueue);
 				highPriorityProcessChosen = FALSE;
+				extracted = 1;
 			}
 		}
 	}
 	//altrimenti consuetudine
 	//estraiamo un nuovo processo solo se non stiamo eseguendo I/O
 	//operazioni di I/O sincrone
-	else if(codiceEccezione!=DOIO){
+	else{
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
-			highPriorityProcessChosen = TRUE;			
+			highPriorityProcessChosen = TRUE;	
+			extracted = 1;
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
+			extracted = 1;
 		}
-		else currentProcess = NULL;
 	}
 	//resetto la flag
 	lastProcessHasYielded = NULL;
 	//c'è effettivamente un processo che sta aspettando in una delle due code
-	if (currentProcess != NULL) {
+	if (extracted==1) {
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 		//setto il process local timer

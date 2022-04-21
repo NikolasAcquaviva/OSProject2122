@@ -402,7 +402,6 @@ void p3() {
     }
 
     SYSCALL(VERHOGEN, (int)&sem_endp3, 0, 0); /* V(sem_endp3)        */
-
     SYSCALL(TERMPROCESS, 0, 0, 0); /* terminate p3    */
 
     /* just did a SYS2, so should not get to this point */
@@ -569,7 +568,6 @@ void p5b() {
     /* should cause a termination       */
     /* since this has already been      */
     /* done for PROGTRAPs               */
-
     SYSCALL(TERMPROCESS, 0, 0, 0);
 
     /* should have terminated, so should not get to this point */
@@ -700,7 +698,6 @@ void p10() {
         print("Inconsistent process id for p9!\n");
         PANIC();
     }
-
     SYSCALL(TERMPROCESS, ppid, 0, 0);
 
     print("Error: p10 didn't die with its parent!\n");
@@ -714,7 +711,6 @@ void hp_p1() {
     for (int i = 0; i < 100; i++) {
         SYSCALL(YIELD, 0, 0, 0);
     }
-
     SYSCALL(TERMPROCESS, 0, 0, 0);
     print("Error: hp_p1 didn't die!\n");
     PANIC();

@@ -27,11 +27,10 @@ void InterruptExceptionHandler(){
         setTIMER(NEVER); // setting the timer to a high value, ack interrupt
         
         /* SETTING OLD STATE ON CURRENT PROCESS */
-        currentProcess->p_s = *((state_t*) BIOSDATAPAGE); //update the current process state information
+        currentProcess->p_s = *iep_s; //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
         if (currentProcess->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, currentProcess);
         else insertProcQ(&LowPriorityReadyQueue, currentProcess); //re-insert the process in the readyqueue
-        setSTATUS(ALLOFF);
         scheduler();
     }
 
@@ -54,7 +53,6 @@ void InterruptExceptionHandler(){
         
         //adjust the semaphore value
         deviceSemaphores[NoDEVICE-1] = 0;
-        setSTATUS(ALLOFF);
         /*torna al processo in esecuzione se esiste, oppure rientro nello scheduler*/
         if (currentProcess == NULL) scheduler(); /* passing control to the current process (if there is one) */
         else LDST((state_t*) BIOSDATAPAGE);
@@ -122,7 +120,6 @@ void NonTimerHandler(int line, int dev){
         
     }
 
-    
     /* FINDING DEVICE SEMAPHORE ADDRESS */
     int semAdd = (line - 3) * 8 + dev + 8*isReadTerm;
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
@@ -137,18 +134,14 @@ void NonTimerHandler(int line, int dev){
         unlocked->p_time += (CURRENT_TOD - interruptstarttime);
         
         /*Diminuisco il numero di processi SoftBlocked*/
-        softBlockCount -= 1;
+        softBlockCount--;
         
         /*Inserisco il processo sbloccato nella readyQueue*/
         if(unlocked!=currentProcess){
             if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
             else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
         }
-        setSTATUS(ALLOFF);
-        if (currentProcess == NULL) scheduler();
-        /*Altrimenti carico il vecchio stato*/
-        else LDST((&currentProcess->p_s));
     }
-    else if (currentProcess == NULL) scheduler();
-    else LDST(&currentProcess->p_s);
+    if (currentProcess == NULL) scheduler();
+    else LDST((state_t*) BIOSDATAPAGE);
 }
