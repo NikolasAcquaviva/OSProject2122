@@ -18,7 +18,6 @@ cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; 
-	int extracted = 0;
 	//introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 	
@@ -27,7 +26,6 @@ void scheduler() {
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
 	if (lastProcessHasYielded != NULL) {
 		if (lastProcessHasYielded->p_prio == 1){
-			extracted = 1;
 			pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue);
 			//e se è l'unico processo nella coda ad alta priorità pronto per essere eseguito
 			//si prova a dispatchare un processo a bassa priorita, se esiste
@@ -37,7 +35,10 @@ void scheduler() {
 					highPriorityProcessChosen = FALSE;
 				}
 				//best effort: fai partire il processo che aveva rilasciato le risorse
-				else highPriorityProcessChosen = TRUE;	
+				else {
+					currentProcess = removeProcQ(&HighPriorityReadyQueue);
+					highPriorityProcessChosen = TRUE;
+				}	
 			}
 			//altrimenti fai partire il secondo processo ad alta priorità ready
 			else currentProcess = removeProcQ(&HighPriorityReadyQueue);
@@ -50,12 +51,10 @@ void scheduler() {
 			if (!list_empty(&HighPriorityReadyQueue)){
 				currentProcess = removeProcQ(&HighPriorityReadyQueue);
 				highPriorityProcessChosen = TRUE;
-				extracted = 1;
 			}
 			else if(!list_empty(&LowPriorityReadyQueue)){
 				currentProcess = removeProcQ(&LowPriorityReadyQueue);
 				highPriorityProcessChosen = FALSE;
-				extracted = 1;
 			}
 		}
 	}
@@ -63,22 +62,25 @@ void scheduler() {
 	//estraiamo un nuovo processo solo se non stiamo eseguendo I/O
 	//operazioni di I/O sincrone
 	else{
+		pcb_PTR o = currentProcess;
 		if (!list_empty(&HighPriorityReadyQueue)) {
+			klog_print("\nalta priorita");
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
 			highPriorityProcessChosen = TRUE;	
-			extracted = 1;
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
+			klog_print("\nbassa priorita");
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
-			extracted = 1;
 		}
+		if(o==currentProcess) klog_print("\ncambiato");
+		else klog_print("\nnon");
 	}
 	//resetto la flag
 	lastProcessHasYielded = NULL;
-	//c'è effettivamente un processo che sta aspettando in una delle due code
-	if (extracted==1) {
+	if(currentProcess!=NULL){
+		//c'è effettivamente un processo che sta aspettando in una delle due code
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
 		//setto il process local timer

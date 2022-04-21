@@ -135,14 +135,11 @@ static void Die (pcb_t *p, int isRoot){
     if(isRoot==1) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
     if (p->p_semAdd != NULL){
-        if(isDevice(p->p_semAdd)==1) softBlockCount--;
-        else (*p->p_semAdd)++;
         outBlocked(p);
+        if(*p->p_semAdd == 0) _VERHOGEN(p->p_semAdd,0,0);     
     }
-    else if(p != currentProcess){ //lo rimuoviamo dalla coda dei processi pronti
-        if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
-        else outProcQ(&LowPriorityReadyQueue, p);
-    }
+    if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
+    else outProcQ(&LowPriorityReadyQueue, p);
     processCount--;
     freePcb(p);
 }
@@ -233,16 +230,14 @@ void TERM_PROCESS(int pid, int a2, int a3){
     //un processo x fa terminare durante la sua esecuzione il processo y, e poichè l'architettura è monoprocessore, il processo y si troverà in una coda
     int startScheduler = TRUE;
     if(pid == 0){
-        klog_print("\nterminate current");
-        Die(currentProcess,1);
         if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
+        Die(currentProcess,1);
     }
     else{
-        klog_print("\nterminate other");
         pcb_PTR proc = FindProcess(pid); 
-        Die(proc,1);
         if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
         if (__isMyRoot(proc, currentProcess) == FALSE) startScheduler = FALSE;
+        Die(proc,1);
     }
     if (startScheduler == TRUE) scheduler();
     //altrimenti prosegue il processo corrente

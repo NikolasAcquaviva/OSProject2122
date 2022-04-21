@@ -144,7 +144,7 @@ int main() {
 	pidCounter=1; 
 	initProc->p_pid = pidCounter; 
 	pidCounter++;
-	processCount+=1;
+	processCount++;
 
 	/*init first process state */
 	state_t initState;

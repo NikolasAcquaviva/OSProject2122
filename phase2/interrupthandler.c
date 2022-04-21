@@ -39,16 +39,12 @@ void InterruptExceptionHandler(){
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
             STCK(interruptendtime);
-            pcb_PTR blocked = removeBlocked(&(deviceSemaphores[NoDEVICE - 1]));
-
-            if (blocked != NULL)  // equivalent of performing a continuos V operation on the interval timer semaphore
-            {
-                /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
-                blocked->p_time += (interruptendtime - interruptstarttime);
-                if (blocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
-                else if (blocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
-                softBlockCount--;
-            }
+            pcb_PTR blocked = removeBlocked(&deviceSemaphores[NoDEVICE - 1]);
+            /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
+            blocked->p_time += (interruptendtime - interruptstarttime);
+            if (blocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
+            else if (blocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
+            softBlockCount--; 
         }
         
         //adjust the semaphore value
@@ -58,7 +54,7 @@ void InterruptExceptionHandler(){
         else LDST((state_t*) BIOSDATAPAGE);
     }
 
-    else if(line >2){ //controllo sulla linea che non sia un interrupt temporizzato
+    else if(line > 2){ //controllo sulla linea che non sia un interrupt temporizzato
         /*DEVICE INTERRUPT */
         memaddr* device= getInterruptLineAddr(line);
         // in case its a line > 2 interrupt, we cycle through its devices to look for the one that we have to handle
@@ -125,23 +121,19 @@ void NonTimerHandler(int line, int dev){
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
     pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
 
-    /*Se c'era almeno un processo bloccato*/
-    if (unlocked != NULL){
-        /*Inserisco lo stato da ritornare nel registro v0*/
-        unlocked->p_s.reg_v0 = status_toReturn;
+    /*Inserisco lo stato da ritornare nel registro v0*/
+    unlocked->p_s.reg_v0 = status_toReturn;
 
-        /*Calcolo il nuovo tempo del processo*/
-        unlocked->p_time += (CURRENT_TOD - interruptstarttime);
-        
-        /*Diminuisco il numero di processi SoftBlocked*/
-        softBlockCount--;
-        
-        /*Inserisco il processo sbloccato nella readyQueue*/
-        if(unlocked!=currentProcess){
-            if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
-            else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
-        }
-    }
+    /*Calcolo il nuovo tempo del processo*/
+    unlocked->p_time += (CURRENT_TOD - interruptstarttime);
+    
+    /*Diminuisco il numero di processi SoftBlocked*/
+    softBlockCount--;
+    
+    /*Inserisco il processo sbloccato nella readyQueue*/
+    if (unlocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, unlocked);
+    else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);  
+    
     if (currentProcess == NULL) scheduler();
     else LDST((state_t*) BIOSDATAPAGE);
 }

@@ -549,6 +549,8 @@ void p5b() {
     cpu_t time1, time2;
 
     SYSCALL(1, 0, 0, 0);
+    print("diomorto\n");
+
     SYSCALL(PASSEREN, (int)&sem_endp4, 0, 0); /* P(sem_endp4)*/
 
     /* do some delay to be reasonably sure p4 and its offspring are dead */
@@ -564,7 +566,7 @@ void p5b() {
 
     SYSCALL(VERHOGEN, (int)&sem_blkp4, 0, 0); /* V(sem_blkp4) */
     SYSCALL(VERHOGEN, (int)&sem_endp5, 0, 0); /* V(sem_endp5) */
-
+    
     /* should cause a termination       */
     /* since this has already been      */
     /* done for PROGTRAPs               */
