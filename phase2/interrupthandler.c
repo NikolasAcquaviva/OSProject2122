@@ -40,10 +40,13 @@ void InterruptExceptionHandler(){
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
             STCK(interruptendtime);
             pcb_PTR blocked = removeBlocked(&deviceSemaphores[NoDEVICE - 1]);
+            blocked->p_semAdd = NULL;
             /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
             blocked->p_time += (interruptendtime - interruptstarttime);
-            if (blocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
-            else if (blocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
+            if(blocked!=currentProcess){
+                if (blocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
+                else if (blocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
+            }
             softBlockCount--; 
         }
         

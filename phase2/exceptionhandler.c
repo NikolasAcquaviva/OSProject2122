@@ -131,12 +131,14 @@ static int isDevice(int* semaddr){
 //funzione che performa le azioni necessarie al tempo di terminazione di un processo
 //Usata in casi di die portion of pass-up or die oppure nsys2
 static void Die (pcb_t *p, int isRoot){
-    klog_print("\nDie");
     if(isRoot==1) outChild(p); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
     if (p->p_semAdd != NULL){
+        if(isDevice(p->p_semAdd) == 1) softBlockCount--;
+        else if(*p->p_semAdd == 0 &&
+                headBlocked(p->p_semAdd) == NULL) *p->p_semAdd = 1;
         outBlocked(p);
-        if(*p->p_semAdd == 0) _VERHOGEN(p->p_semAdd,0,0);     
+        p->p_semAdd = NULL;
     }
     if (p->p_prio == 1) outProcQ(&HighPriorityReadyQueue, p);
     else outProcQ(&LowPriorityReadyQueue, p);
@@ -145,7 +147,6 @@ static void Die (pcb_t *p, int isRoot){
 }
 
 static void RecursiveDie(pcb_PTR proc){
-    klog_print("\nrecursiveDie");
     struct list_head *head = &proc->p_parent->p_child; struct list_head *iter;
     list_for_each(iter,head){
         pcb_PTR tmp = container_of(iter,pcb_t,p_sib);
@@ -230,14 +231,14 @@ void TERM_PROCESS(int pid, int a2, int a3){
     //un processo x fa terminare durante la sua esecuzione il processo y, e poichè l'architettura è monoprocessore, il processo y si troverà in una coda
     int startScheduler = TRUE;
     if(pid == 0){
-        if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
         Die(currentProcess,1);
+        if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
     }
     else{
         pcb_PTR proc = FindProcess(pid); 
-        if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
-        if (__isMyRoot(proc, currentProcess) == FALSE) startScheduler = FALSE;
         Die(proc,1);
+        if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
+        if (__isMyRoot(proc, currentProcess) == FALSE) startScheduler = FALSE;  
     }
     if (startScheduler == TRUE) scheduler();
     //altrimenti prosegue il processo corrente
@@ -245,7 +246,7 @@ void TERM_PROCESS(int pid, int a2, int a3){
 
 void _PASSEREN(int *semaddr, int a2, int a3){   
     int isDev = isDevice(semaddr);
-    if((*semaddr) == 0 || semaddr == (int*) INTERVALTMR){
+    if((*semaddr) == 0 || semaddr == &deviceSemaphores[NoDEVICE-1]){
         state_t exceptState = *((state_t*) BIOSDATAPAGE);
         exceptState.pc_epc += 4;
         exceptState.reg_t9 = exceptState.pc_epc;
@@ -253,6 +254,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
+        if(semaddr == &deviceSemaphores[NoDEVICE-1]) currentProcess = NULL;
         scheduler();
     }
     else if(headBlocked(semaddr) != NULL){
@@ -349,7 +351,7 @@ int GET_CPU_TIME(int a1, int a2, int a3){
 // It has to be blocked on the ASL, and then the scheduler has to be called
 void WAIT_FOR_CLOCK(int a1, int a2, int a3){
     // A passeren on the interval-timer semaphore
-    _PASSEREN((int*) INTERVALTMR, 0, 0);
+    _PASSEREN(&deviceSemaphores[NoDEVICE-1], 0, 0);
 }
 
 // We've to return the support data structure for 
@@ -369,11 +371,10 @@ int GET_PROCESS_ID(int parent, int a2, int a3){
 // and reinsert enqueuing it in the queue
 void _YIELD(int a1, int a2, int a3){
     state_t exceptState = *((state_t*)BIOSDATAPAGE);
-    exceptState.pc_epc += 4;
-    exceptState.reg_t9 = exceptState.pc_epc;
     currentProcess->p_s = exceptState;
     if(currentProcess->p_prio==1) insertProcQ(&HighPriorityReadyQueue,currentProcess);
     else insertProcQ(&LowPriorityReadyQueue,currentProcess);
     lastProcessHasYielded = currentProcess;
+    currentProcess = NULL;
     scheduler();
 }

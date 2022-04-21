@@ -549,7 +549,6 @@ void p5b() {
     cpu_t time1, time2;
 
     SYSCALL(1, 0, 0, 0);
-    print("diomorto\n");
 
     SYSCALL(PASSEREN, (int)&sem_endp4, 0, 0); /* P(sem_endp4)*/
 

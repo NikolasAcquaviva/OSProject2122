@@ -18,6 +18,7 @@ cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
 	unsigned int highPriorityProcessChosen = FALSE; 
+	int extracted = 0;
 	//introdotta per determinare il timer di ogni processo. Infatti i processi a bassa
 	//priorità sono cadenzati dall'algoritmo roundRobin ogni x secondi. istanza x = 5ms
 	
@@ -25,6 +26,7 @@ void scheduler() {
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
 	if (lastProcessHasYielded != NULL) {
+		extracted = 1;
 		if (lastProcessHasYielded->p_prio == 1){
 			pcb_PTR headHighPriorityQueue = headProcQ(&HighPriorityReadyQueue);
 			//e se è l'unico processo nella coda ad alta priorità pronto per essere eseguito
@@ -62,24 +64,21 @@ void scheduler() {
 	//estraiamo un nuovo processo solo se non stiamo eseguendo I/O
 	//operazioni di I/O sincrone
 	else{
-		pcb_PTR o = currentProcess;
 		if (!list_empty(&HighPriorityReadyQueue)) {
-			klog_print("\nalta priorita");
+			extracted = 1;
 			currentProcess = removeProcQ(&HighPriorityReadyQueue);
 			highPriorityProcessChosen = TRUE;	
 		}
 		//coda ad alta priorità è vuota => prendo un processo da quella a bassa priorità sse non è vuota
 		else if (!list_empty(&LowPriorityReadyQueue)) {
-			klog_print("\nbassa priorita");
+			extracted = 1;
 			currentProcess = removeProcQ(&LowPriorityReadyQueue); //se le rispettive code sono vuote, removeProcQ restituirà NULL
 			highPriorityProcessChosen = FALSE; //pedante
 		}
-		if(o==currentProcess) klog_print("\ncambiato");
-		else klog_print("\nnon");
 	}
 	//resetto la flag
 	lastProcessHasYielded = NULL;
-	if(currentProcess!=NULL){
+	if(extracted == 1){
 		//c'è effettivamente un processo che sta aspettando in una delle due code
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
