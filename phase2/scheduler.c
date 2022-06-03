@@ -1,3 +1,6 @@
+//toDo: appena entriamo in scheduler(), dobbiamo aggiungere il tempo usato dal processo corrente (if != NULL), come nel progetto di Drif?
+
+
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "pcb.h"
@@ -24,6 +27,7 @@ void scheduler() {
 	int extracted = 0;
 	
 	//SCEGLIAMO IL PROSSIMO PROCESSO DA METTERE IN ESECUZIONE/SCHEDULARE
+	
 	//si controlla se l'ultimo processo era ad alta priorità e ha rilasciato le risorse con yield(), poichè bisogna evitare (best effort)
 	//che tali processi riprendano immediatamente dopo l'operazione yield()
 	if (lastProcessHasYielded != NULL) {
@@ -90,6 +94,7 @@ void scheduler() {
 		//reset variabile, indifferentemente dal suo valore precedente
 		highPriorityProcessChosen = FALSE;
 		//ed INFINE carico lo stato del processo nel processore
+		//(IEP e IMON già settati in init.c)
 		LDST(&currentProcess->p_s);
 	}
 	else{

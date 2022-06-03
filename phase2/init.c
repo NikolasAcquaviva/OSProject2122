@@ -6,7 +6,22 @@
 #include "scheduler.h"
 #include <umps3/umps/libumps.h>
 
+
+
+
+/*
+ * Bus: dove si interfacciano i vari componenti
+ *		Clocking services: TOD, Interval timer
+ * 
+ *
+ * Five classes of peripheral devices, *8 instances
+ *
+ *
+ *
+ *
+ * */
 #define NoDEVICE 49 //numero di device
+
 #define TRUE 1
 #define FALSE 0
 
@@ -114,6 +129,7 @@ extern void GeneralExceptionHandler();
 extern void print(char* msg);
 
 int main() {
+	//tra RAMTOP e KERNELSTACK c'è l'OS caricato in RAM ?
 	passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
 	//popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
 	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
@@ -138,10 +154,12 @@ int main() {
 
 	pcb_PTR initProc = allocPcb(); 
 	
-	initProc->p_supportStruct = NULL; //slide pg 24/48 => dobbiamo indicare un suo gestore? Chi?
+	//"Per quanto riguarda TLB Trap e Program Trap, tutto quello che si deve fare è passare il controllo a un gestore indicato dal processo corrente
+	//(se presente) oppure ucciderlo"
+	initProc->p_supportStruct = NULL; //slide pg 24/48
 	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità
 	
-	pidCounter=1; 
+	pidCounter=1; //id 0 non può esistere per TERM_PROC
 	initProc->p_pid = pidCounter; 
 	pidCounter++;
 	processCount++;
