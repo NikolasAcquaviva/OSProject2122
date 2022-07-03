@@ -2,7 +2,7 @@
 #define INTERRUPTHANDLER_H
 
 #include "../pandos_types.h"
-#include "exceptionhandler.h"
+//#include "exceptionhandler.h"
 
 cpu_t interruptstarttime, interruptendtime;
 int getInterruptInt(memaddr* map);

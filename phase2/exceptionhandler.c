@@ -12,7 +12,7 @@
 #include "../phase1/pcb.h"
 #include "../phase1/asl.h"
 #include "scheduler.h"
-#include "interrupthandler.h"
+//#include "interrupthandler.h"
 #include "exceptionhandler.h"
 #include "init.h"
 
@@ -436,9 +436,12 @@ support_t* GET_SUPPORT_DATA(int a1, int a2, int a3){
 // get pid of current process if parent is equal to 0
 // get pid of the parent process otherwise
 int GET_PROCESS_ID(int parent, int a2, int a3){
-    if(parent!=0) return currentProcess->p_parent->p_pid;
-	else if (currentProcess->p_parent != NULL) return currentProcess->p_parent->p_pid;
-	else return 0;
+    if(parent!=0) {
+	if (currentProcess->p_parent != NULL) return currentProcess->p_parent->p_pid;
+	else return 0; 
+    }
+
+    else return currentProcess->p_pid;
 }
 
 // take out the current process from its queue
