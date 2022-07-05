@@ -129,8 +129,10 @@ void NonTimerHandler(int line, int dev){
     else if (line == 7){
         /* CASTING TO TERMINAL REGISTER */
         termreg_t* termreg = (termreg_t*) devreg;
-
+		
+		//pops pg 54 pdf dice che dovremmo fare l'ack ad entrambi
         //Se non è pronto a ricevere. Prima di poter ricevere nuovi comandi, dobbiamo mandare l'ack
+		//pops pg 54 pdf char recv'd/transmitted IS NOT YET ACKED AS MUCH AS READY STATUS!
         if (termreg->recv_status != READY){
             /*Salvo lo status da ritornare*/
             status_toReturn = termreg->recv_status;
