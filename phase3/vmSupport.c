@@ -1,4 +1,5 @@
 //cercare "DA CONTROLLARE"
+#include <umps3/umps/const.h>
 #include <umps3/umps/libumps.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
@@ -10,12 +11,12 @@
 #define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT
 #define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
 
-swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool
+swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
 //DA CONTROLLARE QUESTA VARIABILE
-semd_t swapSem; //per accedere alla swapPool in mutex
+int swapSem; //per accedere alla swapPool in mutex
 
 void initSwap(){
-	swapSem.s_key = (int *) 1;
+	swapSem =  1;
 	for (int i=0; i < UPROCMAX*2; i++){
 		swapTable[i].sw_asid = -1;	
 	}
@@ -48,6 +49,19 @@ int getVictimPage(){
     return frame;
 }
 
+void updateTLB(){
+	TLBCLR();
+}
+
+void flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
+	//((line - 3) * 8) + (line == 7 ? (isRead * 8) + dev : dev);
+	int semNo = (FLASHINT - 3)*8 + flashDevNum;
+	//prende mutex sul device register associato al flash device
+	SYSCALL(PASSEREN, (int) &deviceSemaphores[semNo], 0, 0);
+	(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
+}
+
+
 //pg fault
 void pager(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
@@ -59,18 +73,31 @@ void pager(){
 	else {
 		//swap pool mutex
 		//DA CONTROLLARE
-		SYSCALL(PASSEREN, (swapSem.s_key), 0, 0);
+		SYSCALL(PASSEREN, &swapSem, 0, 0);
 		int missingPage = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
 		
-		int victimPage = getVictimPage();
+		int victimPgNum = getVictimPage();
+		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
+
 		//if it was occupied
-		if (swapTable[victimPage].sw_asid != -1){
+		if (swapTable[victimPgNum].sw_asid != -1){
 			//anche se siamo in mutex, abbiamo interrupt abilitati nel livello di supporto, pertanto in un multiproc sys potremmo essere interrotti (?)
 			DISABLEINTERRUPTS;
 			
-			//update process x's page table
-
+			//invalidiamo associazione
+			swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON; //"puntatore alla entry corrispondente nella tabella delle pagine del processo" => lo vedrà anche l'altro processo!
+			//update TLB
+			updateTLB();	
+			
 			ENABLEINTERRUPTS;
+
+			int 
+			int victimPgOwner = swapTable[victimPgNum].sw_asid; //un flash device associato ad ogni ASID
+
+			//update old owner's process backing storage
+			flashCmd(FLASHWRITE, victimPgAddr, , victimPgOwner);
+
+
 		}
 
 	}
