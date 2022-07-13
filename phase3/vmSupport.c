@@ -14,6 +14,8 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
 }
 
+//Master sempahore which wait for all processes to be concluded in order to terminate testing
+extern int masterSem; //da initProc.c
 
 #define TRUE 1
 #define FALSE 0
@@ -37,7 +39,6 @@ void initSwap(){
 	}
 }
 
-void killProc(){} 
 
  /*re-inizializza tutte le entry del processo che sta per essere ucciso*/
 void clearSwap(int asid){
@@ -49,6 +50,18 @@ void clearSwap(int asid){
         }  
     }
 }
+
+void killProc(int *sem){
+
+	clearSwap(currentProcess->p_supportStruct->sup_asid);
+
+	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
+
+	SYSCALL(VERHOGEN, (int) &masterSem, 0, 0);
+	SYSCALL(TERMPROCESS, 0, 0, 0);
+
+} 
+
 
 //FIFO replacement algo se prima non è stata trovata alcuna pagina libera as suggested
 int getVictimPage(){
@@ -71,7 +84,7 @@ void updateTLB(){
 
 
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
-void flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
+int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	//((line - 3) * 8) + (line == 7 ? (isRead * 8) + dev : dev);
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
@@ -81,17 +94,15 @@ void flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	/*carica data0 con il blocco da leggere o scrivere*/
 	flashDevReg->dtp.data0 =  block;
 
-	//DISABLEINTERRUPTS;
 	// inserting the command after writing into data
 	flashDevReg->dtp.command = (devBlockNum << 8) | cmd;
-	int devStatus = SYSCALL(DOIO, FLASHINT, , 0);
+	int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
+	SYSCALL(VERHOGEN, (int) &deviceSemaphores[semNo], 0, 0);
 	
-
-	//ENABLEINTERRUPTS;
-
-
-
-
+	if (devStatus != READY){
+		return -1;
+	}
+	else return devStatus;
 }
 
 
@@ -101,7 +112,7 @@ void pager(){
 	int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
 	//if the cause is a TLB mod exc => trap	
 	if (cause != TLBINVLDL && cause != TLBINVLDS){
-		killProc();
+		killProc(NULL);
 	}
 	else {
 		//swap pool mutex
@@ -129,10 +140,14 @@ void pager(){
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
 			//update old owner's process backing storage
-			flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
-
-
+			int devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
+			if (devStatus != READY){
+				killProc(&swapSem);
+			}
+			
 		}
+		
+
 
 	}
 
