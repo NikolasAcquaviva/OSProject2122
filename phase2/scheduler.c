@@ -9,11 +9,6 @@
 #define TIME_CONVERT(T) ((T) * (*((memaddr *) TIMESCALEADDR)))
 #define CURRENT_TOD ((*((memaddr *)TODLOADDR)) / (*((cpu_t *)TIMESCALEADDR)))
 
-//umps3 supporta solo I/O asincrono, se ci sono altri processi
-//lo scheduler non li mandera anche se il currentprocess è bloccato
-//su un semaforo, se quest'ultimo è di un device di I/O
-
-
 cpu_t startTime;
 cpu_t finishTime;
 void scheduler() {
@@ -62,8 +57,6 @@ void scheduler() {
 		}
 	}
 	//altrimenti consuetudine
-	//estraiamo un nuovo processo solo se non stiamo eseguendo I/O
-	//operazioni di I/O sincrone
 	else{
 		if (!list_empty(&HighPriorityReadyQueue)) {
 			extracted = 1;

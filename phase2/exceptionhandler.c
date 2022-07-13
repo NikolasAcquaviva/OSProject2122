@@ -357,6 +357,7 @@ int GET_CPU_TIME(int a1, int a2, int a3){
 // It has to be blocked on the ASL, and then the scheduler has to be called
 void WAIT_FOR_CLOCK(int a1, int a2, int a3){
     // A passeren on the interval-timer semaphore
+    GET_CPU_TIME(0,0,0);
     _PASSEREN(&deviceSemaphores[NoDEVICE-1], 0, 0);
 }
 
@@ -369,7 +370,10 @@ support_t* GET_SUPPORT_DATA(int a1, int a2, int a3){
 // get pid of current process if parent is equal to 0
 // get pid of the parent process otherwise
 int GET_PROCESS_ID(int parent, int a2, int a3){
-    if(parent!=0) return currentProcess->p_parent->p_pid;
+    if(parent!=0){
+      if(currentProcess->p_parent!=NULL) return currentProcess->p_parent->p_pid;
+      else return 0;
+    }
     else return currentProcess->p_pid;
 }
 
