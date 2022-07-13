@@ -4,12 +4,27 @@
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "../phase2/init.h"
+//#include "../phase2/interrupthandler.h"
+//AGGIUNGERE LE SEGUENTI DUE FUNZIONI A interrupthandler.c
+memaddr *getDevRegAddr(int line, int devNo){
+	return (memaddr *) (0x10000054 + ((line - 3) * 0x80) + (devNo * 0x10));
+}
 
+int getDevSemIndex(int line, int devNo, int isReadTerm){
+	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
+}
+
+
+#define TRUE 1
+#define FALSE 0
 #define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))
 #define ENABLEINTERRUPTS setSTATUS(getSTATUS() | IECON)
 #define POOLSTART (RAMSTART + (32 * PAGESIZE))
 #define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT
 #define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
+/* Page Table Starting Address */
+#define PAGETBLSTART 0x80000000
+
 
 swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
 //DA CONTROLLARE QUESTA VARIABILE
@@ -53,12 +68,30 @@ void updateTLB(){
 	TLBCLR();
 }
 
+
+
+//flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
 void flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	//((line - 3) * 8) + (line == 7 ? (isRead * 8) + dev : dev);
-	int semNo = (FLASHINT - 3)*8 + flashDevNum;
+	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
 	SYSCALL(PASSEREN, (int) &deviceSemaphores[semNo], 0, 0);
-	(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
+	devreg_t* flashDevReg = (devreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
+	
+	/*carica data0 con il blocco da leggere o scrivere*/
+	flashDevReg->dtp.data0 =  block;
+
+	//DISABLEINTERRUPTS;
+	// inserting the command after writing into data
+	flashDevReg->dtp.command = (devBlockNum << 8) | cmd;
+	int devStatus = SYSCALL(DOIO, FLASHINT, , 0);
+	
+
+	//ENABLEINTERRUPTS;
+
+
+
+
 }
 
 
@@ -91,11 +124,12 @@ void pager(){
 			
 			ENABLEINTERRUPTS;
 
-			int 
-			int victimPgOwner = swapTable[victimPgNum].sw_asid; //un flash device associato ad ogni ASID
+			// block of the flash device to write into (coincides with the page number)
+			int devBlockNum = (swapTable[victimPgNum].sw_pte->pte_entryHI - PAGETBLSTART) >> VPNSHIFT;
+			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
 			//update old owner's process backing storage
-			flashCmd(FLASHWRITE, victimPgAddr, , victimPgOwner);
+			flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
 
 
 		}
