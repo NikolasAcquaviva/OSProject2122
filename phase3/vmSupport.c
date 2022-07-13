@@ -3,7 +3,7 @@
 #include <umps3/umps/libumps.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
-#include "../phase2/init.h"
+#include "../phase2/init.h" //esporta deviceSemaphores
 //#include "../phase2/interrupthandler.h"
 //AGGIUNGERE LE SEGUENTI DUE FUNZIONI A interrupthandler.c
 memaddr *getDevRegAddr(int line, int devNo){
@@ -95,8 +95,10 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	flashDevReg->dtp.data0 =  block;
 
 	// inserting the command after writing into data
-	flashDevReg->dtp.command = (devBlockNum << 8) | cmd;
-	int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
+	unsigned int value =  (devBlockNum << 8) | cmd;
+	flashDevReg->dtp.command = value; 
+	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
+	int devStatus = SYSCALL(DOIO, flashDevReg->dtp.command, value, 0);
 	SYSCALL(VERHOGEN, (int) &deviceSemaphores[semNo], 0, 0);
 	
 	if (devStatus != READY){
