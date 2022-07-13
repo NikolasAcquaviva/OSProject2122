@@ -1,3 +1,10 @@
+//toDo:             if(blocked!=currentProcess) => correggere (SU IT sul quale facciamo semplice passeren). Confusione della DOIO
+//					inoltre gestore delle eccezioni è uno => le procedure per gestire le eccezioni sono svolte in modo atomico, quindi non è
+//					possibile che mentre stavamo svolgendo una WAIT_FOR_CLOCK, è arrivato l'interrupt. Inoltre il current process nel caso viene annullato
+
+//					potrebbe esserci nessun process unlocked (in fondo)
+
+
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "pcb.h"
@@ -10,7 +17,7 @@
 
 
 
-static memaddr* getInterruptLineAddr(int line){   //restituisce l'indirizzo del device con l'interrupt attivo
+static memaddr* getInterruptLineAddr(int line){  //indirizzo linea 3. Per classe device con interrupt. parte da 0x10000040, e incrementiamo di una word 
     return (memaddr *) (0x10000040 + (0x04 * (line-3)));
 }
 
@@ -20,11 +27,12 @@ void InterruptExceptionHandler(){
     //salva il tempo iniziale dell'interrupt
     STCK(interruptstarttime);
     state_t* iep_s = (state_t*) BIOSDATAPAGE;    //preleviamo l'exception state
-    memaddr interruptmap = ((iep_s->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK
+    memaddr interruptmap = ((iep_s->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK. Come con ExcCode, abbiamo hardcodato. Guarda figura 3.3 pops. Otteniamo Interrupt Pending => su quale linea l'interrupt is pending. CAUSEMASK azzera tutta la parte precedente 
+	//CERCHIAMO, partendo dal basso, SU QUALE LINEA C'E' STATO L'INTERRUPT
     int line = getInterruptInt(&interruptmap); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
-        setTIMER(TIME_CONVERT(NEVER)); // setting the timer to a high value, ack interrupt  
+        setTIMER(TIME_CONVERT(NEVER)); // setting the timer to a high value, ack interrupt  (riscriviamo un nuovo valore all'interno del registro (tale che lo scheduler ha tempo di svolgere le sue operazioni?))
         /* SETTING OLD STATE ON CURRENT PROCESS */
         currentProcess->p_s = *iep_s; //update the current process state information
         currentProcess->p_time += (CURRENT_TOD - startTime); 
@@ -34,7 +42,7 @@ void InterruptExceptionHandler(){
     }
 
     else if (line == 2) { //System wide interval timer
-        LDIT(PSECOND); //100000
+        LDIT(PSECOND); //100000 ACK
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
             STCK(interruptendtime);
@@ -42,7 +50,7 @@ void InterruptExceptionHandler(){
             blocked->p_semAdd = NULL;
             /* PROCESS NO LONGER BLOCKED ON A SEMAPHORE */
             blocked->p_time += (interruptendtime - interruptstarttime);
-            if(blocked!=currentProcess){
+            if(blocked!=currentProcess){ //SBAGLIATO, sempre vera
                 if (blocked->p_prio == 1) insertProcQ(&HighPriorityReadyQueue, blocked);
                 else if (blocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, blocked);
             }
@@ -71,7 +79,7 @@ void InterruptExceptionHandler(){
 }
 
 int getInterruptInt(memaddr* map){  //calcolare la linea che ha richiesto l'interrupt
-    unsigned int p_map = *(map);
+    unsigned int p_map = *(map); 
     int check=1; //2^0 = 1. gestiamo il caso ove la linea è 1
     for(int i=0; i<8; i++){
         if(p_map & check) return i;
@@ -79,6 +87,27 @@ int getInterruptInt(memaddr* map){  //calcolare la linea che ha richiesto l'inte
     }
     return -1;
 }
+
+/* /1* Device register type for disks, flash devices and printers (dtp) *1/ */
+/* typedef struct dtpreg { */
+/* 	unsigned int status; */
+/* 	unsigned int command; */
+/* 	unsigned int data0; */
+/* 	unsigned int data1; */
+/* } dtpreg_t; */
+
+/* /1* Device register type for terminals *1/ */
+/* typedef struct termreg { */
+/* 	unsigned int recv_status; */
+/* 	unsigned int recv_command; */
+/* 	unsigned int transm_status; */
+/* 	unsigned int transm_command; */
+/* } termreg_t; */
+
+/* typedef union devreg { */
+/* 	dtpreg_t dtp; */
+/* 	termreg_t term; */
+/* } devreg_t; */
 
 void NonTimerHandler(int line, int dev){
     //pg 28 (39/158) manuale Non student guide
@@ -92,7 +121,7 @@ void NonTimerHandler(int line, int dev){
     // if it's a normal device
     if (2 < line && line < 7){
         /*Invio un ACK*/
-        devreg->dtp.command = ACK;
+        devreg->dtp.command = ACK; //ACK command code in proper register or writing a new command, in order to ack the interrupt
         /*Salvo lo status da ritornare*/
         status_toReturn = devreg->dtp.status;
     }
@@ -100,8 +129,10 @@ void NonTimerHandler(int line, int dev){
     else if (line == 7){
         /* CASTING TO TERMINAL REGISTER */
         termreg_t* termreg = (termreg_t*) devreg;
-
-        //Se non è pronto a ricevere
+		
+		//pops pg 54 pdf dice che dovremmo fare l'ack ad entrambi
+        //Se non è pronto a ricevere. Prima di poter ricevere nuovi comandi, dobbiamo mandare l'ack
+		//pops pg 54 pdf char recv'd/transmitted IS NOT YET ACKED AS MUCH AS READY STATUS!
         if (termreg->recv_status != READY){
             /*Salvo lo status da ritornare*/
             status_toReturn = termreg->recv_status;
@@ -121,7 +152,7 @@ void NonTimerHandler(int line, int dev){
     /* FINDING DEVICE SEMAPHORE ADDRESS */
     int semAdd = (line - 3) * 8 + dev + 8*isReadTerm;
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
-    pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
+    pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]); //potrebbe ritornare NULL! primo IMPORTANT POINT 3.6.1 student guide
 
     /*Inserisco lo stato da ritornare nel registro v0*/
     unlocked->p_s.reg_v0 = status_toReturn;

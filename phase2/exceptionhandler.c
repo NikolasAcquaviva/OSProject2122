@@ -1,3 +1,10 @@
+//toDo: puntatore BIOSDATAPAGE in SYSCALLExceptionHandler()
+//		errore semaforo nella DOIO (anche giulio billi ha fatto così)
+//		per coerenza, currentProcess = NULL; andrebbe messo all'inizio di scheduler(), dopo che abbiamo aggiornato il tempo d'uso (sempre nello scheduler) del processo corrente (come in progetto drif). Tutto questo per evitare  if(semaddr == &deviceSemaphores[NoDEVICE-1]) currentProcess = NULL in P()
+//
+//		quando avviene trap, solo RI come codice EcxCode? (3.5.11 student guide)
+
+
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include <umps3/umps/cp0.h>
@@ -5,7 +12,7 @@
 #include "../phase1/pcb.h"
 #include "../phase1/asl.h"
 #include "scheduler.h"
-#include "interrupthandler.h"
+//#include "interrupthandler.h"
 #include "exceptionhandler.h"
 #include "init.h"
 
@@ -30,17 +37,22 @@ static void PassUp_Or_Die(int index){
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
         state_t exceptState = *((state_t*)BIOSDATAPAGE);
+		//[index] => handler of that exception, if specified. Switch context
         currentProcess->p_supportStruct->sup_exceptState[index] = exceptState;
+		//LDCXT allows a current process to change its operating mode/context - non carichiamo uno stato pieno di registri come con LDST
         LDCXT(currentProcess->p_supportStruct->sup_exceptContext[index].stackPtr,
               currentProcess->p_supportStruct->sup_exceptContext[index].status,
               currentProcess->p_supportStruct->sup_exceptContext[index].pc);
         }
 }
 
+//da GeneralExceptionHandler
 void TLBExceptionHandler(){
     PassUp_Or_Die(PGFAULTEXCEPT);
 }
 
+
+//da GeneralExceptionHandler
 void TrapExceptionHandler(){
     PassUp_Or_Die(GENERALEXCEPT);
 }
@@ -48,20 +60,29 @@ void TrapExceptionHandler(){
 void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
-    state_t exceptState = *((state_t*) BIOSDATAPAGE);
+
+	//AVREMMO DOVUTO USARE PUNTATORI! PROVARE A PASSARE LO STATO, se è NULL => LO ASSEGNAMO
+    state_t exceptState = *((state_t*) BIOSDATAPAGE); //saved exception state is stored at the start of the BIOS Data Page
     //prendiamo i registri
-    int a0 = exceptState.reg_a0,
+	//a0 => quale syscall viene eseguita
+    int a0 = exceptState.reg_a0, 
         a1 = exceptState.reg_a1,
         a2 = exceptState.reg_a2,
         a3 = exceptState.reg_a3;
     //check user mode
     int user = exceptState.status;
-    user = (user << 28) >> 31;
+    user = (user << 28) >> 31; //troviamo KUp
+	//"process was in kernel mode and a0 contained a value in the
+	//negative kernel's level range"
+	//(+ => syscall da eseguire a livello di supporto (phase 3))
+	//NON SIAMO IN KERNEL MODE => TRAP
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
+        exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT); //codice eccezione trap in posizione giusta in registro cause. SOLO EXC_RI?
         GeneralExceptionHandler();
     }
+	//livello di supporto - TRAP
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
+	//dopo aver fatto tutti i check...
     else{
         //se viene sollevata un'operazione di I/O,setto il valore
         //lo scheduler lo usa per eseguire I/O sincrono
@@ -69,6 +90,7 @@ void SYSCALLExceptionHandler(){
         //altrimenti lo scheduler penserà che viene chiamato solo su operazioni I/O
         switch (a0){
             case CREATEPROCESS:
+				//"a1 should contain a pointer to the initial processor state (state_t *) of newly created process"
                 exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
                 break;
             case TERMPROCESS:
@@ -99,6 +121,7 @@ void SYSCALLExceptionHandler(){
                 _YIELD(a1,a2,a3);
                 break;
             default:
+				//codice negativo ma inesistente
                 //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
                 exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
                 GeneralExceptionHandler();
@@ -111,12 +134,17 @@ void SYSCALLExceptionHandler(){
             dopo aver incrementato di una word il program counter per 
             non avere il loop infinito di syscalls
         */
-        exceptState.pc_epc += 4; 
-        LDST(&exceptState);
+		//3.5.12 "["
+        exceptState.pc_epc += 4; //prima di ricaricare lo stato del processo, dobbiamo incrementare il PC di una word, altrimenti ripete l'istruzione che chiama la syscall
+        LDST(&exceptState); //load back updated interrupted state
+
+		//The saved exception state was the state of the process at the time the
+		//SYSCALL was executed. The processor state in the Current Process’s pcb
+		//was the state of the process at the start of it current time slice/quantum
     }
 }
 
-//check whether a semaphore is a device semaphore
+//check whether a semaphore is a device semaphore. Sem4s per accedere al dispositivo in mutex
 static int isDevice(int* semaddr){
     for(int i = 0; i < NoDEVICE; i++){
         if(semaddr == &deviceSemaphores[i])
@@ -129,14 +157,15 @@ static int isDevice(int* semaddr){
 //Usata in casi di die portion of pass-up or die oppure nsys2
 static void Die (pcb_t *p, int isRoot){
     if(isRoot==1) outChild(p); 
-    // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere
+    // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere. Guarda TERM_PROCESS
     
     //se il pcb da terminare è bloccato, aggiustiamo il valore
     //del semaforo o la variabile softblock in base al tipo del semaforo
     if (p->p_semAdd != NULL){
         if(isDevice(p->p_semAdd) == 1) softBlockCount--;
-        else if(*p->p_semAdd == 0 && headBlocked(p->p_semAdd) == NULL) *p->p_semAdd = 1;
-        outBlocked(p);
+        else if(*p->p_semAdd == 0 && headBlocked(p->p_semAdd) == NULL) *p->p_semAdd = 1; //il processo si era accaparrato la risorsa => il prossimo processo che la richiederà la otterrà subito.
+		//IL SIGNALING E' EFFETTUATO IN INTERRUPT.C
+        outBlocked(p); //se non è effettivamente bloccato, semplicemente ritorna NULL. ALtrimenti se stava aspettando per quella risorsa, si defila.
         p->p_semAdd = NULL;
     }
     //rimuoviamo il pcb dalle code di priorita altrimenti
@@ -152,9 +181,11 @@ static void Die (pcb_t *p, int isRoot){
 static void RecursiveDie(pcb_PTR proc){
     struct list_head *head = &proc->p_parent->p_child; struct list_head *iter;
     list_for_each(iter,head){
-        pcb_PTR tmp = container_of(iter,pcb_t,p_sib);
+        pcb_PTR tmp = container_of(iter,pcb_t,p_sib); //quindi si parte dal primo figlio
+		//elimino prima i miei discendente, ricorsivamente
         if(!list_empty(&tmp->p_child)) 
             RecursiveDie(container_of(tmp->p_child.next,pcb_t,p_sib));
+		//poi mi suicido
         Die(proc,0);
     }
     
@@ -168,6 +199,7 @@ static pcb_PTR FindProcess(int pid){
     //quando pid è pari a 0 non si entra qui ma si termina il current process
     //di conseguenza non ci resta che cercare nelle code ready o code dei semafori 
     pcb_PTR tmp;
+	//p_list: nome del campo contenente la list_head
     list_for_each_entry(tmp,&HighPriorityReadyQueue,p_list){
         if(tmp->p_pid == pid) return tmp;
     }    
@@ -181,9 +213,10 @@ static pcb_PTR FindProcess(int pid){
             if(itr->p_pid == pid) return itr;
         }
     }
-    //cerchiamo sui semafori dei device
+	//Brute-force: i semafori dei device non sono nella ASL => cerco su tutti i pcb
+    //cerchiamo sui semafori dei device //il check è pedante, potevamo semplicemente controllare solo il pid
     for(int i = 0; i < MAX_PROC; i++){
-        for(int j = 0; j < NoDEVICE; j++){
+        for(int j = 0; j < NoDEVICE; j++){ //inserito per poter dire: "prima cerchiamo nella ASL, poi nei devices's sem4s"
             if(pcbFree_table[i].p_pid == pid && 
                 pcbFree_table[i].p_semAdd == &deviceSemaphores[j])
                 return &pcbFree_table[i];
@@ -203,6 +236,9 @@ static int __isMyRoot(pcb_PTR padre, pcb_PTR figlio){
     else return __isMyRoot(padre, figlio->p_parent);
 }
 
+//manca p_next e p_child (guarda student guide pg 12/28)
+//Creo nuovo processo come figlio del processo invocante
+//successo => restituisce l'id del processo creato; else -1
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
     /*
     creo il processo:
@@ -241,28 +277,34 @@ void TERM_PROCESS(int pid, int a2, int a3){
         if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
     }
     else{
-        pcb_PTR proc = FindProcess(pid); 
+        pcb_PTR proc = FindProcess(pid); //ritorna il processo, non il pid
         Die(proc,1);
+		//elimino i miei figli nel caso ci siano. Parto dal fratello della sentinella
         if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
+		//controllo se currentProcess è discendente di proc
         if (__isMyRoot(proc, currentProcess) == FALSE) startScheduler = FALSE;  
+		//altrimenti anche currentProcess è stato eliminato
     }
     if (startScheduler == TRUE) scheduler();
     //altrimenti prosegue il processo corrente
 }
 
+//chiamata all'interval timer è sempre bloccante
 void _PASSEREN(int *semaddr, int a2, int a3){   
-    int isDev = isDevice(semaddr);
+    int isDev = isDevice(semaddr); //per contatore softBlockCount
     if((*semaddr) == 0 || semaddr == &deviceSemaphores[NoDEVICE-1]){
         state_t exceptState = *((state_t*) BIOSDATAPAGE);
-        exceptState.pc_epc += 4;
+        exceptState.pc_epc += 4; //incrementiamo per quando riprenderemo
         exceptState.reg_t9 = exceptState.pc_epc;
         currentProcess->p_s = exceptState;
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-        if(semaddr == &deviceSemaphores[NoDEVICE-1]) currentProcess = NULL;
+		//guarda gg. messo per entrare nel ramo wait state (IDLE PROCESSOR) dello scheduler
+        if(semaddr == &deviceSemaphores[NoDEVICE-1]) currentProcess = NULL; //superfluo poichè dopo chiamiamo lo scheduler?
         scheduler();
     }
+	//passaggio mutua esclusione
     else if(headBlocked(semaddr) != NULL){
         pcb_PTR exit = removeBlocked(semaddr);
         if(isDev == 1) softBlockCount--;
@@ -274,6 +316,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
 
 void _VERHOGEN(int *semaddr, int a2, int a3){
     int isDev = isDevice(semaddr);
+	//V() bloccante in bin sem con valore 1
     if((*semaddr) == 1){
         state_t exceptState = *((state_t*) BIOSDATAPAGE);
         exceptState.pc_epc += 4;
@@ -284,6 +327,7 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
         scheduler();
     }
+	//il valore del sem è 0, proviamo prima a fare passaggio mutua esclusione
     else if(headBlocked(semaddr) != NULL){
         pcb_PTR exit = removeBlocked(semaddr);
         if(isDev == 1) softBlockCount--;
@@ -293,18 +337,33 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
     else (*semaddr)++;   
 }
 
+
+//interrupt line   Device class
+//0					Inter-processor - (abbiamo un solo processore...)
+//1					Processor Local Timer (uno per ogni processore; serve per intervallare i processi a bassa priorità)
+//2					Interval timer (Bus)
+//3					Disk Devices
+//4					Flash Devices					
+//5					Network Devices
+//6					Printer Devices
+//7					Terminal Devices
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
-    devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR;
-    dtpreg_t* dev; termreg_t* terminal;
+    devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR; /* INIZIO Bus register area */ //4.2 pops
+	/* Device register type for disks, flash devices and printers (dtp) */
+    dtpreg_t* dev;
+	/* Device register type for terminals */
+	termreg_t* terminal;
     int line, numDevice, semIndex; 
     int isRecvTerm = 0; //per individuare se è di ricezione
     //politiche del devicesemaphores array
     //8 disk - 8 tape - 8 network - 8 printer - 8 transm term - 8 recv term - interval timer
     
-    for(int j = 0; j < 8; j++){
-        //terminali su linea 4
+    for(int j = 0; j < 8; j++){ //8 per numero istanze. Potremmo breakare una volta entrati in un if?
+        //terminali su linea 4 + 3
+		//5 classi di devices; gli ultimi sono i terminali
         if(&(deviceRegs->devreg[4][j].term.transm_command) == (memaddr*) cmdAddr){
-            line = 4; numDevice = j;
+            line = 4; numDevice = j; 
+			//"Given an interrupt line and a device number one can compute the starting address of the device's device register"
             terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
             terminal->transm_command = cmdValue;
         }
@@ -313,7 +372,10 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
             terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
             terminal->recv_command = cmdValue;
         }
+
         //gli altri device fanno parte dello stesso gruppo
+		//"dispositivi I/O dell'emulatore hanno per ogni loro istanza 4 registri, e tra questi c'è il registro nel quale viene scritto il codice
+		//che viene interpretato dal dispositivo come il comando dell'operazione da eseguire"
         for(int i = 0; i < 4; i++){
             if(&(deviceRegs->devreg[i][j].dtp.command) == (memaddr*) cmdAddr){
                 line = i; numDevice = j; 
@@ -329,12 +391,16 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     else semIndex = line*8 + numDevice;
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
     
+	//chiamata SEMPRE BLOCCANTE (da student guide)
     exceptState.pc_epc += 4; //increment pc by a word
     exceptState.reg_t9 = exceptState.pc_epc;    
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     softBlockCount++; // incrementiamo il numero di processi bloccati
-    deviceSemaphores[semIndex]--;
-    insertBlocked(&deviceSemaphores[semIndex], currentProcess);
+    deviceSemaphores[semIndex]--; //SBAGLIATO! CASO MAI IL VALORE DEL SEMAFORO BINARIO ERA GIA' A 0, E ORA e' -1! 
+	//IO AVREI FATTO COSì:
+	//    deviceSemaphores[semIndex] = 0;
+	//	  _PASSEREN(&deviceSemaphores[semIndex], 0, 0);
+    insertBlocked(&deviceSemaphores[semIndex], currentProcess); //GUARDA SOPRA
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
     currentProcess = NULL;
     scheduler(); // richiamiamo lo scheduler   
@@ -357,7 +423,7 @@ int GET_CPU_TIME(int a1, int a2, int a3){
 // It has to be blocked on the ASL, and then the scheduler has to be called
 void WAIT_FOR_CLOCK(int a1, int a2, int a3){
     // A passeren on the interval-timer semaphore
-    GET_CPU_TIME(0,0,0);
+	GET_CPU_TIME(0, 0, 0); //nella student guide (3.5.13) dice che anche questa syscall deve aggiornare il tempo di utilizzo
     _PASSEREN(&deviceSemaphores[NoDEVICE-1], 0, 0);
 }
 
