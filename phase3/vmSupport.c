@@ -117,9 +117,11 @@ void pager(){
 	else {
 		//swap pool mutex
 		//DA CONTROLLARE
-		SYSCALL(PASSEREN, &swapSem, 0, 0);
+		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
 		int missingPage = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
-		
+	
+		int devStatus;
+
 		int victimPgNum = getVictimPage();
 		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
 
@@ -140,14 +142,38 @@ void pager(){
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
 			//update old owner's process backing storage
-			int devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
+			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
 			if (devStatus != READY){
 				killProc(&swapSem);
 			}
 			
 		}
 		
+		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
+		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPage, currSup->sup_asid);
+		if (devStatus != READY){
+			killProc(&swapSem);
+		}
+		
+		//UPDATING SWAP POOL TABLE ENTRY TO REFLECT THE NEW CONTENTS
+		swapTable[victimPgNum].sw_asid = currSup->sup_asid;
+		swapTable[victimPgNum].sw_pageNo = missingPage;
+		swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[missingPage]);
 
+		DISABLEINTERRUPTS;
+		
+		/*accende il V bit, il D bit e setta PNF*/
+		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
+		updateTLB();	
+
+		ENABLEINTERRUPTS;	
+		
+
+		/*rilascia la mutua esclusione*/
+		SYSCALL(VERHOGEN, (int) &swapSem, 0, 0);
+		
+		/*ritorna il controllo a current e ritenta*/
+		LDST((state_t *) &(currSup->sup_exceptState[PGFAULTEXCEPT]));
 
 	}
 
