@@ -33,7 +33,10 @@ void writeprinter(support_t *currSup){
     //indirizzo virtuale del primo char della str da trasmettere
     char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
-    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG) killProc(NULL);
+    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+        killProc(NULL);
+        return;
+    }
 
     int printerNum = currSup->sup_asid - 1;
     int printerSem = getDevSemIndex(PRNTINT, printerNum, 0);
@@ -46,9 +49,20 @@ void writeprinter(support_t *currSup){
     while ((i < strLen) && (i >= 0)){
         devRegs->dtp.data0 = *firstCharAddr;
         devRegs->dtp.command = TRANSMITCHAR;
-        status = SYSCALL(DOIO, devRegs->dtp.command, *firstCharAddr, 0);;
+        status = SYSCALL(DOIO, (int) &devRegs->dtp.command, TRANSMITCHAR, 0);
+        
+        if((status & 0x000000FF) == READY){
+            i++;
+            firstCharAddr++;
+        }
+        else {
+        /*ritorniamo il numero negato dello status*/
+        i = -(status & 0x000000FF);
+        }
     }
-
+    SYSCALL(VERHOGEN, (int) &deviceSemaphores[printerSem], 0, 0);
+    /*ritorna il numero di caratteri inviati*/
+    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
 void writeterminal(support_t *currSup){}
 void readterminal(support_t *currSup){}
