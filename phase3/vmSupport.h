@@ -11,3 +11,5 @@
 #define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT
 #define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
 void killProc(int *sem);
+extern memaddr *getDevRegAddr(int line, int devNo);
+extern int getDevSemIndex(int line, int devNo, int isReadTerm);

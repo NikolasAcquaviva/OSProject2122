@@ -152,7 +152,7 @@ void NonTimerHandler(int line, int dev){
     /* FINDING DEVICE SEMAPHORE ADDRESS */
     int semAdd = (line - 3) * 8 + dev + 8*isReadTerm;
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
-    pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]); //potrebbe ritornare NULL! primo IMPORTANT POINT 3.6.1 student guide
+    pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]); //potrebbe ritornare NULL! primo IMPORTANT POINT 3.6.1 student guide. Interrupt per segnalare fine op => come fa ad esserci nessun processo bloccato?
 
     /*Inserisco lo stato da ritornare nel registro v0*/
     unlocked->p_s.reg_v0 = status_toReturn;
