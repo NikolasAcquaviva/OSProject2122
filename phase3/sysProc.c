@@ -49,19 +49,15 @@ void writeprinter(support_t *currSup){
     while ((i < strLen) && (i >= 0)){
         devRegs->dtp.data0 = *firstCharAddr;
         devRegs->dtp.command = TRANSMITCHAR;
-        status = SYSCALL(DOIO, (int) &devRegs->dtp.command, TRANSMITCHAR, 0);
-        
-        if((status & 0x000000FF) == READY){
+        SYSCALL(DOIO, (int) &devRegs->dtp.command, TRANSMITCHAR, 0);
+        status = devRegs->dtp.status;
+        if (status == READY){
             i++;
             firstCharAddr++;
         }
-        else {
-        /*ritorniamo il numero negato dello status*/
-        i = -(status & 0x000000FF);
-        }
+        else i = status*-1;
     }
     SYSCALL(VERHOGEN, (int) &deviceSemaphores[printerSem], 0, 0);
-    /*ritorna il numero di caratteri inviati*/
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
 void writeterminal(support_t *currSup){}
