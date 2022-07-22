@@ -1,3 +1,4 @@
+//toDo: quando si controllano che gli indirizzi virtuali siano giusti, oltre a controllare che siano oltre il TLB floor address, controllare che siano nel range degli indirizzi virtuali di QUEL processo!
 #include "../pandos_types.h"
 #include "../pandos_const.h"
 #include <umps3/umps/const.h>
@@ -51,7 +52,7 @@ void writeprinter(support_t *currSup){
         //PRINTCHR = TRANSMITCHAR = RECEIVECHAR
         SYSCALL(DOIO, (int) &devRegs->dtp.command, TRANSMITCHAR, 0);
         status = devRegs->dtp.status;
-        if (status == READY){
+        if ((status & 0x000000FF)== READY){
             i++;
             firstCharAddr++;
         }
@@ -76,11 +77,10 @@ void writeterminal(support_t *currSup){
     int status;
     int i = 0;
     while ((i < strLen) && (i >= 0)){
-        devRegs->term.transm_command = *firstCharAddr << BYTELENGTH | TRANSMITCHAR;
-        SYSCALL(DOIO, (int) &devRegs->term.transm_command, TRANSMITCHAR, 0);
+        SYSCALL(DOIO, (int) &devRegs->term.transm_command, *firstCharAddr << BYTELENGTH | TRANSMITCHAR, 0);
         status = devRegs->dtp.status;
         //OKCHARTRANS has same value of char received
-        if (status == OKCHARTRANS){
+        if ((status & 0x000000FF)  == OKCHARTRANS){
             i++;
             firstCharAddr++;
         }
@@ -91,10 +91,8 @@ void writeterminal(support_t *currSup){
 }
 void readterminal(support_t *currSup){
     //toEDIT
-    //indirizzo virtuale del primo char della str da trasmettere
-    char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
-    int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
-    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+    char *buf = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
+    if((int)buf < KUSEG){
         killProc(NULL);
         return;
     }
@@ -105,16 +103,20 @@ void readterminal(support_t *currSup){
 
     int status;
     int i = 0;
-    while ((i < strLen) && (i >= 0)){
-        devRegs->term.transm_command = *firstCharAddr << BYTELENGTH | TRANSMITCHAR;
-        SYSCALL(DOIO, (int) &devRegs->term.transm_command, TRANSMITCHAR, 0);
+    while (TRUE){
+        SYSCALL(DOIO, (int) &devRegs->term.recv_command, TRANSMITCHAR, 0);
         status = devRegs->dtp.status;
         //OKCHARTRANS has same value of char received
-        if (status == OKCHARTRANS){
+        if ((status & 0x000000FF)  == OKCHARTRANS){
             i++;
-            firstCharAddr++;
+            *buf = (status & 0x0000FF00) >> BYTELENGTH;
+            buf++;
+            if ((status & 0x0000FF00) >> BYTELENGTH == '\n') break;
         }
-        else i = status*-1;
+        else{
+            i = status*-1;
+            break;
+        }
     }
     SYSCALL(VERHOGEN, (int) &deviceSemaphores[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
