@@ -48,7 +48,7 @@ void writeprinter(support_t *currSup){
     int i = 0;
     while ((i < strLen) && (i >= 0)){
         devRegs->dtp.data0 = *firstCharAddr;
-        devRegs->dtp.command = TRANSMITCHAR;
+        //PRINTCHR = TRANSMITCHAR = RECEIVECHAR
         SYSCALL(DOIO, (int) &devRegs->dtp.command, TRANSMITCHAR, 0);
         status = devRegs->dtp.status;
         if (status == READY){
@@ -60,9 +60,65 @@ void writeprinter(support_t *currSup){
     SYSCALL(VERHOGEN, (int) &deviceSemaphores[printerSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
-void writeterminal(support_t *currSup){}
-void readterminal(support_t *currSup){}
+void writeterminal(support_t *currSup){
+    //indirizzo virtuale del primo char della str da trasmettere
+    char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
+    int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
+    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+        killProc(NULL);
+        return;
+    }
+    int termNum = currSup->sup_asid - 1;
+    int termSem = getDevSemIndex(TERMINT, termNum, 0);
+    devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum);
+    SYSCALL(PASSEREN, (int) &deviceSemaphores[termSem], 0, 0);
 
+    int status;
+    int i = 0;
+    while ((i < strLen) && (i >= 0)){
+        devRegs->term.transm_command = *firstCharAddr << BYTELENGTH | TRANSMITCHAR;
+        SYSCALL(DOIO, (int) &devRegs->term.transm_command, TRANSMITCHAR, 0);
+        status = devRegs->dtp.status;
+        //OKCHARTRANS has same value of char received
+        if (status == OKCHARTRANS){
+            i++;
+            firstCharAddr++;
+        }
+        else i = status*-1;
+    }
+    SYSCALL(VERHOGEN, (int) &deviceSemaphores[termSem], 0, 0);
+    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
+}
+void readterminal(support_t *currSup){
+    //toEDIT
+    //indirizzo virtuale del primo char della str da trasmettere
+    char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
+    int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
+    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+        killProc(NULL);
+        return;
+    }
+    int termNum = currSup->sup_asid - 1;
+    int termSem = getDevSemIndex(TERMINT, termNum, 1);
+    devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum);
+    SYSCALL(PASSEREN, (int) &deviceSemaphores[termSem], 0, 0);
+
+    int status;
+    int i = 0;
+    while ((i < strLen) && (i >= 0)){
+        devRegs->term.transm_command = *firstCharAddr << BYTELENGTH | TRANSMITCHAR;
+        SYSCALL(DOIO, (int) &devRegs->term.transm_command, TRANSMITCHAR, 0);
+        status = devRegs->dtp.status;
+        //OKCHARTRANS has same value of char received
+        if (status == OKCHARTRANS){
+            i++;
+            firstCharAddr++;
+        }
+        else i = status*-1;
+    }
+    SYSCALL(VERHOGEN, (int) &deviceSemaphores[termSem], 0, 0);
+    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
+}
 
 void supGeneralExceptionHandler(){
 

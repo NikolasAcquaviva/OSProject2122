@@ -102,7 +102,6 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 
 	flashDevReg->dtp.command = value; 
 	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
-    //io passerei &(flashDevReg->dtp.command)
 	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->dtp.command, value, 0);
 	SYSCALL(VERHOGEN, (int) &deviceSemaphores[semNo], 0, 0);
 	
