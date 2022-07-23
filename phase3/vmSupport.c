@@ -3,7 +3,8 @@
 #include <umps3/umps/libumps.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
-#include "../phase2/init.h"
+#include "../phase2/init.h" //esporta currentProcess
+#include "initProc.c"
 //#include "../phase2/interrupthandler.h"
 //AGGIUNGERE LE SEGUENTI DUE FUNZIONI A interrupthandler.c
 memaddr *getDevRegAddr(int line, int devNo){
@@ -14,6 +15,8 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
 }
 
+//Master sempahore which wait for all processes to be concluded in order to terminate testing
+extern int masterSem; //da initProc.c
 
 #define TRUE 1
 #define FALSE 0
@@ -37,7 +40,6 @@ void initSwap(){
 	}
 }
 
-void killProc(){} 
 
  /*re-inizializza tutte le entry del processo che sta per essere ucciso*/
 void clearSwap(int asid){
@@ -49,6 +51,18 @@ void clearSwap(int asid){
         }  
     }
 }
+
+void killProc(int *sem){
+
+	clearSwap(currentProcess->p_supportStruct->sup_asid);
+
+	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
+
+	SYSCALL(VERHOGEN, (int) &masterSem, 0, 0);
+	SYSCALL(TERMPROCESS, 0, 0, 0);
+
+} 
+
 
 //FIFO replacement algo se prima non è stata trovata alcuna pagina libera as suggested
 int getVictimPage(){
@@ -71,27 +85,31 @@ void updateTLB(){
 
 
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
-void flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
+int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	//((line - 3) * 8) + (line == 7 ? (isRead * 8) + dev : dev);
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
-	SYSCALL(PASSEREN, (int) &deviceSemaphores[semNo], 0, 0);
+	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
 	devreg_t* flashDevReg = (devreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
 	
 	/*carica data0 con il blocco da leggere o scrivere*/
 	flashDevReg->dtp.data0 =  block;
 
-	//DISABLEINTERRUPTS;
 	// inserting the command after writing into data
-	flashDevReg->dtp.command = (devBlockNum << 8) | cmd;
-	int devStatus = SYSCALL(DOIO, FLASHINT, , 0);
+	unsigned int value;
+    //fare if/else se cmd = FLASHREAD? figura 5.12 pops
+    if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd;
+    else if (cmd == FLASHREAD) value = cmd;
+
+	flashDevReg->dtp.command = value; 
+	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
+	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->dtp.command, value, 0);
+	SYSCALL(VERHOGEN, (int) &devSem[semNo], 0, 0);
 	
-
-	//ENABLEINTERRUPTS;
-
-
-
-
+	if (devStatus != READY){
+		return -1;
+	}
+	else return devStatus;
 }
 
 
@@ -101,14 +119,16 @@ void pager(){
 	int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
 	//if the cause is a TLB mod exc => trap	
 	if (cause != TLBINVLDL && cause != TLBINVLDS){
-		killProc();
+		killProc(NULL);
 	}
 	else {
 		//swap pool mutex
 		//DA CONTROLLARE
-		SYSCALL(PASSEREN, &swapSem, 0, 0);
+		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
 		int missingPage = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
-		
+	
+		int devStatus;
+
 		int victimPgNum = getVictimPage();
 		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
 
@@ -129,10 +149,38 @@ void pager(){
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
 			//update old owner's process backing storage
-			flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
-
-
+			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
+			if (devStatus != READY){
+				killProc(&swapSem);
+			}
+			
 		}
+		
+		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
+		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPage, currSup->sup_asid);
+		if (devStatus != READY){
+			killProc(&swapSem);
+		}
+		
+		//UPDATING SWAP POOL TABLE ENTRY TO REFLECT THE NEW CONTENTS
+		swapTable[victimPgNum].sw_asid = currSup->sup_asid;
+		swapTable[victimPgNum].sw_pageNo = missingPage;
+		swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[missingPage]);
+
+		DISABLEINTERRUPTS;
+		
+		/*accende il V bit, il D bit e setta PNF*/
+		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
+		updateTLB();	
+
+		ENABLEINTERRUPTS;	
+		
+
+		/*rilascia la mutua esclusione*/
+		SYSCALL(VERHOGEN, (int) &swapSem, 0, 0);
+		
+		/*ritorna il controllo a current e ritenta*/
+		LDST((state_t *) &(currSup->sup_exceptState[PGFAULTEXCEPT]));
 
 	}
 
