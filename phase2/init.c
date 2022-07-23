@@ -5,7 +5,7 @@
 #include "listx.h"
 #include "scheduler.h"
 #include <umps3/umps/libumps.h>
-
+#include "../phase3/initProc.c"
 
 
 
@@ -24,7 +24,7 @@
 
 #define TRUE 1
 #define FALSE 0
-
+/*
 #define KLOG_LINES     64     // Number of lines in the buffer. Adjustable, only limited by available memory
 #define KLOG_LINE_SIZE 42     // Length of a single line in characters
 
@@ -55,7 +55,7 @@ void klog_print(char *str) {
 }
 
 
-// Princ a number in hexadecimal format (best for addresses)
+Print a number in hexadecimal format (best for addresses)
 void klog_print_hex(unsigned int num) {
     const char digits[] = "0123456789ABCDEF";
 
@@ -84,7 +84,7 @@ static void next_line(void) {
     for (unsigned int i = 0; i < KLOG_LINE_SIZE; i++) {
         klog_buffer[klog_line_index][i] = ' ';
     }
-}
+}*/
 
 //dichiarazione delle  variabili globali
 //come politica dei pid è stato scelto un contatore

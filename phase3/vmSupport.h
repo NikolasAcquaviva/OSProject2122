@@ -1,5 +1,3 @@
-#include <umps3/umps/const.h>
-#include <umps3/umps/libumps.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "../phase2/init.h" //esporta currentProcess

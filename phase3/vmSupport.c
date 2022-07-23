@@ -1,10 +1,7 @@
 //cercare "DA CONTROLLARE"
-#include <umps3/umps/const.h>
-#include <umps3/umps/libumps.h>
-#include "../pandos_const.h"
-#include "../pandos_types.h"
-#include "../phase2/init.h" //esporta currentProcess
 #include "initProc.c"
+#include "vmSupport.h"
+
 //#include "../phase2/interrupthandler.h"
 //AGGIUNGERE LE SEGUENTI DUE FUNZIONI A interrupthandler.c
 memaddr *getDevRegAddr(int line, int devNo){

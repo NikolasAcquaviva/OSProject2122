@@ -1,7 +1,3 @@
-#include <umps3/umps/libumps.h>
-#include <umps3/umps/types.h>
-#include "../pandos_const.h"
-#include "../pandos_types.h"
 #include "vmSupport.h"
 
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
@@ -14,7 +10,7 @@ extern void pager(); //TLB Exception handler
 extern void supGeneralExceptionHandler();
 
 //CREATE A PROCESS USING ITS ID (PROCESS ASID)
-void createUProc(int id){
+static void createUProc(int id){
 
     memaddr ramTop;
     RAMTOP(ramTop);
@@ -57,7 +53,7 @@ void createUProc(int id){
 Inizializza Swap Pool table e semafori, crea gli 8 processi e ne gestisce la terminazione
 Il nome è rimasto 'test' dalla fase 2
 */
-void test() {
+static void test() {
 
     initSwap();
     //init mutex sem4s vs sync sem4s in phase2
