@@ -2,7 +2,7 @@
 #include <umps3/umps/libumps.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
-#include "../phase2/init.h" //esporta deviceSemaphores
+#include "../phase2/init.h" //esporta currentProcess
 #define TRUE 1
 #define FALSE 0
 #define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))
@@ -13,3 +13,4 @@
 void killProc(int *sem);
 extern memaddr *getDevRegAddr(int line, int devNo);
 extern int getDevSemIndex(int line, int devNo, int isReadTerm);
+void initSwap();

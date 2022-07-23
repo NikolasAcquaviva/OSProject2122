@@ -3,7 +3,8 @@
 #include <umps3/umps/libumps.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
-#include "../phase2/init.h" //esporta deviceSemaphores
+#include "../phase2/init.h" //esporta currentProcess
+#include "initProc.c"
 //#include "../phase2/interrupthandler.h"
 //AGGIUNGERE LE SEGUENTI DUE FUNZIONI A interrupthandler.c
 memaddr *getDevRegAddr(int line, int devNo){
@@ -88,7 +89,7 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	//((line - 3) * 8) + (line == 7 ? (isRead * 8) + dev : dev);
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
-	SYSCALL(PASSEREN, (int) &deviceSemaphores[semNo], 0, 0);
+	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
 	devreg_t* flashDevReg = (devreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
 	
 	/*carica data0 con il blocco da leggere o scrivere*/
@@ -103,7 +104,7 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	flashDevReg->dtp.command = value; 
 	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
 	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->dtp.command, value, 0);
-	SYSCALL(VERHOGEN, (int) &deviceSemaphores[semNo], 0, 0);
+	SYSCALL(VERHOGEN, (int) &devSem[semNo], 0, 0);
 	
 	if (devStatus != READY){
 		return -1;

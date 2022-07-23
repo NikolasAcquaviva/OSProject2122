@@ -7,7 +7,8 @@
 #include <umps3/umps/arch.h>
 #include <umps3/umps/types.h>
 #include "vmSupport.h"
-//esportate le funzioni getDevSemIndex, getDevRegAddr e deviceSemaphores
+#include "initProc.h"
+//esportate le funzioni getDevSemIndex, getDevRegAddr e devSem
 
 
 
@@ -43,7 +44,7 @@ void writeprinter(support_t *currSup){
     int printerSem = getDevSemIndex(PRNTINT, printerNum, 0);
     devreg_t* devRegs = (devreg_t*) getDevRegAddr(PRNTINT, printerNum);
 
-    SYSCALL(PASSEREN, (int) &deviceSemaphores[printerSem], 0, 0);
+    SYSCALL(PASSEREN, (int) &devSem[printerSem], 0, 0);
 
     int status;
     int i = 0;
@@ -58,7 +59,7 @@ void writeprinter(support_t *currSup){
         }
         else i = status*-1;
     }
-    SYSCALL(VERHOGEN, (int) &deviceSemaphores[printerSem], 0, 0);
+    SYSCALL(VERHOGEN, (int) &devSem[printerSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
 void writeterminal(support_t *currSup){
@@ -72,7 +73,7 @@ void writeterminal(support_t *currSup){
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 0);
     devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum);
-    SYSCALL(PASSEREN, (int) &deviceSemaphores[termSem], 0, 0);
+    SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;
     int i = 0;
@@ -86,7 +87,7 @@ void writeterminal(support_t *currSup){
         }
         else i = status*-1;
     }
-    SYSCALL(VERHOGEN, (int) &deviceSemaphores[termSem], 0, 0);
+    SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
 void readterminal(support_t *currSup){
@@ -99,7 +100,7 @@ void readterminal(support_t *currSup){
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 1);
     devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum);
-    SYSCALL(PASSEREN, (int) &deviceSemaphores[termSem], 0, 0);
+    SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;
     int i = 0;
@@ -118,7 +119,7 @@ void readterminal(support_t *currSup){
             break;
         }
     }
-    SYSCALL(VERHOGEN, (int) &deviceSemaphores[termSem], 0, 0);
+    SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
 
