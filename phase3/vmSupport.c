@@ -13,7 +13,7 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 }
 
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
-extern int masterSem; //da initProc.c
+/* extern int masterSem; //da initProc.c */
 
 #define TRUE 1
 #define FALSE 0
