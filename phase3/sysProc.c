@@ -18,6 +18,8 @@
 #define WRITEPRINTER	        3
 #define WRITETERMINAL 	        4
 #define READTERMINAL	        5
+#define EOS '\0'
+
 
 
 void gettod(support_t *currSup){
@@ -112,6 +114,7 @@ void readterminal(support_t *currSup){
             i++;
             *buf = (status & 0x0000FF00) >> BYTELENGTH;
             buf++;
+            //ci va EOS?
             if ((status & 0x0000FF00) >> BYTELENGTH == '\n') break;
         }
         else{
