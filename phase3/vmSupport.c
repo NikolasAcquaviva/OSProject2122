@@ -1,6 +1,11 @@
 //cercare "DA CONTROLLARE"
-#include "initProc.c"
-#include "vmSupport.h"
+#include "initProc.h"
+#include <umps3/umps/libumps.h>
+#include <umps3/umps/types.h>
+#include "../pandos_const.h"
+#include "../pandos_types.h"
+
+extern pcb_PTR currentProcess;
 
 //#include "../phase2/interrupthandler.h"
 //AGGIUNGERE LE SEGUENTI DUE FUNZIONI A interrupthandler.c

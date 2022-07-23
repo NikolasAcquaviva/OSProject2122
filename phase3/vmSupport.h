@@ -1,6 +1,5 @@
 #include "../pandos_const.h"
 #include "../pandos_types.h"
-#include "../phase2/init.h" //esporta currentProcess
 #define TRUE 1
 #define FALSE 0
 #define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))

@@ -5,7 +5,7 @@
 #include "listx.h"
 #include "scheduler.h"
 #include <umps3/umps/libumps.h>
-#include "../phase3/initProc.c"
+#include "../phase3/initProc.h" //esporta test
 
 
 

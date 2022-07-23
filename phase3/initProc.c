@@ -1,4 +1,6 @@
-#include "vmSupport.h"
+#include "vmSupport.h" //prende initSwap
+#include <umps3/umps/libumps.h>
+#include <umps3/umps/types.h>
 
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
 int masterSem;
@@ -53,7 +55,7 @@ static void createUProc(int id){
 Inizializza Swap Pool table e semafori, crea gli 8 processi e ne gestisce la terminazione
 Il nome è rimasto 'test' dalla fase 2
 */
-static void test() {
+void test() {
 
     initSwap();
     //init mutex sem4s vs sync sem4s in phase2

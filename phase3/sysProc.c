@@ -6,8 +6,8 @@
 #include <umps3/umps/cp0.h>
 #include <umps3/umps/arch.h>
 #include <umps3/umps/types.h>
-#include "vmSupport.h"
-#include "initProc.h"
+#include "vmSupport.h" //eg killProc
+#include "initProc.h" //eg devSem
 //esportate le funzioni getDevSemIndex, getDevRegAddr e devSem
 
 
