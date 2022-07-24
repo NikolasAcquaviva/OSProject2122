@@ -36,7 +36,7 @@ UMPS3_OBJ = crtso.o libumps.o
 
 all : kernel.core.umps
 
-kernel.core.umps : kernel
+kernel.core.umps : kernel cpy
 	umps3-elf2umps -k out/$<
 
 kernel : asl.o pcb.o exceptionhandler.o interrupthandler.o init.o scheduler.o crtso.o libumps.o initProc.o sysProc.o vmSupport.o
@@ -54,3 +54,6 @@ clean :
 	@ mkdir -p $(OUTPUT_DIR)
 	@ mkdir -p $(OUTPUT_DIR)/obj
 	$(CC) $(CFLAGS) -c -o $(addprefix $(OUTPUT_DIR)/obj/, $@) $<
+
+cpy :
+	-cd $(OUTPUT_DIR) && cp ../phase3config.json . && tar -xf ../testers.tar

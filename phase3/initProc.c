@@ -46,7 +46,7 @@ static void createUProc(int id){
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
     int status = SYSCALL(CREATEPROCESS, (int) &newState, (int) &(supPool[id]), 0);
-    if (status != OK){
+    if (status == -1){ //CREATEPROCESS se errore ritorna -1
         klog_print("status non okay");
         SYSCALL(TERMPROCESS, 0, 0, 0);
         
@@ -61,7 +61,6 @@ Inizializza Swap Pool table e semafori, crea gli 8 processi e ne gestisce la ter
 Il nome è rimasto 'test' dalla fase 2
 */
 void test() {
-    klog_print("sono dentro test cazzo");
     initSwap();
     //init mutex sem4s vs sync sem4s in phase2
     for(int i=0; i < 49; i++) devSem[i]=1; 
