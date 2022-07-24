@@ -1,6 +1,7 @@
 #include "vmSupport.h" //prende initSwap
 #include <umps3/umps/libumps.h>
 #include <umps3/umps/types.h>
+#include "../phase2/init.h"
 
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
 int masterSem;
@@ -13,7 +14,7 @@ extern void supGeneralExceptionHandler();
 
 //CREATE A PROCESS USING ITS ID (PROCESS ASID)
 static void createUProc(int id){
-
+    klog_print("entrato 1");
     memaddr ramTop;
     RAMTOP(ramTop);
     memaddr stackTop = ramTop - (2*id*PAGESIZE);
@@ -45,7 +46,11 @@ static void createUProc(int id){
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
     int status = SYSCALL(CREATEPROCESS, (int) &newState, (int) &(supPool[id]), 0);
-    if (status != OK) SYSCALL(TERMPROCESS, 0, 0, 0);
+    if (status != OK){
+        klog_print("status non okay");
+        SYSCALL(TERMPROCESS, 0, 0, 0);
+        
+    } 
 
 }
 
@@ -56,7 +61,7 @@ Inizializza Swap Pool table e semafori, crea gli 8 processi e ne gestisce la ter
 Il nome è rimasto 'test' dalla fase 2
 */
 void test() {
-
+    klog_print("sono dentro test cazzo");
     initSwap();
     //init mutex sem4s vs sync sem4s in phase2
     for(int i=0; i < 49; i++) devSem[i]=1; 

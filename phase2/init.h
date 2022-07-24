@@ -23,5 +23,6 @@ extern pcb_PTR currentProcess;
 extern int deviceSemaphores[NoDEVICE];
 extern void memcpy(void *dest, const void *src, int n);
 void klog_print(char *str); //funzione non globale bensì facente parte di un modulo
+void klog_print_hex(unsigned int num);
 
 #endif
