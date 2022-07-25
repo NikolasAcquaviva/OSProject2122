@@ -19,10 +19,10 @@ static void createUProc(int id){
     memaddr stackTop = ramTop - (2*id*PAGESIZE);
 
     state_t newState;
-    newState.pc_epc = newState.reg_t9 = 0x800000B0;
-    newState.reg_sp = 0xC0000000;
-    newState.status = USERPON | IEPON | TEBITON | IMON; //IEPON => check if IMON
     newState.entry_hi = id << ASIDSHIFT; //figura 6.6 pops
+    newState.reg_sp = 0xC0000000;
+    newState.pc_epc = newState.reg_t9 = 0x800000B0;
+    newState.status = USERPON | IEPON | TEBITON | IMON; //IEPON => check if IMON
 
     supPool[id].sup_asid = id;
 
@@ -44,7 +44,7 @@ static void createUProc(int id){
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryHI = 0xBFFFF000 + (id << ASIDSHIFT);
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
-    int status = SYSCALL(CREATEPROCESS, (int) &newState, 0, (int) &(supPool[id]));
+    int status = SYSCALL(CREATEPROCESS, (int) &newState, PROCESS_PRIO_LOW, (int) &(supPool[id]));
     if (status == -1){ //CREATEPROCESS se errore ritorna -1
         klog_print("status non okay");
         SYSCALL(TERMPROCESS, 0, 0, 0);
