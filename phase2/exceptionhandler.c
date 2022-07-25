@@ -251,7 +251,6 @@ int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
     */  
     pcb_t* nuovo = allocPcb(); // creo il processo
     if (nuovo != NULL){ // gli assegno lo stato, la prio, la support e il pid
-        klog_print("\n nuovo è diverso da NULL\n");
         nuovo->p_s = *statep;
         nuovo->p_prio = prio;
         nuovo->p_supportStruct = supportp;

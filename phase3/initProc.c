@@ -14,7 +14,6 @@ extern void supGeneralExceptionHandler();
 
 //CREATE A PROCESS USING ITS ID (PROCESS ASID)
 static void createUProc(int id){
-    klog_print("entrato 1");
     memaddr ramTop;
     RAMTOP(ramTop);
     memaddr stackTop = ramTop - (2*id*PAGESIZE);
@@ -45,7 +44,7 @@ static void createUProc(int id){
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryHI = 0xBFFFF000 + (id << ASIDSHIFT);
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
 
-    int status = SYSCALL(CREATEPROCESS, (int) &newState, (int) &(supPool[id]), 0);
+    int status = SYSCALL(CREATEPROCESS, (int) &newState, 0, (int) &(supPool[id]));
     if (status == -1){ //CREATEPROCESS se errore ritorna -1
         klog_print("status non okay");
         SYSCALL(TERMPROCESS, 0, 0, 0);
@@ -67,10 +66,9 @@ void test() {
     for (int id=1; id <= UPROCMAX; id++) createUProc(id);
     //second choice
     masterSem = 0;
+    klog_print("dopo create u proc\n");
     for (int j = 0; j < UPROCMAX; j++) SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
-    
+    klog_print("prima di killare\n");
     //killing test process ?
     SYSCALL(TERMPROCESS, 0, 0, 0);
-    
-
 }

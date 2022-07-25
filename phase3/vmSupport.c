@@ -30,7 +30,6 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 /* Page Table Starting Address */
 #define PAGETBLSTART 0x80000000
 
-
 swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
 //DA CONTROLLARE QUESTA VARIABILE
 int swapSem; //per accedere alla swapPool in mutex
