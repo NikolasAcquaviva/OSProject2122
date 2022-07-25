@@ -2,7 +2,7 @@
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "../listx.h"
-
+#include "../phase2/init.h"
 /*pcbFree_h: lista dei PCB che 
 sono liberi o inutilizzati*/
 HIDDEN struct list_head pcbFree_h = LIST_HEAD_INIT(pcbFree_h);
@@ -24,8 +24,10 @@ void initPcbs(){
 void freePcb(pcb_t *p){
 	//controllo che p non sia già nella lista dei pcb liberi
 	pcb_t *tmp; 
-	list_for_each_entry(tmp,&pcbFree_h,p_list) if(tmp==p) break;
-	if(&tmp->p_list==&pcbFree_h) list_add(&p->p_list,&pcbFree_h);//se sono qui non sono mai entrato nell'if precedente
+	list_for_each_entry(tmp,&pcbFree_h,p_list){
+		if(tmp==p) break;
+	}
+	if(&tmp->p_list==&pcbFree_h) list_add(&p->p_list,&pcbFree_h);//se sono qui non sono mai entrato nell'if precedente	
 }
 
 pcb_t *allocPcb(){

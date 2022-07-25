@@ -12,7 +12,6 @@
 #include "../phase1/pcb.h"
 #include "../phase1/asl.h"
 #include "scheduler.h"
-//#include "interrupthandler.h"
 #include "exceptionhandler.h"
 #include "init.h"
 
@@ -156,7 +155,7 @@ static int isDevice(int* semaddr){
 //funzione che performa le azioni necessarie al tempo di terminazione di un processo
 //Usata in casi di die portion of pass-up or die oppure nsys2
 static void Die (pcb_t *p, int isRoot){
-    if(isRoot==1) outChild(p); 
+    if(isRoot==1) outChild(container_of(p->p_child.next,pcb_t,p_sib)); 
     // rimuoviamo p dalla lista dei figli del padre solo se è la radice dell'albero di pcb da rimuovere. Guarda TERM_PROCESS
     
     //se il pcb da terminare è bloccato, aggiustiamo il valore
@@ -173,6 +172,7 @@ static void Die (pcb_t *p, int isRoot){
     else outProcQ(&LowPriorityReadyQueue, p);
     //decrementiamo il numero di processi e liberiamo il pcb
     processCount--;
+    klog_print("entro in freepcb\n");
     freePcb(p);
 }
 
@@ -273,15 +273,21 @@ void TERM_PROCESS(int pid, int a2, int a3){
     //(pid != 0  && current non appartenente al sottoalbero del processo terminato) 
     int startScheduler = TRUE;
     if(pid == 0){
-        Die(currentProcess,1);
-        if(emptyChild(currentProcess) == 0) RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
+        
+        if(emptyChild(currentProcess) == 0) {
+            RecursiveDie(container_of(currentProcess->p_child.next,pcb_t,p_sib));
+            Die(currentProcess,1);
+        }
     }
     else{
         pcb_PTR proc = FindProcess(pid); //ritorna il processo, non il pid
-        Die(proc,1);
+        
 		//elimino i miei figli nel caso ci siano. Parto dal fratello della sentinella
-        if(emptyChild(proc) == 0) RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
-		//controllo se currentProcess è discendente di proc
+        if(emptyChild(proc) == 0){ 
+            RecursiveDie(container_of(proc->p_child.next,pcb_t,p_sib));
+            Die(proc,1);
+		}
+        //controllo se currentProcess è discendente di proc
         if (__isMyRoot(proc, currentProcess) == FALSE) startScheduler = FALSE;  
 		//altrimenti anche currentProcess è stato eliminato
     }

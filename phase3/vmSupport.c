@@ -56,7 +56,6 @@ void clearSwap(int asid){
 }
 
 void killProc(int *sem){
-	klog_print("killproc\n");
 	clearSwap(currentProcess->p_supportStruct->sup_asid);
 
 	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
