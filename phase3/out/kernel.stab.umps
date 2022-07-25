@@ -24,7 +24,7 @@ next_char                        :FUN:0x20004984:0x0000006C:LOC
 list_empty                       :FUN:0x20004DB0:0x00000044:LOC
 supPool                          :OBJ:0x20007AD0:0x000013D4:LOC
 createUProc                      :FUN:0x200055A0:0x00000458:LOC
-frame.1169                       :OBJ:0x20008EB0:0x00000004:LOC
+frame.1228                       :OBJ:0x20008EB0:0x00000004:LOC
 INITCPU                          :FUN:0x2000555C:0x00000040:GLB
 headProcQ                        :FUN:0x200020BC:0x0000006C:GLB
 interruptendtime                 :OBJ:0x20009F00:0x00000004:GLB
@@ -34,7 +34,7 @@ klog_char_index                  :OBJ:0x20007044:0x00000004:GLB
 initPcbs                         :FUN:0x20001CA0:0x00000164:GLB
 klog_buffer                      :OBJ:0x20007048:0x00000A80:GLB
 getENTRYHI                       :FUN:0x200052A8:0x00000014:GLB
-killProc                         :FUN:0x200065BC:0x000000BC:GLB
+killProc                         :FUN:0x200065BC:0x000000CC:GLB
 emptyProcQ                       :FUN:0x20002024:0x00000050:GLB
 HALT                             :FUN:0x2000551C:0x00000014:GLB
 setCAUSE                         :FUN:0x20005398:0x0000001C:GLB
@@ -42,7 +42,7 @@ semd_table                       :OBJ:0x20008EC0:0x00000190:GLB
 WAIT_FOR_CLOCK                   :FUN:0x20003D24:0x00000064:GLB
 lastProcessHasYielded            :OBJ:0x20007030:0x00000004:GLB
 memcpy                           :FUN:0x20004D10:0x00000094:GLB
-pager                            :FUN:0x20006914:0x00000480:GLB
+pager                            :FUN:0x20006924:0x00000480:GLB
 TLBWR                            :FUN:0x200053B4:0x00000014:GLB
 STST                             :FUN:0x2000545C:0x000000C0:GLB
 klog_print_hex                   :FUN:0x20004894:0x000000F0:GLB
@@ -75,14 +75,14 @@ currentProcess                   :OBJ:0x20009FE4:0x00000004:GLB
 WAIT                             :FUN:0x20005418:0x00000014:GLB
 __start                          :FUN:0x200051F0:0x0000003C:GLB
 TERM_PROCESS                     :FUN:0x20003304:0x00000160:GLB
-flashCmd                         :FUN:0x20006798:0x0000017C:GLB
+flashCmd                         :FUN:0x200067A8:0x0000017C:GLB
 LDST                             :FUN:0x20005544:0x00000018:GLB
 readterminal                     :FUN:0x2000604C:0x000001E0:GLB
-updateTLB                        :FUN:0x20006764:0x00000034:GLB
+updateTLB                        :FUN:0x20006774:0x00000034:GLB
 getSTATUS                        :FUN:0x200052BC:0x00000014:GLB
 test                             :FUN:0x200059F8:0x00000154:GLB
 supGeneralExceptionHandler       :FUN:0x2000622C:0x00000168:GLB
-getVictimPage                    :FUN:0x20006678:0x000000EC:GLB
+getVictimPage                    :FUN:0x20006688:0x000000EC:GLB
 TLBR                             :FUN:0x200053F0:0x00000014:GLB
 scheduler                        :FUN:0x20004DF4:0x000003F4:GLB
 getDevSemIndex                   :FUN:0x200063F4:0x00000078:GLB
@@ -116,7 +116,7 @@ outProcQ                         :FUN:0x200021AC:0x000000C4:GLB
 outChild                         :FUN:0x200023F8:0x00000090:GLB
 setINDEX                         :FUN:0x2000530C:0x0000001C:GLB
 getPRID                          :FUN:0x200052F8:0x00000014:GLB
-uTLB_RefillHandler               :FUN:0x20006D94:0x00000128:GLB
+uTLB_RefillHandler               :FUN:0x20006DA4:0x00000128:GLB
 GET_CPU_TIME                     :FUN:0x20003C7C:0x000000A8:GLB
 getTIMER                         :FUN:0x20005294:0x00000014:GLB
 DO_IO                            :FUN:0x2000388C:0x000003F0:GLB

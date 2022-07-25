@@ -4,6 +4,8 @@
 #include <umps3/umps/types.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
+#include "../phase2/init.h"
+
 
 extern pcb_PTR currentProcess;
 
@@ -54,7 +56,7 @@ void clearSwap(int asid){
 }
 
 void killProc(int *sem){
-
+	klog_print("killproc\n");
 	clearSwap(currentProcess->p_supportStruct->sup_asid);
 
 	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
