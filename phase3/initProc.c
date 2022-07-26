@@ -26,15 +26,14 @@ static void createUProc(int id){
 
     supPool[id].sup_asid = id;
 
-    supPool[id].sup_exceptContext[PGFAULTEXCEPT].pc = (memaddr) pager;
-    supPool[id].sup_exceptContext[PGFAULTEXCEPT].status =  IEPON | TEBITON | IMON;
     supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) (stackTop + PAGESIZE); ;
+    supPool[id].sup_exceptContext[PGFAULTEXCEPT].status =  IEPON | TEBITON | IMON;
+    supPool[id].sup_exceptContext[PGFAULTEXCEPT].pc = (memaddr) pager;
     /* supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) &(supPool[id].sup_exceptContext[PGFAULTEXCEPT].sup_stack) ; */
 
-
-    supPool[id].sup_exceptContext[GENERALEXCEPT].pc = (memaddr) supGeneralExceptionHandler;
-    supPool[id].sup_exceptContext[GENERALEXCEPT].status =  IEPON | TEBITON | IMON;
     supPool[id].sup_exceptContext[GENERALEXCEPT].stackPtr =(memaddr) stackTop; ;
+    supPool[id].sup_exceptContext[GENERALEXCEPT].status =  IEPON | TEBITON | IMON;
+    supPool[id].sup_exceptContext[GENERALEXCEPT].pc = (memaddr) supGeneralExceptionHandler;
 
 	// initialization of the process private PageTable
 	for (int j = 0; j < MAXPAGES - 1; j++){ //-1 perchè l'ultima entry è dedicata allo stack'
@@ -49,7 +48,9 @@ static void createUProc(int id){
         klog_print("status non okay");
         SYSCALL(TERMPROCESS, 0, 0, 0);
         
-    } 
+    }
+    //in teoria UPROCMAX di queste printate
+    klog_print("creato un proc\n");
 
 }
 
@@ -67,7 +68,10 @@ void test() {
     //second choice
     masterSem = 0;
     klog_print("dopo create u proc\n");
-    for (int j = 0; j < UPROCMAX; j++) SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
+    for (int j = 0; j < UPROCMAX; j++){
+        SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
+        klog_print("ricevuto un ack su UPROCMAX\n");
+    }
     klog_print("prima di killare\n");
     //killing test process ?
     SYSCALL(TERMPROCESS, 0, 0, 0);

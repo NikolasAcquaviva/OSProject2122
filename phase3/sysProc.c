@@ -89,6 +89,10 @@ void writeterminal(support_t *currSup){
         }
         else i = status*-1;
     }
+    if (i){
+        SYSCALL(DOIO, (int) &devRegs->term.transm_command, ACK, 0);
+    }
+    
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
@@ -115,7 +119,8 @@ void readterminal(support_t *currSup){
             *buf = (status & 0x0000FF00) >> BYTELENGTH;
             buf++;
             //ci va EOS?
-            if ((status & 0x0000FF00) >> BYTELENGTH == '\n') break;
+            if (*buf == EOS) break;
+            if (((status & 0x0000FF00) >> BYTELENGTH == '\n') || ((status & 0x0000FF00) >> BYTELENGTH == EOS)) break;
         }
         else{
             i = status*-1;
