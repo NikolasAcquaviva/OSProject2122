@@ -6,7 +6,6 @@
 #include "../pandos_types.h"
 #include "../phase2/init.h"
 
-
 extern pcb_PTR currentProcess;
 
 //#include "../phase2/interrupthandler.h"
@@ -108,9 +107,7 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->dtp.command, value, 0);
 	SYSCALL(VERHOGEN, (int) &devSem[semNo], 0, 0);
 	
-	if (devStatus != READY){
-		return -1;
-	}
+	if (devStatus != READY) return -1;
 	else return devStatus;
 }
 
@@ -127,10 +124,9 @@ void pager(){
 		//swap pool mutex
 		//DA CONTROLLARE
 		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
+		
 		int missingPage = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
-	
 		int devStatus;
-
 		int victimPgNum = getVictimPage();
 		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
 
@@ -142,8 +138,14 @@ void pager(){
 			//invalidiamo associazione
 			swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON; //"puntatore alla entry corrispondente nella tabella delle pagine del processo" => lo vedrà anche l'altro processo!
 			//update TLB
-			updateTLB();	
-			
+			setENTRYHI(swapTable[victimPgNum].sw_pte->pte_entryHI);
+			setENTRYLO(swapTable[victimPgNum].sw_pte->pte_entryLO);
+			TLBP(); //in registro index abbiamo primo bit che indica se esiste in cache la entry data dai registri cp0 entryHI/LO
+			int index = getINDEX(); //nei bit da 8 a 15 abbiamo l'index del tlb nel quale scrivere i registri hi/lo tramite TLBWI()
+			int probe = (index >> 31); //prendo il bit probe del registro index (6.4 pops), se è 0 c'è un tlb hit
+			if(probe == 0)
+				TLBWI();
+			//updateTLB();	
 			ENABLEINTERRUPTS;
 
 			// block of the flash device to write into (coincides with the page number)
@@ -172,8 +174,20 @@ void pager(){
 		DISABLEINTERRUPTS;
 		
 		/*accende il V bit, il D bit e setta PNF*/
-		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
-		updateTLB();	
+		//un errore risolto: qui nella riga sotto non veniva fatto lo shift del frame con evidenti conseguenze. Inoltre qui viene acceso anche il bit dirty, ma sulla guida non mi sembra che lo richieda. In ogni caso allo stato attuale, che venga acceso o meno il risultato non cambia.
+		swapTable[victimPgNum].sw_pte->pte_entryLO = (victimPgAddr << VPNSHIFT) | VALIDON | DIRTYON;
+		setENTRYHI(swapTable[victimPgNum].sw_pte->pte_entryHI);
+		setENTRYLO(swapTable[victimPgNum].sw_pte->pte_entryLO);
+		//di nuovo probe, se esiste riscrivo il valore aggiornato nello stesso indice, altrimenti utilizzo un indice random per inserirlo (TLBWR)
+		TLBP();
+		int index = getINDEX(); 
+		int probe = (index >> 31); 
+		if(probe == 0)
+			TLBWI();
+		else
+			TLBWR();
+		//la differenza è che tlbwi scrive i registri cp0 HI/LO nella entry con indice index(nel registro index, popolato opportunamente da TLBP, invece se TLBP risulta in TLB miss, l'indice sul quale scrivere è generato pseudorandomicamente)
+		//updateTLB();	
 
 		ENABLEINTERRUPTS;	
 		

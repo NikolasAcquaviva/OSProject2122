@@ -4,7 +4,6 @@
 //
 //		quando avviene trap, solo RI come codice EcxCode? (3.5.11 student guide)
 
-
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include <umps3/umps/cp0.h>
@@ -172,7 +171,6 @@ static void Die (pcb_t *p, int isRoot){
     else outProcQ(&LowPriorityReadyQueue, p);
     //decrementiamo il numero di processi e liberiamo il pcb
     processCount--;
-    klog_print("entro in freepcb\n");
     freePcb(p);
 }
 

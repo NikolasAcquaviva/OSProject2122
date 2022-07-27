@@ -26,7 +26,7 @@ static void createUProc(int id){
 
     supPool[id].sup_asid = id;
 
-    supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) (stackTop + PAGESIZE); ;
+    supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) (stackTop + PAGESIZE);
     supPool[id].sup_exceptContext[PGFAULTEXCEPT].status =  IEPON | TEBITON | IMON;
     supPool[id].sup_exceptContext[PGFAULTEXCEPT].pc = (memaddr) pager;
     /* supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) &(supPool[id].sup_exceptContext[PGFAULTEXCEPT].sup_stack) ; */
@@ -45,12 +45,10 @@ static void createUProc(int id){
 
     int status = SYSCALL(CREATEPROCESS, (int) &newState, PROCESS_PRIO_LOW, (int) &(supPool[id]));
     if (status == -1){ //CREATEPROCESS se errore ritorna -1
-        klog_print("status non okay");
         SYSCALL(TERMPROCESS, 0, 0, 0);
-        
     }
     //in teoria UPROCMAX di queste printate
-    klog_print("creato un proc\n");
+    //klog_print("creato un proc\n");
 
 }
 
@@ -67,12 +65,10 @@ void test() {
     for (int id=1; id <= UPROCMAX; id++) createUProc(id);
     //second choice
     masterSem = 0;
-    klog_print("dopo create u proc\n");
     for (int j = 0; j < UPROCMAX; j++){
         SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
         klog_print("ricevuto un ack su UPROCMAX\n");
     }
-    klog_print("prima di killare\n");
     //killing test process ?
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }

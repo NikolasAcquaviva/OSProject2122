@@ -89,9 +89,9 @@ void writeterminal(support_t *currSup){
         }
         else i = status*-1;
     }
-    if (i){
+    /*if (i){
         SYSCALL(DOIO, (int) &devRegs->term.transm_command, ACK, 0);
-    }
+    }*/
     
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
@@ -130,12 +130,10 @@ void readterminal(support_t *currSup){
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
-
 void supGeneralExceptionHandler(){
 
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 	int cause = ((currSup->sup_exceptState[GENERALEXCEPT].cause) & GETEXECCODE) >> CAUSESHIFT;
-
 	if (cause == SYSEXCEPTION){
 		currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0)

@@ -15,8 +15,6 @@
 #include "interrupthandler.h"
 #include <umps3/umps/libumps.h>
 
-
-
 static memaddr* getInterruptLineAddr(int line){  //indirizzo linea 3. Per classe device con interrupt. parte da 0x10000040, e incrementiamo di una word 
     return (memaddr *) (0x10000040 + (0x04 * (line-3)));
 }
