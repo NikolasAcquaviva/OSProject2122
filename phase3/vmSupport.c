@@ -105,10 +105,10 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 
 	// inserting the command after writing into data
 	unsigned int value;
-    //fare if/else se cmd = FLASHREAD? figura 5.12 pops MA I RAGAZZI NON HANNO FATTO COSì
-    /* if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd; */
-    /* else if (cmd == FLASHREAD) value = cmd; */
-    value = cmd | devBlockNum << 8;
+    //fare if/else se cmd = FLASHREAD? figura 5.12 pops
+    if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd;
+    else if (cmd == FLASHREAD) value = cmd;
+    /* value = cmd | devBlockNum << 8; */
 
 	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
 	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->command, value, 0);
