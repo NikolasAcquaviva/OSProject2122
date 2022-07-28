@@ -57,3 +57,4 @@ clean :
 
 cpy :
 	-cd $(OUTPUT_DIR) && cp ../phase3config.json .
+

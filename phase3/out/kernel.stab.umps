@@ -42,7 +42,7 @@ semd_table                       :OBJ:0x20009EC0:0x00000190:GLB
 WAIT_FOR_CLOCK                   :FUN:0x20003D44:0x00000064:GLB
 lastProcessHasYielded            :OBJ:0x20008030:0x00000004:GLB
 memcpy                           :FUN:0x20004D30:0x00000094:GLB
-pager                            :FUN:0x20006988:0x000004E8:GLB
+pager                            :FUN:0x20006988:0x00000514:GLB
 TLBWR                            :FUN:0x200053D4:0x00000014:GLB
 STST                             :FUN:0x2000547C:0x000000C0:GLB
 klog_print_hex                   :FUN:0x200048B4:0x000000F0:GLB
@@ -116,7 +116,7 @@ outProcQ                         :FUN:0x200021AC:0x000000C4:GLB
 outChild                         :FUN:0x200023F8:0x00000090:GLB
 setINDEX                         :FUN:0x2000532C:0x0000001C:GLB
 getPRID                          :FUN:0x20005318:0x00000014:GLB
-uTLB_RefillHandler               :FUN:0x20006E70:0x00000128:GLB
+uTLB_RefillHandler               :FUN:0x20006E9C:0x00000128:GLB
 GET_CPU_TIME                     :FUN:0x20003C9C:0x000000A8:GLB
 getTIMER                         :FUN:0x200052B4:0x00000014:GLB
 DO_IO                            :FUN:0x200038AC:0x000003F0:GLB
