@@ -29,8 +29,8 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 #define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))
 #define ENABLEINTERRUPTS setSTATUS(getSTATUS() | IECON)
 #define POOLSTART (RAMSTART + (32 * PAGESIZE))
-/* #define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT */
-#define __GETVPN(T) (T - (KUSEG >> VPNSHIFT)) //ritorna index
+#define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT
+/* #define __GETVPN(T) (T - (KUSEG >> VPNSHIFT)) //ritorna index */
 #define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
 /* Page Table Starting Address */
 #define PAGETBLSTART 0x80000000
@@ -125,13 +125,13 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 void pager(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 	//if the cause is a TLB mod exc => trap	
-    if (currSup->sup_exceptState[PGFAULTEXCEPT].cause == 1) {
-        killProc(NULL);
-    }
-    /* int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT; */
-	/* if (cause != TLBINVLDL && cause != TLBINVLDS){ */
-	/* 	killProc(NULL); */
-	/* } */
+    /* if (currSup->sup_exceptState[PGFAULTEXCEPT].cause == 1) { */
+    /*     killProc(NULL); */
+    /* } */
+    int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
+	if (cause == 1){
+		killProc(NULL);
+	}
 	else {
 		//swap pool mutex
 		//DA CONTROLLARE
