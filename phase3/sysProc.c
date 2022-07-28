@@ -164,7 +164,16 @@ void supGeneralExceptionHandler(){
         currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
 	}
+    //sarà dovuto ad un errore di ritorno sbagliato? non credo
+    else if (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 == READTERMINAL){
+        klog_print("\nENTRATA STRANA\n");
+        readterminal(currSup);
+        currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
+        currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
+        LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
+    }
 	else {
+        klog_print_hex(currSup->sup_exceptState[GENERALEXCEPT].reg_a0);
         klog_print("errore strano 2");
         killProc(NULL);
         //gli altri ragazzi hanno semplicemente terminato, credo sia sbagliata la loro scelta
