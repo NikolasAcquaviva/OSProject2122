@@ -9,6 +9,7 @@
 #include "vmSupport.h" //eg killProc
 #include "initProc.h" //eg devSem
 //esportate le funzioni getDevSemIndex, getDevRegAddr e devSem
+#include "../phase2/init.h"
 
 
 
@@ -44,18 +45,18 @@ void writeprinter(support_t *currSup){
 
     int printerNum = currSup->sup_asid - 1;
     int printerSem = getDevSemIndex(PRNTINT, printerNum, 0);
-    devreg_t* devRegs = (devreg_t*) getDevRegAddr(PRNTINT, printerNum);
-
+    /* devreg_t* devRegs = (devreg_t*) getDevRegAddr(PRNTINT, printerNum); */
+    void *devRegs = (void *)DEV_REG_ADDR(PRNTINT, printerNum);
     SYSCALL(PASSEREN, (int) &devSem[printerSem], 0, 0);
 
     int status;
     int i = 0;
     while ((i < strLen) && (i >= 0)){
-        devRegs->dtp.data0 = *firstCharAddr;
+        ((dtpreg_t *)devRegs)->data0 = *firstCharAddr;
+        /* devRegs->dtp.data0 = *firstCharAddr; */
         //PRINTCHR = TRANSMITCHAR = RECEIVECHAR
-        SYSCALL(DOIO, (int) &devRegs->dtp.command, TRANSMITCHAR, 0);
-        status = devRegs->dtp.status;
-        if ((status & 0x000000FF)== READY){
+        status = SYSCALL(DOIO, (int) &((dtpreg_t *)devRegs)->command, TRANSMITCHAR, 0);
+        if ((status & 0x000000FF)== READY){ //TODO da chiarire! c'è anche da dire che sulla doc non c'è scritto quanti bit occupa lo status delle stampanti...
             i++;
             firstCharAddr++;
         }
@@ -68,20 +69,20 @@ void writeterminal(support_t *currSup){
     //indirizzo virtuale del primo char della str da trasmettere
     char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
-    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
-        killProc(NULL);
+    if((memaddr)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+        killProc(NULL); //i ragazzi fanno direttamente una TERMINATE del current process
         return;
     }
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 0);
-    devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum);
+    /* devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum); */
+    void *devRegs = (void *)DEV_REG_ADDR(TERMINT, termNum);
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;
     int i = 0;
     while ((i < strLen) && (i >= 0)){
-        SYSCALL(DOIO, (int) &devRegs->term.transm_command, *firstCharAddr << BYTELENGTH | TRANSMITCHAR, 0);
-        status = devRegs->dtp.status;
+        status = SYSCALL(DOIO, (int) &((termreg_t *)devRegs)->transm_command, (unsigned int)*firstCharAddr << BYTELENGTH | TRANSMITCHAR, 0);
         //OKCHARTRANS has same value of char received
         if ((status & 0x000000FF)  == OKCHARTRANS){
             i++;
@@ -99,43 +100,47 @@ void writeterminal(support_t *currSup){
 void readterminal(support_t *currSup){
     //toEDIT
     char *buf = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
-    if((int)buf < KUSEG){
+    if((memaddr)buf < KUSEG){
         killProc(NULL);
         return;
     }
     int termNum = currSup->sup_asid - 1;
+    //TODO: valutare idea di fare 3 array di semafori, ognuno lungo UPROCMAX
     int termSem = getDevSemIndex(TERMINT, termNum, 1);
-    devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum);
+    termreg_t* devRegs = (termreg_t*) DEV_REG_ADDR(TERMINT, termNum);
+    /* devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum); */
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;
-    int i = 0;
-    while (TRUE){
-        SYSCALL(DOIO, (int) &devRegs->term.recv_command, TRANSMITCHAR, 0);
-        status = devRegs->dtp.status;
+    int readChar = 0; 
+    // No fixed string length: we terminate reading a newline character.
+    for (char r = EOS; r != '\n';){
+        status = SYSCALL(DOIO, (int) &devRegs->recv_command, TRANSMITCHAR, 0);
         //OKCHARTRANS has same value of char received
-        if ((status & 0x000000FF)  == OKCHARTRANS){
-            i++;
-            *buf = (status & 0x0000FF00) >> BYTELENGTH;
-            buf++;
+        if ((status & 0x000000FF)  == OKCHARTRANS){ //TODO: capire perchè solo una f
+            r = (status & 0x0000FF00) >> BYTELENGTH;
+            *(buf + readChar++) = r;  
+
             //ci va EOS?
-            if (*buf == EOS) break;
-            if (((status & 0x0000FF00) >> BYTELENGTH == '\n') || ((status & 0x0000FF00) >> BYTELENGTH == EOS)) break;
+            /* if (*buf == EOS) break; */
+            /* if (((status & 0x0000FF00) >> BYTELENGTH == '\n') || ((status & 0x0000FF00) >> BYTELENGTH == EOS)) break; */
         }
         else{
-            i = status*-1;
-            break;
+            killProc(&devSem[termSem]);
+            currSup->sup_exceptState[GENERALEXCEPT].reg_v0 =  (status & 0x0000000F) * -1;
+            return;
         }
     }
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
-    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
+    // We add a EOS terminating character after the newline character: "*\n\0" TODO: PERCHE'? Controllare se si verifica una sorta di ciclo altrimenti
+    *(buf + readChar) = EOS;
+    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = readChar;
 }
 void supGeneralExceptionHandler(){
-
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
-	int cause = ((currSup->sup_exceptState[GENERALEXCEPT].cause) & GETEXECCODE) >> CAUSESHIFT;
+	/* int cause = ((currSup->sup_exceptState[GENERALEXCEPT].cause) & GETEXECCODE) >> CAUSESHIFT; */
+    int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
 	if (cause == SYSEXCEPTION){
-		currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0)
 		{
 			case GET_TOD:
@@ -156,8 +161,17 @@ void supGeneralExceptionHandler(){
 			default:
 				killProc(NULL);
 		}
+        currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
+        currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
 	}
-	else killProc(NULL);
+	else {
+        killProc(NULL);
+        //gli altri ragazzi hanno semplicemente terminato, credo sia sbagliata la loro scelta
+        /* SYSCALL(TERMINATE, 0, 0, 0); */
+    }
+    /* currSup->sup_exceptState[GENERALEXCEPT].pc_epc += WORDLEN; */
+    /* currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; */
+    /* LDST(&(currSup->sup_exceptState[GENERALEXCEPT])); */
 
 }

@@ -57,6 +57,10 @@ void clearSwap(int asid){
 void killProc(int *sem){
 	clearSwap(currentProcess->p_supportStruct->sup_asid);
 
+    //TODO controllare se asid detiene If the specified U-Proc is holding hostage the Swap Pool Table,
+    //https://github.com/lucat1/unibo_08574_progetto/blob/6a98e14a18b875e8444339dce4c451a34e54b83e/phase3/src/pager.c
+    //riga 140
+    //idea principale è di tenere un array che rappresenta lo stato del sys
 	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
 
 	SYSCALL(VERHOGEN, (int) &masterSem, 0, 0);
