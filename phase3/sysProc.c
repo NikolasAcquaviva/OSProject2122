@@ -45,8 +45,8 @@ void writeprinter(support_t *currSup){
 
     int printerNum = currSup->sup_asid - 1;
     int printerSem = getDevSemIndex(PRNTINT, printerNum, 0);
-    /* devreg_t* devRegs = (devreg_t*) getDevRegAddr(PRNTINT, printerNum); */
-    void *devRegs = (void *)DEV_REG_ADDR(PRNTINT, printerNum);
+    devreg_t* devRegs = (devreg_t*) getDevRegAddr(PRNTINT, printerNum); 
+    //void *devRegs = (void *)DEV_REG_ADDR(PRNTINT, printerNum);
     SYSCALL(PASSEREN, (int) &devSem[printerSem], 0, 0);
 
     int status;
@@ -75,8 +75,8 @@ void writeterminal(support_t *currSup){
     }
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 0);
-    /* devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum); */
-    void *devRegs = (void *)DEV_REG_ADDR(TERMINT, termNum);
+    devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum); 
+    //void *devRegs = (void *)DEV_REG_ADDR(TERMINT, termNum);
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;
@@ -90,10 +90,6 @@ void writeterminal(support_t *currSup){
         }
         else i = status*-1;
     }
-    /*if (i){
-        SYSCALL(DOIO, (int) &devRegs->term.transm_command, ACK, 0);
-    }*/
-    
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = i;
 }
@@ -107,8 +103,8 @@ void readterminal(support_t *currSup){
     int termNum = currSup->sup_asid - 1;
     //TODO: valutare idea di fare 3 array di semafori, ognuno lungo UPROCMAX
     int termSem = getDevSemIndex(TERMINT, termNum, 1);
-    termreg_t* devRegs = (termreg_t*) DEV_REG_ADDR(TERMINT, termNum);
-    /* devreg_t* devRegs = (devreg_t*) getDevRegAddr(TERMINT, termNum); */
+    //termreg_t* devRegs = (termreg_t*) DEV_REG_ADDR(TERMINT, termNum);
+    termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum); 
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;

@@ -47,9 +47,6 @@ static void createUProc(int id){
     if (status == -1){ //CREATEPROCESS se errore ritorna -1
         SYSCALL(TERMPROCESS, 0, 0, 0);
     }
-    //in teoria UPROCMAX di queste printate
-    //klog_print("creato un proc\n");
-
 }
 
 

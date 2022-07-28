@@ -56,4 +56,4 @@ clean :
 	$(CC) $(CFLAGS) -c -o $(addprefix $(OUTPUT_DIR)/obj/, $@) $<
 
 cpy :
-	-cd $(OUTPUT_DIR) && cp ../phase3config.json . && tar -xf ../testers.tar
+	-cd $(OUTPUT_DIR) && cp ../phase3config.json .

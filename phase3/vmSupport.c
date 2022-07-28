@@ -83,11 +83,22 @@ int getVictimPage(){
     return frame;
 }
 
-void updateTLB(){
-	TLBCLR();
+void updateTLB(pteEntry_t *sw_pte, int isCurr){
+	/*abbiamo 2 casi di updateTLB nel pager:
+		1. dopo aver invalidato la entry della page victim, bisogna aggiornare quella entry anche nella TLB,se esiste
+		2. dopo aver inserito la pagina che ora è considerata valid per il current process (iscurr=1)
+	*/
+
+	setENTRYHI(sw_pte->pte_entryHI);
+	setENTRYLO(sw_pte->pte_entryLO);
+	TLBP(); //in registro index abbiamo primo bit che indica se esiste in cache la entry data dai registri cp0 entryHI/LO
+	int index = getINDEX(); //nei bit da 8 a 15 abbiamo l'index del tlb nel quale scrivere i registri hi/lo tramite TLBWI()
+	int probe = (index >> 31); //prendo il bit probe del registro index (6.4 pops), se è 0 c'è un tlb hit
+	if(probe == 0)
+		TLBWI();
+	else if(isCurr==1) TLBWR(); // nel caso in cui la pagina invalidata (isCurr=0) non fosse presente in cache allora non facciamo niente
+
 }
-
-
 
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
 int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
@@ -95,24 +106,25 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
 	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
-	devreg_t* flashDevReg = (devreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
+	dtpreg_t* flashDevReg = (dtpreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
 	
 	/*carica data0 con il blocco da leggere o scrivere*/
-	flashDevReg->dtp.data0 =  block;
+	flashDevReg->data0 =  block;
 
 	// inserting the command after writing into data
 	unsigned int value;
     //fare if/else se cmd = FLASHREAD? figura 5.12 pops
-    if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd;
-    else if (cmd == FLASHREAD) value = cmd;
-
-	flashDevReg->dtp.command = value; 
-	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
-	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->dtp.command, value, 0);
+	/*
+		if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd;
+    	else if (cmd == FLASHREAD) value = cmd;
+		Qui forse ti sei confuso coi terminali, qui in entrambi i casi 
+		bisogna fare -- value = (devBlockNum << 8) | cmd;
+	*/
+	value = (devBlockNum << 8) | cmd;
+	flashDevReg->command = value; 
+	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->command, value, 0);
 	SYSCALL(VERHOGEN, (int) &devSem[semNo], 0, 0);
-	
-	if (devStatus != READY) return -1;
-	else return devStatus;
+	return devStatus;
 }
 
 
@@ -141,19 +153,12 @@ void pager(){
 			
 			//invalidiamo associazione
 			swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON; //"puntatore alla entry corrispondente nella tabella delle pagine del processo" => lo vedrà anche l'altro processo!
-			//update TLB
-			setENTRYHI(swapTable[victimPgNum].sw_pte->pte_entryHI);
-			setENTRYLO(swapTable[victimPgNum].sw_pte->pte_entryLO);
-			TLBP(); //in registro index abbiamo primo bit che indica se esiste in cache la entry data dai registri cp0 entryHI/LO
-			int index = getINDEX(); //nei bit da 8 a 15 abbiamo l'index del tlb nel quale scrivere i registri hi/lo tramite TLBWI()
-			int probe = (index >> 31); //prendo il bit probe del registro index (6.4 pops), se è 0 c'è un tlb hit
-			if(probe == 0)
-				TLBWI();
-			//updateTLB();	
+			updateTLB(swapTable[victimPgNum].sw_pte,0);
+
 			ENABLEINTERRUPTS;
 
 			// block of the flash device to write into (coincides with the page number)
-			int devBlockNum = (swapTable[victimPgNum].sw_pte->pte_entryHI - PAGETBLSTART) >> VPNSHIFT;
+			int devBlockNum = (swapTable[victimPgNum].sw_pte->pte_entryHI >> VPNSHIFT) - PAGETBLSTART;
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
 			//update old owner's process backing storage
@@ -165,7 +170,8 @@ void pager(){
 		}
 		
 		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
-		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPage, currSup->sup_asid);
+		//qui sotto non era stato decrementato di 1 l'aside nel quarto parametro
+		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPage, currSup->sup_asid - 1);
 		if (devStatus != READY){
 			killProc(&swapSem);
 		}
@@ -179,31 +185,17 @@ void pager(){
 		
 		/*accende il V bit, il D bit e setta PNF*/
 		//un errore risolto: qui nella riga sotto non veniva fatto lo shift del frame con evidenti conseguenze. Inoltre qui viene acceso anche il bit dirty, ma sulla guida non mi sembra che lo richieda. In ogni caso allo stato attuale, che venga acceso o meno il risultato non cambia.
-		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr  | VALIDON | DIRTYON;
-		setENTRYHI(swapTable[victimPgNum].sw_pte->pte_entryHI);
-		setENTRYLO(swapTable[victimPgNum].sw_pte->pte_entryLO);
-		//di nuovo probe, se esiste riscrivo il valore aggiornato nello stesso indice, altrimenti utilizzo un indice random per inserirlo (TLBWR)
-		TLBP();
-		int index = getINDEX(); 
-		int probe = (index >> 31); 
-		if(probe == 0)
-			TLBWI();
-		else
-			TLBWR();
-		//la differenza è che tlbwi scrive i registri cp0 HI/LO nella entry con indice index(nel registro index, popolato opportunamente da TLBP, invece se TLBP risulta in TLB miss, l'indice sul quale scrivere è generato pseudorandomicamente)
-		//updateTLB();	
+		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
+		updateTLB(swapTable[victimPgNum].sw_pte,1);	
 
 		ENABLEINTERRUPTS;	
 		
-
 		/*rilascia la mutua esclusione*/
 		SYSCALL(VERHOGEN, (int) &swapSem, 0, 0);
 		
 		/*ritorna il controllo a current e ritenta*/
 		LDST((state_t *) &(currSup->sup_exceptState[PGFAULTEXCEPT]));
-
 	}
-
 }
 
 //entry non trovata in TLB => la recuperiamo dalla tabella delle pagine del processo corrente
