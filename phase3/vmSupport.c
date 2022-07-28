@@ -175,7 +175,7 @@ void pager(){
 		
 		/*accende il V bit, il D bit e setta PNF*/
 		//un errore risolto: qui nella riga sotto non veniva fatto lo shift del frame con evidenti conseguenze. Inoltre qui viene acceso anche il bit dirty, ma sulla guida non mi sembra che lo richieda. In ogni caso allo stato attuale, che venga acceso o meno il risultato non cambia.
-		swapTable[victimPgNum].sw_pte->pte_entryLO = (victimPgAddr << VPNSHIFT) | VALIDON | DIRTYON;
+		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr  | VALIDON | DIRTYON;
 		setENTRYHI(swapTable[victimPgNum].sw_pte->pte_entryHI);
 		setENTRYLO(swapTable[victimPgNum].sw_pte->pte_entryLO);
 		//di nuovo probe, se esiste riscrivo il valore aggiornato nello stesso indice, altrimenti utilizzo un indice random per inserirlo (TLBWR)
