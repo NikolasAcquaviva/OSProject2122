@@ -20,8 +20,6 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
 }
 
-int initPageTable(support_t *supp, int asid){}
-
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
 /* extern int masterSem; //da initProc.c */
 
