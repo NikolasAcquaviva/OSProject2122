@@ -1,6 +1,8 @@
 //cercare "DA CONTROLLARE"
 #include "initProc.h"
 #include <umps3/umps/libumps.h>
+#include <umps3/umps/cp0.h>
+#include <umps3/umps/arch.h>
 #include <umps3/umps/types.h>
 #include "../pandos_const.h"
 #include "../pandos_types.h"
@@ -17,6 +19,8 @@ memaddr *getDevRegAddr(int line, int devNo){
 int getDevSemIndex(int line, int devNo, int isReadTerm){
 	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
 }
+
+int initPageTable(support_t *supp, int asid){}
 
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
 /* extern int masterSem; //da initProc.c */
@@ -95,20 +99,21 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
 	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
-	devreg_t* flashDevReg = (devreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
+	dtpreg_t *flashDevReg = (dtpreg_t *)DEV_REG_ADDR(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
 	
 	/*carica data0 con il blocco da leggere o scrivere*/
-	flashDevReg->dtp.data0 =  block;
+	/* flashDevReg->dtp.data0 =  (memaddr)block; */
+    flashDevReg->data0 = (memaddr) block; //dest se FLASHREAD, src se FLASHWRITE
 
 	// inserting the command after writing into data
 	unsigned int value;
-    //fare if/else se cmd = FLASHREAD? figura 5.12 pops
-    if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd;
-    else if (cmd == FLASHREAD) value = cmd;
+    //fare if/else se cmd = FLASHREAD? figura 5.12 pops MA I RAGAZZI NON HANNO FATTO COSì
+    /* if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd; */
+    /* else if (cmd == FLASHREAD) value = cmd; */
+    value = cmd | devBlockNum << 8;
 
-	flashDevReg->dtp.command = value; 
 	//int devStatus = SYSCALL(DOIO, FLASHINT, flashDevNum, 0);
-	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->dtp.command, value, 0);
+	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->command, value, 0);
 	SYSCALL(VERHOGEN, (int) &devSem[semNo], 0, 0);
 	
 	if (devStatus != READY) return -1;
