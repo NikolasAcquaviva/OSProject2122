@@ -11,8 +11,6 @@
 //esportate le funzioni getDevSemIndex, getDevRegAddr e devSem
 #include "../phase2/init.h"
 
-
-
 /* Support level SYS calls */
 #define GET_TOD			1
 #define TERMINATE		2

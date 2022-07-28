@@ -1,5 +1,6 @@
 //cercare "DA CONTROLLARE"
 #include "initProc.h"
+#include <umps3/umps/const.h>
 #include <umps3/umps/libumps.h>
 #include <umps3/umps/cp0.h>
 #include <umps3/umps/arch.h>
@@ -28,7 +29,8 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 #define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))
 #define ENABLEINTERRUPTS setSTATUS(getSTATUS() | IECON)
 #define POOLSTART (RAMSTART + (32 * PAGESIZE))
-#define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT
+/* #define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT */
+#define __GETVPN(T) (T - (KUSEG >> VPNSHIFT)) //ritorna index
 #define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
 /* Page Table Starting Address */
 #define PAGETBLSTART 0x80000000
@@ -122,18 +124,22 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 //pg fault
 void pager(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
-	int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
 	//if the cause is a TLB mod exc => trap	
-	if (cause != TLBINVLDL && cause != TLBINVLDS){
-		killProc(NULL);
-	}
+    if (currSup->sup_exceptState[PGFAULTEXCEPT].cause == 1) {
+        killProc(NULL);
+    }
+    /* int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT; */
+	/* if (cause != TLBINVLDL && cause != TLBINVLDS){ */
+	/* 	killProc(NULL); */
+	/* } */
 	else {
 		//swap pool mutex
 		//DA CONTROLLARE
 		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
 		
-		int missingPage = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
-		int devStatus;
+		int missingPageNum = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
+		int missingPageAddr = currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi >> VPNSHIFT;
+        int devStatus;
 		int victimPgNum = getVictimPage();
 		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
 
@@ -168,15 +174,18 @@ void pager(){
 		}
 		
 		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
-		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPage, currSup->sup_asid);
+		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPageNum, currSup->sup_asid);
 		if (devStatus != READY){
 			killProc(&swapSem);
 		}
 		
 		//UPDATING SWAP POOL TABLE ENTRY TO REFLECT THE NEW CONTENTS
 		swapTable[victimPgNum].sw_asid = currSup->sup_asid;
-		swapTable[victimPgNum].sw_pageNo = missingPage;
-		swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[missingPage]);
+		swapTable[victimPgNum].sw_pageNo = missingPageAddr;
+		swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[missingPageNum]);
+
+        // Update the Current Process’s Page Table entry.
+        currSup->sup_privatePgTbl[missingPageNum].pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
 
 		DISABLEINTERRUPTS;
 		

@@ -57,3 +57,5 @@ clean :
 
 cpy :
 	-cd $(OUTPUT_DIR) && cp ../phase3config.json . && tar -xf ../testers.tar
+	# -cd $(OUTPUT_DIR) && cp ../phase3config.json . && cp ../testers .
+
