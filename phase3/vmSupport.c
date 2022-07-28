@@ -141,6 +141,7 @@ void pager(){
     /* } */
     int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
 	if (cause == 1){
+        klog_print("\ncause pari a 1\n");
 		killProc(NULL);
 	}
 	else {
@@ -172,6 +173,7 @@ void pager(){
 			//update old owner's process backing storage
 			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
 			if (devStatus != READY){
+                klog_print("\ndev non ready write\n");
 				killProc(&swapSem);
 			}
 			
@@ -181,6 +183,7 @@ void pager(){
 		//qui sotto non era stato decrementato di 1 l'aside nel quarto parametro
 		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPageNum, currSup->sup_asid - 1);
 		if (devStatus != READY){
+            klog_print("\ndev non ready read\n");
 			killProc(&swapSem);
 		}
 		

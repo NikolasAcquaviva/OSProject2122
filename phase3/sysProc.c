@@ -37,6 +37,7 @@ void writeprinter(support_t *currSup){
     char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
     if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+        klog_print("\nerrore write printer\n");
         killProc(NULL);
         return;
     }
@@ -68,6 +69,7 @@ void writeterminal(support_t *currSup){
     char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
     if((memaddr)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
+        klog_print("\nerrore write terminal\n");
         killProc(NULL); //i ragazzi fanno direttamente una TERMINATE del current process
         return;
     }
@@ -95,6 +97,7 @@ void readterminal(support_t *currSup){
     //toEDIT
     char *buf = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     if((memaddr)buf < KUSEG){
+        klog_print("\nerrore read terminal cazzo\n");
         killProc(NULL);
         return;
     }
@@ -120,6 +123,7 @@ void readterminal(support_t *currSup){
             /* if (((status & 0x0000FF00) >> BYTELENGTH == '\n') || ((status & 0x0000FF00) >> BYTELENGTH == EOS)) break; */
         }
         else{
+            klog_print("\nerrore read terminal cazzo2\n");
             killProc(&devSem[termSem]);
             currSup->sup_exceptState[GENERALEXCEPT].reg_v0 =  (status & 0x0000000F) * -1;
             return;
@@ -153,6 +157,7 @@ void supGeneralExceptionHandler(){
                 readterminal(currSup);
                 break;
 			default:
+                klog_print("errore strano 1");
 				killProc(NULL);
 		}
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
@@ -160,6 +165,7 @@ void supGeneralExceptionHandler(){
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
 	}
 	else {
+        klog_print("errore strano 2");
         killProc(NULL);
         //gli altri ragazzi hanno semplicemente terminato, credo sia sbagliata la loro scelta
         /* SYSCALL(TERMINATE, 0, 0, 0); */
