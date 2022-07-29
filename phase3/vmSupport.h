@@ -2,6 +2,10 @@
 #include "../pandos_types.h"
 #define TRUE 1
 #define FALSE 0
+
+/* Page Table Starting Address */
+#define PAGETBLSTART 0x80000000
+
 #define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))
 #define ENABLEINTERRUPTS setSTATUS(getSTATUS() | IECON)
 #define POOLSTART (RAMSTART + (32 * PAGESIZE))

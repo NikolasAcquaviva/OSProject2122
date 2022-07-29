@@ -8,7 +8,7 @@
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "../phase2/init.h"
-
+#include "vmSupport.h"
 extern pcb_PTR currentProcess;
 
 //#include "../phase2/interrupthandler.h"
@@ -20,20 +20,6 @@ memaddr *getDevRegAddr(int line, int devNo){
 int getDevSemIndex(int line, int devNo, int isReadTerm){
 	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
 }
-
-//Master sempahore which wait for all processes to be concluded in order to terminate testing
-/* extern int masterSem; //da initProc.c */
-
-#define TRUE 1
-#define FALSE 0
-#define DISABLEINTERRUPTS setSTATUS(getSTATUS() & (~IECON))
-#define ENABLEINTERRUPTS setSTATUS(getSTATUS() | IECON)
-#define POOLSTART (RAMSTART + (32 * PAGESIZE))
-#define __GETVPN(T) (T & GETPAGENO) >> VPNSHIFT
-/* #define __GETVPN(T) (T - (KUSEG >> VPNSHIFT)) //ritorna index */
-#define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
-/* Page Table Starting Address */
-#define PAGETBLSTART 0x80000000
 
 swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
 //DA CONTROLLARE QUESTA VARIABILE
@@ -131,7 +117,6 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	return devStatus;
 }
 
-
 //pg fault
 void pager(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
@@ -145,18 +130,20 @@ void pager(){
 		killProc(NULL);
 	}
 	else {
+		
 		//swap pool mutex
 		//DA CONTROLLARE
 		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
-		
 		int missingPageNum = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
 		int missingPageAddr = currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi >> VPNSHIFT;
-        int devStatus;
+        
+		int devStatus;
 		int victimPgNum = getVictimPage();
 		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
 
 		//if it was occupied
 		if (swapTable[victimPgNum].sw_asid != -1){
+			
 			//anche se siamo in mutex, abbiamo interrupt abilitati nel livello di supporto, pertanto in un multiproc sys potremmo essere interrotti (?)
 			DISABLEINTERRUPTS;
 			
@@ -167,13 +154,13 @@ void pager(){
 			ENABLEINTERRUPTS;
 
 			// block of the flash device to write into (coincides with the page number)
+			
 			int devBlockNum = (swapTable[victimPgNum].sw_pte->pte_entryHI >> VPNSHIFT) - PAGETBLSTART;
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
 			//update old owner's process backing storage
 			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
 			if (devStatus != READY){
-                klog_print("\ndev non ready write\n");
 				killProc(&swapSem);
 			}
 			
@@ -183,7 +170,6 @@ void pager(){
 		//qui sotto non era stato decrementato di 1 l'aside nel quarto parametro
 		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPageNum, currSup->sup_asid - 1);
 		if (devStatus != READY){
-            klog_print("\ndev non ready read\n");
 			killProc(&swapSem);
 		}
 		
