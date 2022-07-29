@@ -11,6 +11,9 @@
 //esportate le funzioni getDevSemIndex, getDevRegAddr e devSem
 #include "../phase2/init.h"
 
+
+static int stranezza;
+
 /* Support level SYS calls */
 #define GET_TOD			1
 #define TERMINATE		2
@@ -137,22 +140,9 @@ void readterminal(support_t *currSup){
 void supGeneralExceptionHandler(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 	/* int cause = ((currSup->sup_exceptState[GENERALEXCEPT].cause) & GETEXECCODE) >> CAUSESHIFT; */
-    unsigned int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
+    int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
 
-    //per debugging
-    char causeStr = (char) (cause >> 8);
-    /* causeStr[0] = cause & 0xFF; */
-    /* causeStr[1] = (cause >> 8) & 0xFF; */
-    char excStr = (char) (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 >> 8);
-    /* excStr[0] = currSup->sup_exceptState[GENERALEXCEPT].reg_a0 & 0xFF; */
-    /* excStr[1] = (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 >> 8) & 0xFF; */
-    klog_print("\nnumero causa: ");
-    klog_print(&causeStr);
-    klog_print("\n");
-    klog_print("\nnumero eccezione; ");
-    klog_print(&excStr);
-    klog_print("\n");
-
+    stranezza = cause;
 
 	if (cause == SYSEXCEPTION){
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0)
@@ -179,7 +169,15 @@ void supGeneralExceptionHandler(){
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
         currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
-	} else if (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 == READTERMINAL){ 
+    }else if (cause == 6){
+        klog_print("\nentrato boh\n");
+        readterminal(currSup);
+        currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
+        currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
+        LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
+        
+    }
+	else if (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 == READTERMINAL){ 
         klog_print("\nENTRATA STRANA\n");
         readterminal(currSup);
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;

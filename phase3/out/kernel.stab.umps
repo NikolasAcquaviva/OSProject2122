@@ -1,4 +1,4 @@
-MPSA00000069 0000001B
+MPSA00000069 0000001C
 INIT_LIST_HEAD                   :FUN:0x200010B0:0x00000048:LOC
 list_add                         :FUN:0x20001168:0x00000058:LOC
 list_del                         :FUN:0x2000120C:0x0000005C:LOC
@@ -24,7 +24,8 @@ next_char                        :FUN:0x200049A4:0x0000006C:LOC
 list_empty                       :FUN:0x20004DD0:0x00000044:LOC
 supPool                          :OBJ:0x20009CD8:0x000013D4:LOC
 createUProc                      :FUN:0x200055C0:0x00000448:LOC
-frame.0                          :OBJ:0x2000B174:0x00000004:LOC
+stranezza                        :OBJ:0x2000B0B0:0x00000004:LOC
+frame.0                          :OBJ:0x2000B184:0x00000004:LOC
 INITCPU                          :FUN:0x2000557C:0x00000040:GLB
 headProcQ                        :FUN:0x200020BC:0x0000006C:GLB
 interruptendtime                 :OBJ:0x20009084:0x00000004:GLB
@@ -81,7 +82,7 @@ readterminal                     :FUN:0x2000604C:0x0000023C:GLB
 updateTLB                        :FUN:0x20006944:0x000000C8:GLB
 getSTATUS                        :FUN:0x200052DC:0x00000014:GLB
 test                             :FUN:0x20005A08:0x00000144:GLB
-supGeneralExceptionHandler       :FUN:0x20006288:0x000002F0:GLB
+supGeneralExceptionHandler       :FUN:0x20006288:0x000002F4:GLB
 getVictimPage                    :FUN:0x20006858:0x000000EC:GLB
 TLBR                             :FUN:0x20005410:0x00000014:GLB
 scheduler                        :FUN:0x20004E14:0x000003F4:GLB
@@ -101,7 +102,7 @@ TrapExceptionHandler             :FUN:0x20002764:0x00000038:GLB
 TLBWI                            :FUN:0x200053E8:0x00000014:GLB
 getCAUSE                         :FUN:0x200052F0:0x00000014:GLB
 outBlocked                       :FUN:0x20001570:0x000001B4:GLB
-swapSem                          :OBJ:0x2000B170:0x00000004:GLB
+swapSem                          :OBJ:0x2000B180:0x00000004:GLB
 setENTRYLO                       :FUN:0x20005348:0x0000001C:GLB
 getBADVADDR                      :FUN:0x200052A0:0x00000014:GLB
 InterruptExceptionHandler        :FUN:0x20003FD8:0x00000488:GLB
@@ -130,4 +131,4 @@ interruptstarttime               :OBJ:0x20009080:0x00000004:GLB
 klog_line_index                  :OBJ:0x20009090:0x00000004:GLB
 CREATE_PROCESS                   :FUN:0x200031C0:0x00000164:GLB
 GET_SUPPORT_DATA                 :FUN:0x20003DA8:0x0000003C:GLB
-swapTable                        :OBJ:0x2000B0B0:0x000000C0:GLB
+swapTable                        :OBJ:0x2000B0C0:0x000000C0:GLB
