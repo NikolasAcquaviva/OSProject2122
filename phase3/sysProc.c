@@ -11,6 +11,9 @@
 //esportate le funzioni getDevSemIndex, getDevRegAddr e devSem
 #include "../phase2/init.h"
 
+
+static int stranezza;
+
 /* Support level SYS calls */
 #define GET_TOD			1
 #define TERMINATE		2
@@ -135,13 +138,12 @@ void readterminal(support_t *currSup){
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = readChar;
 }
 
-static memaddr causeTest;
-
 void supGeneralExceptionHandler(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
-    unsigned int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
+	/* int cause = ((currSup->sup_exceptState[GENERALEXCEPT].cause) & GETEXECCODE) >> CAUSESHIFT; */
+    int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
 
-    causeTest = cause;    
+    stranezza = cause;
 
 	if (cause == SYSEXCEPTION){
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0)
@@ -168,7 +170,15 @@ void supGeneralExceptionHandler(){
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
         currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
-	} else if (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 == READTERMINAL){ 
+    }else if (cause == 6){
+        klog_print("\nentrato boh\n");
+        readterminal(currSup);
+        currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
+        currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
+        LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
+        
+    }
+	else if (currSup->sup_exceptState[GENERALEXCEPT].reg_a0 == READTERMINAL){ 
         klog_print("\nENTRATA STRANA\n");
         readterminal(currSup);
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
