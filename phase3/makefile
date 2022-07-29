@@ -59,7 +59,6 @@ clean :
 
 cpy :
 	cd $(OUTPUT_DIR) && cp ../phase3config.json .
-	cd $(TESTING_DIR) && make #prima di copiare indiscriminatamente, si dovrebbe salvare la data di un file umps (se presente). dopo il comando make nell'altra cartella. controllare se le date non coincidono
-	cp -rf $(TESTING_DIR) $(OUTPUT_DIR) #quando andremo a consegnare metteremo mv -v anzichè cp -rf
-
-
+	cd $(TESTING_DIR) && make 
+	rm -rf $(OUTPUT_DIR)/testers && mkdir $(OUTPUT_DIR)/testers && cd $(OUTPUT_DIR)/testers
+	for filename in $(TESTING_DIR)/*.umps; do ln $$filename $(OUTPUT_DIR)/testers/$$(basename $$filename .umps).umps; done #anzichè creare copie creiamo hard links

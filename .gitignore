@@ -7,9 +7,10 @@ phase[1|2|3]_config/*
 .vscode/*.*
 .vscode/*
 #eventuali cartelle out generate da make
-# **/out/
-# */out/
-# **/out/*
-# */out/*
-# **/out/*.*
-# */out/*.*
+**/out/
+*/out/
+**/out/*
+*/out/*
+**/out/*.*
+*/out/*.*
+phase3/testers/*.umps
