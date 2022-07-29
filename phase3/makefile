@@ -20,7 +20,7 @@ SRC_DIR = ../
 PHASE1_DIR = $(SRC_DIR)/phase1
 PHASE2_DIR = $(SRC_DIR)/phase2
 PHASE3_DIR = $(SRC_DIR)/phase3
-# TESTING_DIR = $(SRC_DIR)/testers
+TESTING_DIR = $(SRC_DIR)/phase3/testers
 PROJ_INCLUDE = -I$(SRC_DIR) -I$(PHASE1_DIR) -I$(PHASE2_DIR) -I$(PHASE3_DIR)
 
 CFLAGS_LANG = -ffreestanding
@@ -44,6 +44,8 @@ kernel : asl.o pcb.o exceptionhandler.o interrupthandler.o init.o scheduler.o cr
 
 clean :
 	-rm -f *.o kernel kernel.*.umps out -r
+	-cd $(TESTING_DIR) && make clean
+
 
 %.o : %.c
 	@ mkdir -p $(OUTPUT_DIR)
@@ -56,5 +58,8 @@ clean :
 	$(CC) $(CFLAGS) -c -o $(addprefix $(OUTPUT_DIR)/obj/, $@) $<
 
 cpy :
-	-cd $(OUTPUT_DIR) && cp ../phase3config.json . && tar -xf ../testers.tar
+	cd $(OUTPUT_DIR) && cp ../phase3config.json .
+	cd $(TESTING_DIR) && make #prima di copiare indiscriminatamente, si dovrebbe salvare la data di un file umps (se presente). dopo il comando make nell'altra cartella. controllare se le date non coincidono
+	cp -rf $(TESTING_DIR) $(OUTPUT_DIR) #quando andremo a consegnare metteremo mv -v anzichè cp -rf
+
 
