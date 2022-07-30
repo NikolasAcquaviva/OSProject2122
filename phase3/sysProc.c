@@ -93,8 +93,13 @@ int writeterminal(support_t *currSup){
 
 int readterminal(support_t *currSup){
     //TODO: valutare idea di fare 3 array di semafori, ognuno lungo UPROCMAX
-
     char *buf = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
+    if((memaddr) buf < KUSEG){
+        klog_print("dio\n");
+        killProc(NULL);
+        return -1;
+    }
+    
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 1);
     termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum); 
@@ -114,7 +119,8 @@ int readterminal(support_t *currSup){
             readChar++;
         }
         else{
-            currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = ((status & 0xFF) >> BYTELENGTH) * -1;
+            continue;
+            currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = ((status & 0xFF00) >> BYTELENGTH) * -1;
             return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
         }
     }

@@ -34,9 +34,9 @@ static void PassUp_Or_Die(int index){
     }
     else{
         //salviamo lo stato nel giusto campo della struttura di supporto
-        state_t exceptState = *((state_t*)BIOSDATAPAGE);
+        state_t *exceptState = (state_t*)BIOSDATAPAGE;
 		//[index] => handler of that exception, if specified. Switch context
-        currentProcess->p_supportStruct->sup_exceptState[index] = exceptState;
+        currentProcess->p_supportStruct->sup_exceptState[index] = *exceptState;
 		//LDCXT allows a current process to change its operating mode/context - non carichiamo uno stato pieno di registri come con LDST
         LDCXT(currentProcess->p_supportStruct->sup_exceptContext[index].stackPtr,
               currentProcess->p_supportStruct->sup_exceptContext[index].status,
@@ -59,37 +59,31 @@ void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
 
-	//AVREMMO DOVUTO USARE PUNTATORI! PROVARE A PASSARE LO STATO, se è NULL => LO ASSEGNAMO
-    state_t exceptState = *((state_t*) BIOSDATAPAGE); //saved exception state is stored at the start of the BIOS Data Page
+    state_t *exceptState = (state_t*) BIOSDATAPAGE; //saved exception state is stored at the start of the BIOS Data Page
     //prendiamo i registri
 	//a0 => quale syscall viene eseguita
-    int a0 = exceptState.reg_a0, 
-        a1 = exceptState.reg_a1,
-        a2 = exceptState.reg_a2,
-        a3 = exceptState.reg_a3;
+    int a0 = exceptState->reg_a0, 
+        a1 = exceptState->reg_a1,
+        a2 = exceptState->reg_a2,
+        a3 = exceptState->reg_a3;
     //check user mode
-    int user = exceptState.status;
+    int user = exceptState->status;
     user = (user << 28) >> 31; //troviamo KUp
 	//"process was in kernel mode and a0 contained a value in the
 	//negative kernel's level range"
 	//(+ => syscall da eseguire a livello di supporto (phase 3))
 	//NON SIAMO IN KERNEL MODE => TRAP
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT); //codice eccezione trap in posizione giusta in registro cause. SOLO EXC_RI?
+        exceptState->cause = (exceptState->cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT); //codice eccezione trap in posizione giusta in registro cause. SOLO EXC_RI?
         GeneralExceptionHandler();
     }
 	//livello di supporto - TRAP
     else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
-	//dopo aver fatto tutti i check...
     else{
-        //se viene sollevata un'operazione di I/O,setto il valore
-        //lo scheduler lo usa per eseguire I/O sincrono
-        //lo risetto ogni volta che viene sollevata un eccezione
-        //altrimenti lo scheduler penserà che viene chiamato solo su operazioni I/O
         switch (a0){
             case CREATEPROCESS:
 				//"a1 should contain a pointer to the initial processor state (state_t *) of newly created process"
-                exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
+                exceptState->reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
                 break;
             case TERMPROCESS:
                 TERM_PROCESS(a1, a2, a3);
@@ -101,19 +95,19 @@ void SYSCALLExceptionHandler(){
                 _VERHOGEN((int*) a1, a2, a3);
                 break;
             case DOIO:
-                exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
+                exceptState->reg_v0 = DO_IO((int*)a1,a2,a3);
                 break;
             case GETTIME:
-                exceptState.reg_v0 = GET_CPU_TIME(a1,a2,a3);
+                exceptState->reg_v0 = GET_CPU_TIME(a1,a2,a3);
                 break;
             case CLOCKWAIT:
                 WAIT_FOR_CLOCK(a1,a2,a3);
                 break;
             case GETSUPPORTPTR:
-                exceptState.reg_v0 = (memaddr) GET_SUPPORT_DATA(a1,a2,a3);
+                exceptState->reg_v0 = (memaddr) GET_SUPPORT_DATA(a1,a2,a3);
                 break;
             case GETPROCESSID:
-                exceptState.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
+                exceptState->reg_v0 = GET_PROCESS_ID(a1,a2,a3);
                 break;
             case YIELD:
                 _YIELD(a1,a2,a3);
@@ -121,7 +115,7 @@ void SYSCALLExceptionHandler(){
             default:
 				//codice negativo ma inesistente
                 //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-                exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
+                exceptState->cause = (exceptState->cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
                 GeneralExceptionHandler();
                 break;
         }
@@ -133,8 +127,8 @@ void SYSCALLExceptionHandler(){
             non avere il loop infinito di syscalls
         */
 		//3.5.12 "["
-        exceptState.pc_epc += 4; //prima di ricaricare lo stato del processo, dobbiamo incrementare il PC di una word, altrimenti ripete l'istruzione che chiama la syscall
-        LDST(&exceptState); //load back updated interrupted state
+        exceptState->pc_epc += 4; //prima di ricaricare lo stato del processo, dobbiamo incrementare il PC di una word, altrimenti ripete l'istruzione che chiama la syscall
+        LDST(exceptState); //load back updated interrupted state
 
 		//The saved exception state was the state of the process at the time the
 		//SYSCALL was executed. The processor state in the Current Process’s pcb
@@ -238,15 +232,6 @@ static int __isMyRoot(pcb_PTR padre, pcb_PTR figlio){
 //Creo nuovo processo come figlio del processo invocante
 //successo => restituisce l'id del processo creato; else -1
 int CREATE_PROCESS(state_t *statep, int prio, support_t *supportp){
-    /*
-    creo il processo:
-    decido se alta o bassa prio;
-    genero il puntatore alla struttura di supporto;
-    gli assegno un id;
-    ;
-    lo inserisco come figlio del current;
-    ritorno l'id del processo;
-    */  
     pcb_t* nuovo = allocPcb(); // creo il processo
     if (nuovo != NULL){ // gli assegno lo stato, la prio, la support e il pid
         nuovo->p_s = *statep;
@@ -297,14 +282,13 @@ void TERM_PROCESS(int pid, int a2, int a3){
 void _PASSEREN(int *semaddr, int a2, int a3){   
     int isDev = isDevice(semaddr); //per contatore softBlockCount
     if((*semaddr) == 0 || semaddr == &deviceSemaphores[NoDEVICE-1]){
-        state_t exceptState = *((state_t*) BIOSDATAPAGE);
-        exceptState.pc_epc += 4; //incrementiamo per quando riprenderemo
-        exceptState.reg_t9 = exceptState.pc_epc;
-        currentProcess->p_s = exceptState;
+        state_t *exceptState = (state_t*) BIOSDATAPAGE;
+        exceptState->pc_epc += 4; //incrementiamo per quando riprenderemo
+        exceptState->reg_t9 = exceptState->pc_epc;
+        currentProcess->p_s = *exceptState;
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-		//guarda gg. messo per entrare nel ramo wait state (IDLE PROCESSOR) dello scheduler
         if(semaddr == &deviceSemaphores[NoDEVICE-1]) currentProcess = NULL; //superfluo poichè dopo chiamiamo lo scheduler?
         scheduler();
     }
@@ -322,10 +306,10 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
     int isDev = isDevice(semaddr);
 	//V() bloccante in bin sem con valore 1
     if((*semaddr) == 1){
-        state_t exceptState = *((state_t*) BIOSDATAPAGE);
-        exceptState.pc_epc += 4;
-        exceptState.reg_t9 = exceptState.pc_epc;
-        currentProcess->p_s = exceptState;
+        state_t *exceptState = (state_t*) BIOSDATAPAGE;
+        exceptState->pc_epc += 4;
+        exceptState->reg_t9 = exceptState->pc_epc;
+        currentProcess->p_s = *exceptState;
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
@@ -396,11 +380,11 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     //perche abbiamo 16 device, i primi 8 di trasmissione
     if(isRecvTerm == 1) semIndex = line*8 + numDevice + 8;
     else semIndex = line*8 + numDevice;
-    state_t exceptState = *((state_t*) BIOSDATAPAGE);
+    state_t *exceptState = (state_t*) BIOSDATAPAGE;
 	//chiamata SEMPRE BLOCCANTE (da student guide)
-    exceptState.pc_epc += 4; //increment pc by a word
-    exceptState.reg_t9 = exceptState.pc_epc;    
-    currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
+    exceptState->pc_epc += 4; //increment pc by a word
+    exceptState->reg_t9 = exceptState->pc_epc;    
+    currentProcess->p_s = *exceptState; //copiamo lo stato della bios data page nello stato del current
     softBlockCount++; // incrementiamo il numero di processi bloccati
     deviceSemaphores[semIndex] = 0; 
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
@@ -448,10 +432,10 @@ int GET_PROCESS_ID(int parent, int a2, int a3){
 // take out the current process from its queue
 // and reinsert enqueuing it in the queue
 void _YIELD(int a1, int a2, int a3){
-    state_t exceptState = *((state_t*)BIOSDATAPAGE);
-    exceptState.pc_epc += 4;
-    exceptState.reg_t9 = exceptState.pc_epc;  
-    currentProcess->p_s = exceptState;
+    state_t *exceptState = (state_t*)BIOSDATAPAGE;
+    exceptState->pc_epc += 4;
+    exceptState->reg_t9 = exceptState->pc_epc;  
+    currentProcess->p_s = *exceptState;
     if(currentProcess->p_prio==1) insertProcQ(&HighPriorityReadyQueue,currentProcess);
     else insertProcQ(&LowPriorityReadyQueue,currentProcess);
     lastProcessHasYielded = currentProcess;

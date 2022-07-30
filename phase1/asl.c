@@ -133,9 +133,6 @@ SEMD con chiave semAdd. Ritorna NULL se il SEMD
 non compare nella ASL oppure se compare ma la sua
 coda dei processi è vuota.
 */
-//chiedere se hanno implementato liste di pcb_t in modo circolare e double-linked
-//si suppone che le liste di pcb_t non abbiano un MININT e un MAXINT
-//list_head è sempre un connettore => container_of()
 
 pcb_t* headBlocked(int *semAdd){
 
