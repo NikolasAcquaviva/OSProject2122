@@ -341,7 +341,6 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
     else (*semaddr)++;   
 }
 
-
 //interrupt line   Device class
 //0					Inter-processor - (abbiamo un solo processore...)
 //1					Processor Local Timer (uno per ogni processore; serve per intervallare i processi a bassa priorità)
@@ -351,6 +350,7 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
 //5					Network Devices
 //6					Printer Devices
 //7					Terminal Devices
+
 int DO_IO(int *cmdAddr, int cmdValue, int a3){
     devregarea_t * deviceRegs = (devregarea_t*) RAMBASEADDR; /* INIZIO Bus register area */ //4.2 pops
 	/* Device register type for disks, flash devices and printers (dtp) */
@@ -370,11 +370,13 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
 			//"Given an interrupt line and a device number one can compute the starting address of the device's device register"
             terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
             terminal->transm_command = cmdValue;
+            break;
         }
-        if(&(deviceRegs->devreg[4][j].term.recv_command) == (memaddr*) cmdAddr){
-            line = 4; numDevice = j; isRecvTerm = 1;
+        else if(&(deviceRegs->devreg[4][j].term.recv_command) == (memaddr*) cmdAddr){
+            line = 4; numDevice = j; isRecvTerm = 1; 
             terminal = (termreg_t*) (0x10000054 + (4 * 0x80) + (numDevice * 0x10));
             terminal->recv_command = cmdValue;
+            break;
         }
 
         //gli altri device fanno parte dello stesso gruppo
@@ -385,6 +387,7 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
                 line = i; numDevice = j; 
                 dev = (dtpreg_t*) (0x10000054 + (line * 0x80) + (numDevice* 0x10));
                 dev->command = cmdValue;
+                break;
             }
         }
     }
@@ -394,19 +397,14 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     if(isRecvTerm == 1) semIndex = line*8 + numDevice + 8;
     else semIndex = line*8 + numDevice;
     state_t exceptState = *((state_t*) BIOSDATAPAGE);
-    
 	//chiamata SEMPRE BLOCCANTE (da student guide)
     exceptState.pc_epc += 4; //increment pc by a word
     exceptState.reg_t9 = exceptState.pc_epc;    
     currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     softBlockCount++; // incrementiamo il numero di processi bloccati
-    deviceSemaphores[semIndex]--; //SBAGLIATO! CASO MAI IL VALORE DEL SEMAFORO BINARIO ERA GIA' A 0, E ORA e' -1! 
-	//IO AVREI FATTO COSì:
-	//    deviceSemaphores[semIndex] = 0;
-	//	  _PASSEREN(&deviceSemaphores[semIndex], 0, 0);
-    insertBlocked(&deviceSemaphores[semIndex], currentProcess); //GUARDA SOPRA
+    deviceSemaphores[semIndex] = 0; 
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-    currentProcess = NULL;
+    _PASSEREN(&deviceSemaphores[semIndex], 0, 0);
     scheduler(); // richiamiamo lo scheduler   
     
     if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;

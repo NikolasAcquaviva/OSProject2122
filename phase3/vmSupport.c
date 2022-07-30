@@ -46,16 +46,13 @@ void clearSwap(int asid){
 
 void killProc(int *sem){
 	clearSwap(currentProcess->p_supportStruct->sup_asid);
-
     //TODO controllare se asid detiene If the specified U-Proc is holding hostage the Swap Pool Table,
     //https://github.com/lucat1/unibo_08574_progetto/blob/6a98e14a18b875e8444339dce4c451a34e54b83e/phase3/src/pager.c
     //riga 140
     //idea principale è di tenere un array che rappresenta lo stato del sys
 	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
-
 	SYSCALL(VERHOGEN, (int) &masterSem, 0, 0);
 	SYSCALL(TERMPROCESS, 0, 0, 0);
-
 } 
 
 
@@ -92,7 +89,6 @@ void updateTLB(pteEntry_t *sw_pte, int isCurr){
 
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
 int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
-	//((line - 3) * 8) + (line == 7 ? (isRead * 8) + dev : dev);
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
 	//prende mutex sul device register associato al flash device
 	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
@@ -102,15 +98,7 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	flashDevReg->data0 =  block;
 
 	// inserting the command after writing into data
-	unsigned int value;
-    //fare if/else se cmd = FLASHREAD? figura 5.12 pops
-	/*
-		if (cmd == FLASHWRITE) value = (devBlockNum << 8) | cmd;
-    	else if (cmd == FLASHREAD) value = cmd;
-		Qui forse ti sei confuso coi terminali, qui in entrambi i casi 
-		bisogna fare -- value = (devBlockNum << 8) | cmd;
-	*/
-	value = (devBlockNum << 8) | cmd;
+	unsigned int value = (devBlockNum << 8) | cmd;
 	flashDevReg->command = value; 
 	int devStatus = SYSCALL(DOIO, (int) &flashDevReg->command, value, 0);
 	SYSCALL(VERHOGEN, (int) &devSem[semNo], 0, 0);
@@ -121,16 +109,12 @@ int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 void pager(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
 	//if the cause is a TLB mod exc => trap	
-    /* if (currSup->sup_exceptState[PGFAULTEXCEPT].cause == 1) { */
-    /*     killProc(NULL); */
-    /* } */
+    
     int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
 	if (cause == 1){
-        klog_print("\ncause pari a 1\n");
 		killProc(NULL);
 	}
-	else {
-		
+	else{
 		//swap pool mutex
 		//DA CONTROLLARE
 		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
@@ -167,7 +151,6 @@ void pager(){
 		}
 		
 		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
-		//qui sotto non era stato decrementato di 1 l'aside nel quarto parametro
 		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPageNum, currSup->sup_asid - 1);
 		if (devStatus != READY){
 			killProc(&swapSem);
@@ -200,11 +183,9 @@ void pager(){
 
 //entry non trovata in TLB => la recuperiamo dalla tabella delle pagine del processo corrente
 void uTLB_RefillHandler(){
-	 /*prende l'inizio di BIOSDATAPAGE*/ // retrieving the exception state
+	/*prende l'inizio di BIOSDATAPAGE*/ // retrieving the exception state
 	state_t* currProc_s = (state_t*) BIOSDATAPAGE;
-
 	int vpn = GETVPN(currProc_s->entry_hi);
-	//currentProcess esportata includendo init.h
 	setENTRYHI(currentProcess->p_supportStruct->sup_privatePgTbl[vpn].pte_entryHI);
     setENTRYLO(currentProcess->p_supportStruct->sup_privatePgTbl[vpn].pte_entryLO);
     //WRITING ON TLB

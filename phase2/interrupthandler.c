@@ -64,7 +64,7 @@ void InterruptExceptionHandler(){
 
     else if(line > 2){ //controllo sulla linea che non sia un interrupt temporizzato
         /*DEVICE INTERRUPT */
-        memaddr* device= getInterruptLineAddr(line);
+        memaddr* device = getInterruptLineAddr(line);
         // in case its a line > 2 interrupt, we cycle through its devices to look for the one that we have to handle
         //Ciclo 8 volte (devices per interrupt line)
         int mask = 1;
@@ -86,27 +86,6 @@ int getInterruptInt(memaddr* map){  //calcolare la linea che ha richiesto l'inte
     return -1;
 }
 
-/* /1* Device register type for disks, flash devices and printers (dtp) *1/ */
-/* typedef struct dtpreg { */
-/* 	unsigned int status; */
-/* 	unsigned int command; */
-/* 	unsigned int data0; */
-/* 	unsigned int data1; */
-/* } dtpreg_t; */
-
-/* /1* Device register type for terminals *1/ */
-/* typedef struct termreg { */
-/* 	unsigned int recv_status; */
-/* 	unsigned int recv_command; */
-/* 	unsigned int transm_status; */
-/* 	unsigned int transm_command; */
-/* } termreg_t; */
-
-/* typedef union devreg { */
-/* 	dtpreg_t dtp; */
-/* 	termreg_t term; */
-/* } devreg_t; */
-
 void NonTimerHandler(int line, int dev){
     //pg 28 (39/158) manuale Non student guide
     devreg_t* devreg = (devreg_t*) (0x10000054 + ((line - 3) * 0x80) + (dev * 0x10));
@@ -127,24 +106,21 @@ void NonTimerHandler(int line, int dev){
     else if (line == 7){
         /* CASTING TO TERMINAL REGISTER */
         termreg_t* termreg = (termreg_t*) devreg;
-		
 		//pops pg 54 pdf dice che dovremmo fare l'ack ad entrambi
         //Se non è pronto a ricevere. Prima di poter ricevere nuovi comandi, dobbiamo mandare l'ack
 		//pops pg 54 pdf char recv'd/transmitted IS NOT YET ACKED AS MUCH AS READY STATUS!
-        if (termreg->recv_status != READY){
+        if(termreg->transm_status != READY){
+            /*Salvo lo status da ritornare*/
+            status_toReturn = termreg->transm_status;
+            termreg->transm_command = ACK;
+        }
+        else if (termreg->recv_status != READY){ //char transmitted/received (5)
             /*Salvo lo status da ritornare*/
             status_toReturn = termreg->recv_status;
             termreg->recv_command = ACK;
             /*Il terminale può ricevere interrupts*/
             isReadTerm = 1; /* SETTING RECEIVE INTERRUPT */
         }
-        else
-        {
-            /*Salvo lo status da ritornare*/
-            status_toReturn = termreg->transm_status;
-            termreg->transm_command = ACK;
-        }
-        
     }
 
     /* FINDING DEVICE SEMAPHORE ADDRESS */
