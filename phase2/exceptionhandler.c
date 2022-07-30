@@ -59,23 +59,22 @@ void SYSCALLExceptionHandler(){
     //se il codice della syscall è positivo(ma valido), pass-up or die
     //se il codice è nel range negativo con user mode oppure non valido simuliamo un program trap
 
-	//AVREMMO DOVUTO USARE PUNTATORI! PROVARE A PASSARE LO STATO, se è NULL => LO ASSEGNAMO
-    state_t exceptState = *((state_t*) BIOSDATAPAGE); //saved exception state is stored at the start of the BIOS Data Page
+    state_t *exceptState = (state_t*) BIOSDATAPAGE; //saved exception state is stored at the start of the BIOS Data Page
     //prendiamo i registri
 	//a0 => quale syscall viene eseguita
-    int a0 = exceptState.reg_a0, 
-        a1 = exceptState.reg_a1,
-        a2 = exceptState.reg_a2,
-        a3 = exceptState.reg_a3;
+    int a0 = exceptState->reg_a0, 
+        a1 = exceptState->reg_a1,
+        a2 = exceptState->reg_a2,
+        a3 = exceptState->reg_a3;
     //check user mode
-    int user = exceptState.status;
+    int user = exceptState->status;
     user = (user << 28) >> 31; //troviamo KUp
 	//"process was in kernel mode and a0 contained a value in the
 	//negative kernel's level range"
 	//(+ => syscall da eseguire a livello di supporto (phase 3))
 	//NON SIAMO IN KERNEL MODE => TRAP
     if(a0 <= -1 && a0 >= -10 && user == 1){
-        exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT); //codice eccezione trap in posizione giusta in registro cause. SOLO EXC_RI?
+        exceptState->cause = (exceptState->cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT); //codice eccezione trap in posizione giusta in registro cause. SOLO EXC_RI?
         GeneralExceptionHandler();
     }
 	//livello di supporto - TRAP
@@ -89,7 +88,7 @@ void SYSCALLExceptionHandler(){
         switch (a0){
             case CREATEPROCESS:
 				//"a1 should contain a pointer to the initial processor state (state_t *) of newly created process"
-                exceptState.reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
+                exceptState->reg_v0 = CREATE_PROCESS((state_t*) a1, a2, (support_t*) a3);
                 break;
             case TERMPROCESS:
                 TERM_PROCESS(a1, a2, a3);
@@ -101,19 +100,19 @@ void SYSCALLExceptionHandler(){
                 _VERHOGEN((int*) a1, a2, a3);
                 break;
             case DOIO:
-                exceptState.reg_v0 = DO_IO((int*)a1,a2,a3);
+                exceptState->reg_v0 = DO_IO((int*)a1,a2,a3);
                 break;
             case GETTIME:
-                exceptState.reg_v0 = GET_CPU_TIME(a1,a2,a3);
+                exceptState->reg_v0 = GET_CPU_TIME(a1,a2,a3);
                 break;
             case CLOCKWAIT:
                 WAIT_FOR_CLOCK(a1,a2,a3);
                 break;
             case GETSUPPORTPTR:
-                exceptState.reg_v0 = (memaddr) GET_SUPPORT_DATA(a1,a2,a3);
+                exceptState->reg_v0 = (memaddr) GET_SUPPORT_DATA(a1,a2,a3);
                 break;
             case GETPROCESSID:
-                exceptState.reg_v0 = GET_PROCESS_ID(a1,a2,a3);
+                exceptState->reg_v0 = GET_PROCESS_ID(a1,a2,a3);
                 break;
             case YIELD:
                 _YIELD(a1,a2,a3);
@@ -121,7 +120,7 @@ void SYSCALLExceptionHandler(){
             default:
 				//codice negativo ma inesistente
                 //caso codice non valido, program trap settando excCode in cause a RI(code number 10), passare controllo al gestore
-                exceptState.cause = (exceptState.cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
+                exceptState->cause = (exceptState->cause & CAUSE_EXCCODE_MASK) | (EXC_RI << CAUSE_EXCCODE_BIT);
                 GeneralExceptionHandler();
                 break;
         }
@@ -133,8 +132,8 @@ void SYSCALLExceptionHandler(){
             non avere il loop infinito di syscalls
         */
 		//3.5.12 "["
-        exceptState.pc_epc += 4; //prima di ricaricare lo stato del processo, dobbiamo incrementare il PC di una word, altrimenti ripete l'istruzione che chiama la syscall
-        LDST(&exceptState); //load back updated interrupted state
+        exceptState->pc_epc += 4; //prima di ricaricare lo stato del processo, dobbiamo incrementare il PC di una word, altrimenti ripete l'istruzione che chiama la syscall
+        LDST(exceptState); //load back updated interrupted state
 
 		//The saved exception state was the state of the process at the time the
 		//SYSCALL was executed. The processor state in the Current Process’s pcb
