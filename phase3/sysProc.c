@@ -26,6 +26,7 @@ signed int gettod(support_t *currSup){
 }
 
 void terminate(){
+    klog_print("normale terminate\n");
     killProc(NULL);
 }
 
@@ -95,7 +96,7 @@ int readterminal(support_t *currSup){
     //TODO: valutare idea di fare 3 array di semafori, ognuno lungo UPROCMAX
     char *buf = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     if((memaddr) buf < KUSEG){
-        klog_print("dio\n");
+        klog_print("fuori kuseg\n");
         killProc(NULL);
         return -1;
     }
@@ -137,19 +138,19 @@ void supGeneralExceptionHandler(){
 	if (cause == SYSEXCEPTION){
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0){
 			case GET_TOD:
-                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = gettod(currSup);
+                gettod(currSup);
                 break;
             case TERMINATE:
                 terminate();
                 break;
             case WRITEPRINTER:
-                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = writeprinter(currSup);
+                writeprinter(currSup);
                 break;
             case WRITETERMINAL:
-                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = writeterminal(currSup);
+                writeterminal(currSup);
                 break;
             case READTERMINAL:
-                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = readterminal(currSup);
+                readterminal(currSup);
                 break;
             default:
                 klog_print("default\n");
@@ -161,6 +162,7 @@ void supGeneralExceptionHandler(){
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
     }
 	else {
+        klog_print("exccode!=8\n");
         killProc(NULL);
     }
 }

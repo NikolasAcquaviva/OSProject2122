@@ -112,6 +112,7 @@ void pager(){
     
     int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
 	if (cause == 1){
+		klog_print("pager cause=1\n");
 		killProc(NULL);
 	}
 	else{
@@ -145,6 +146,7 @@ void pager(){
 			//update old owner's process backing storage
 			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
 			if (devStatus != READY){
+				klog_print("pager devstatus!=READY(1)\n");
 				killProc(&swapSem);
 			}
 			
@@ -153,6 +155,7 @@ void pager(){
 		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
 		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPageNum, currSup->sup_asid - 1);
 		if (devStatus != READY){
+			klog_print("pager devstatus!=READY(2)\n");
 			killProc(&swapSem);
 		}
 		
