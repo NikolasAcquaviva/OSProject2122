@@ -119,7 +119,6 @@ int readterminal(support_t *currSup){
             readChar++;
         }
         else{
-            continue;
             currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = ((status & 0xFF00) >> BYTELENGTH) * -1;
             return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
         }
@@ -150,6 +149,9 @@ void supGeneralExceptionHandler(){
                 break;
             case READTERMINAL:
                 readterminal(currSup);
+                break;
+            default:
+                killProc(NULL);
                 break;
 		}
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
