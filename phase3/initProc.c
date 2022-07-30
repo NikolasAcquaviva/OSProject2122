@@ -61,13 +61,12 @@ static void debug(){return;}
 
 void test() {
     initSwap();
-    masterSem = 0;
     //init mutex sem4s vs sync sem4s in phase2
-    for(int i=0; i < 49; i++) devSem[i]=1; 
+    for(int i = 0; i < 49; i++) devSem[i]=1; 
+    masterSem = 0;
     for (int id = 1; id <= UPROCMAX; id++) createUProc(id);
     for (int j = 0; j < UPROCMAX; j++){
         SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
     }
-    //killing test process ?
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }

@@ -103,11 +103,11 @@ int readterminal(support_t *currSup){
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 1);
     termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum); 
-    SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
-
     int status;
     int readChar = 0; 
     char r = '^';
+    
+    SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
     // No fixed string length: we terminate reading a newline character.
     while(r != '\n'){
         status = SYSCALL(DOIO, (int) &devRegs->recv_command, TRANSMITCHAR, 0);
@@ -118,7 +118,8 @@ int readterminal(support_t *currSup){
             buf++;
             readChar++;
         }
-        else{
+        else{     
+            klog_print("else read\n");       
             currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = ((status & 0xFF00) >> BYTELENGTH) * -1;
             return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
         }
@@ -136,21 +137,22 @@ void supGeneralExceptionHandler(){
 	if (cause == SYSEXCEPTION){
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0){
 			case GET_TOD:
-                gettod(currSup);
+                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = gettod(currSup);
                 break;
             case TERMINATE:
                 terminate();
                 break;
             case WRITEPRINTER:
-                writeprinter(currSup);
+                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = writeprinter(currSup);
                 break;
             case WRITETERMINAL:
-                writeterminal(currSup);
+                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = writeterminal(currSup);
                 break;
             case READTERMINAL:
-                readterminal(currSup);
+                currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = readterminal(currSup);
                 break;
             default:
+                klog_print("default\n");
                 killProc(NULL);
                 break;
 		}
