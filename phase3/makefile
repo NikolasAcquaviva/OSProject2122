@@ -20,7 +20,7 @@ SRC_DIR = ../
 PHASE1_DIR = $(SRC_DIR)/phase1
 PHASE2_DIR = $(SRC_DIR)/phase2
 PHASE3_DIR = $(SRC_DIR)/phase3
-# TESTING_DIR = $(SRC_DIR)/testers
+TESTING_DIR = $(SRC_DIR)/phase3/testers
 PROJ_INCLUDE = -I$(SRC_DIR) -I$(PHASE1_DIR) -I$(PHASE2_DIR) -I$(PHASE3_DIR)
 
 CFLAGS_LANG = -ffreestanding
@@ -44,6 +44,8 @@ kernel : asl.o pcb.o exceptionhandler.o interrupthandler.o init.o scheduler.o cr
 
 clean :
 	-rm -f *.o kernel kernel.*.umps out -r
+	-cd $(TESTING_DIR) && make clean
+
 
 %.o : %.c
 	@ mkdir -p $(OUTPUT_DIR)
@@ -56,5 +58,7 @@ clean :
 	$(CC) $(CFLAGS) -c -o $(addprefix $(OUTPUT_DIR)/obj/, $@) $<
 
 cpy :
-	-cd $(OUTPUT_DIR) && cp ../phase3config.json . && tar -xf ../testers.tar
-
+	cd $(OUTPUT_DIR) && cp ../phase3config.json .
+	cd $(TESTING_DIR) && make 
+	rm -rf $(OUTPUT_DIR)/testers && mkdir $(OUTPUT_DIR)/testers && cd $(OUTPUT_DIR)/testers
+	for filename in $(TESTING_DIR)/*.umps; do ln $$filename $(OUTPUT_DIR)/testers/$$(basename $$filename .umps).umps; done #anzichè creare copie creiamo hard links
