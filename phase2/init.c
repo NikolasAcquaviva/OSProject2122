@@ -28,6 +28,30 @@
 #define KLOG_LINES     64     // Number of lines in the buffer. Adjustable, only limited by available memory
 #define KLOG_LINE_SIZE 42     // Length of a single line in characters
 
+void printaExc(int cause, char *position){
+    /* klog_print("\n"); */
+    klog_print(position);
+    /* klog_print("\n"); */
+
+    switch (cause) {
+        case 0: klog_print("0\n");break;
+        case 1: klog_print("1\n");break;
+        case 2: klog_print("2\n");break;
+        case 3: klog_print("3\n");break;
+        case 4: klog_print("4\n");break;
+        case 5: klog_print("5\n");break;
+        case 6: klog_print("6\n");break;
+        case 7: klog_print("7\n");break;
+        case 8: klog_print("8\n");break;
+        case 9: klog_print("9\n");break;
+        case 10: klog_print("10\n");break;
+        case 11: klog_print("11\n");break;
+
+        default:
+            klog_print("\noltre 12\n'");
+            break;
+    }
+}
 
 static void next_line(void);
 static void next_char(void);

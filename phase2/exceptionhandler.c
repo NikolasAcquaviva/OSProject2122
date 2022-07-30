@@ -13,12 +13,12 @@
 #include "scheduler.h"
 #include "exceptionhandler.h"
 #include "init.h"
+#include "../phase3/initProc.h"
 
 //Gestore generale delle eccezioni. Performa un branching basato sul codice dell'eccezione
 void GeneralExceptionHandler(){
     memaddr Cause = ((state_t*) BIOSDATAPAGE)->cause; //otteniamo il contenuto del registro cause
     int exCode = ((Cause & CAUSEMASK) >> 2); //codice eccezione dal registro cause
-    
     if(exCode == 0) InterruptExceptionHandler();
     else if(exCode <= 3) TLBExceptionHandler();
     else if(exCode == 8) SYSCALLExceptionHandler();
@@ -33,6 +33,7 @@ static void PassUp_Or_Die(int index){
         TERM_PROCESS(0,0,0);
     }
     else{
+        printaExc(CAUSE_GET_EXCCODE(currentProcess->p_supportStruct->sup_exceptState[index].cause), "POD");
         //salviamo lo stato nel giusto campo della struttura di supporto
         state_t *exceptState = (state_t*)BIOSDATAPAGE;
 		//[index] => handler of that exception, if specified. Switch context
@@ -78,7 +79,7 @@ void SYSCALLExceptionHandler(){
         GeneralExceptionHandler();
     }
 	//livello di supporto - TRAP
-    else if(a0 > 0 && a0 <= 10) PassUp_Or_Die(GENERALEXCEPT);
+    else if(a0 > 0 && a0 <= 10) {PassUp_Or_Die(GENERALEXCEPT); if (a0 == 5) printaExc(a0, "SEH");}
     else{
         switch (a0){
             case CREATEPROCESS:

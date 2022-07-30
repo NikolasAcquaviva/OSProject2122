@@ -26,7 +26,7 @@ signed int gettod(support_t *currSup){
 }
 
 void terminate(){
-    klog_print("normale terminate\n");
+    klog_print("NT");
     killProc(NULL);
 }
 
@@ -134,8 +134,10 @@ static int causeDio;
 void supGeneralExceptionHandler(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
     int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
+    printaExc(cause, "SGEH");
     causeDio = cause;
 	if (cause == SYSEXCEPTION){
+        printaExc(currSup->sup_exceptState[GENERALEXCEPT].reg_a0, "SP");
 		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0){
 			case GET_TOD:
                 gettod(currSup);
