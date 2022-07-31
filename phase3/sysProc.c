@@ -18,10 +18,10 @@
 #define READTERMINAL	        5
 #define EOS '\0'
 
-signed int gettod(support_t *currSup){
+unsigned int gettod(support_t *currSup){
     cpu_t tod;
     STCK(tod);
-    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = tod;
+    currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = (unsigned int) tod;
     return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
 }
 

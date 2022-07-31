@@ -39,9 +39,7 @@ static void PassUp_Or_Die(int index){
 		//[index] => handler of that exception, if specified. Switch context
         currentProcess->p_supportStruct->sup_exceptState[index] = *exceptState;
 		//LDCXT allows a current process to change its operating mode/context - non carichiamo uno stato pieno di registri come con LDST
-        LDCXT(currentProcess->p_supportStruct->sup_exceptContext[index].stackPtr,
-              currentProcess->p_supportStruct->sup_exceptContext[index].status,
-              currentProcess->p_supportStruct->sup_exceptContext[index].pc);
+        LDCXT(currentProcess->p_supportStruct->sup_exceptContext[index].stackPtr, currentProcess->p_supportStruct->sup_exceptContext[index].status, currentProcess->p_supportStruct->sup_exceptContext[index].pc);
         }
 }
 
