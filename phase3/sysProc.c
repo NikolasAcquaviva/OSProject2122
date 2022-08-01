@@ -17,7 +17,8 @@
 #define WRITETERMINAL 	        4
 #define READTERMINAL	        5
 #define EOS '\0'
-
+static void debug(){return;}
+static int causeDio;
 signed int gettod(support_t *currSup){
     cpu_t tod;
     STCK(tod);
@@ -113,7 +114,8 @@ int readterminal(support_t *currSup){
     while(r != '\n'){
         status = SYSCALL(DOIO, (int) &devRegs->recv_command, TRANSMITCHAR, 0);
         //OKCHARTRANS has same value of char received
-        if ((status & 0xFF)  == OKCHARTRANS){ //TODO: capire perchè solo una f
+        if ((status & 0xFF) == OKCHARTRANS){ //TODO: capire perchè solo una f
+            klog_print("status good\n");
             r = (status & 0xFF00) >> BYTELENGTH;
             *buf = r;
             buf++;
@@ -126,11 +128,11 @@ int readterminal(support_t *currSup){
         }
     }
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
+    debug();
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = readChar;
     return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
 }
-static void debug(){return;}
-static int causeDio;
+
 void supGeneralExceptionHandler(){
 	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
     int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);

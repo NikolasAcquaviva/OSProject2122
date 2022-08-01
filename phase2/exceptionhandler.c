@@ -289,7 +289,7 @@ void _PASSEREN(int *semaddr, int a2, int a3){
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-        if(semaddr == &deviceSemaphores[NoDEVICE-1]) currentProcess = NULL; //superfluo poichè dopo chiamiamo lo scheduler?
+        currentProcess = NULL; 
         scheduler();
     }
 	//passaggio mutua esclusione
@@ -388,7 +388,8 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     softBlockCount++; // incrementiamo il numero di processi bloccati
     deviceSemaphores[semIndex] = 0; 
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-    _PASSEREN(&deviceSemaphores[semIndex], 0, 0);
+    insertBlocked(&deviceSemaphores[semIndex], currentProcess);
+    currentProcess = NULL;
     scheduler(); // richiamiamo lo scheduler   
     
     if(&(dev->command) == (memaddr*) cmdAddr) return dev->status;

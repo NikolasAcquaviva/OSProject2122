@@ -1,6 +1,3 @@
-//toDo: appena entriamo in scheduler(), dobbiamo aggiungere il tempo usato dal processo corrente (if != NULL), come nel progetto di Drif?
-
-
 #include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "pcb.h"
@@ -77,6 +74,7 @@ void scheduler() {
 	//resetto la flag
 	lastProcessHasYielded = NULL;
 	if(extracted == 1){
+		extracted = 0;
 		//c'è effettivamente un processo che sta aspettando in una delle due code
 		//fisso il momento (in "clock tick") di partenza in cui parte
 		STCK(startTime);
