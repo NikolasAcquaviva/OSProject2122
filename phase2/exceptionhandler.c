@@ -388,7 +388,7 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     softBlockCount++; // incrementiamo il numero di processi bloccati
     deviceSemaphores[semIndex] = 0; 
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
-    insertBlocked(&deviceSemaphores[semIndex], currentProcess);
+    insertBlocked(&deviceSemaphores[semIndex], currentProcess); //abbiamo già svolto le operazioni che avrebbe svolto una PASSEREN
     currentProcess = NULL;
     scheduler(); // richiamiamo lo scheduler   
     
