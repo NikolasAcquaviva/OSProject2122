@@ -282,10 +282,10 @@ void TERM_PROCESS(int pid, int a2, int a3){
 void _PASSEREN(int *semaddr, int a2, int a3){   
     int isDev = isDevice(semaddr); //per contatore softBlockCount
     if((*semaddr) == 0 || semaddr == &deviceSemaphores[NoDEVICE-1]){
-        state_t *exceptState = (state_t*) BIOSDATAPAGE;
-        exceptState->pc_epc += 4; //incrementiamo per quando riprenderemo
-        exceptState->reg_t9 = exceptState->pc_epc;
-        currentProcess->p_s = *exceptState;
+        state_t exceptState = *((state_t*) BIOSDATAPAGE);
+        exceptState.pc_epc += 4; //incrementiamo per quando riprenderemo
+        exceptState.reg_t9 = exceptState.pc_epc;
+        currentProcess->p_s = exceptState;
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
@@ -306,10 +306,10 @@ void _VERHOGEN(int *semaddr, int a2, int a3){
     int isDev = isDevice(semaddr);
 	//V() bloccante in bin sem con valore 1
     if((*semaddr) == 1){
-        state_t *exceptState = (state_t*) BIOSDATAPAGE;
-        exceptState->pc_epc += 4;
-        exceptState->reg_t9 = exceptState->pc_epc;
-        currentProcess->p_s = *exceptState;
+        state_t exceptState = *((state_t*) BIOSDATAPAGE);
+        exceptState.pc_epc += 4;
+        exceptState.reg_t9 = exceptState.pc_epc;
+        currentProcess->p_s = exceptState;
         if(isDev == 1) softBlockCount++; // incrementiamo il numero di processi bloccati
         insertBlocked(semaddr,currentProcess); //blocchiamo il pcb sul semaforo
         GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
@@ -380,11 +380,11 @@ int DO_IO(int *cmdAddr, int cmdValue, int a3){
     //perche abbiamo 16 device, i primi 8 di trasmissione
     if(isRecvTerm == 1) semIndex = line*8 + numDevice + 8;
     else semIndex = line*8 + numDevice;
-    state_t *exceptState = (state_t*) BIOSDATAPAGE;
+    state_t exceptState = *((state_t*) BIOSDATAPAGE);
 	//chiamata SEMPRE BLOCCANTE (da student guide)
-    exceptState->pc_epc += 4; //increment pc by a word
-    exceptState->reg_t9 = exceptState->pc_epc;    
-    currentProcess->p_s = *exceptState; //copiamo lo stato della bios data page nello stato del current
+    exceptState.pc_epc += 4; //increment pc by a word
+    exceptState.reg_t9 = exceptState.pc_epc;    
+    currentProcess->p_s = exceptState; //copiamo lo stato della bios data page nello stato del current
     softBlockCount++; // incrementiamo il numero di processi bloccati
     deviceSemaphores[semIndex] = 0; 
     GET_CPU_TIME(0, 0, 0); // settiamo il tempo accumulato di cpu usato dal processo
@@ -432,10 +432,10 @@ int GET_PROCESS_ID(int parent, int a2, int a3){
 // take out the current process from its queue
 // and reinsert enqueuing it in the queue
 void _YIELD(int a1, int a2, int a3){
-    state_t *exceptState = (state_t*)BIOSDATAPAGE;
-    exceptState->pc_epc += 4;
-    exceptState->reg_t9 = exceptState->pc_epc;  
-    currentProcess->p_s = *exceptState;
+    state_t exceptState = *((state_t*)BIOSDATAPAGE);
+    exceptState.pc_epc += 4;
+    exceptState.reg_t9 = exceptState.pc_epc;  
+    currentProcess->p_s = exceptState;
     if(currentProcess->p_prio==1) insertProcQ(&HighPriorityReadyQueue,currentProcess);
     else insertProcQ(&LowPriorityReadyQueue,currentProcess);
     lastProcessHasYielded = currentProcess;
