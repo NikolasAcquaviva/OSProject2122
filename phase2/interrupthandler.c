@@ -21,7 +21,7 @@ void InterruptExceptionHandler(){
     STCK(interruptstarttime);
     state_t* exceptionState = (state_t*) BIOSDATAPAGE;    //preleviamo l'exception state
     unsigned int interruptsPending = ((exceptionState->cause & 0xFF00) >> 8); //0xFF00 = CAUSEMASK. Come con ExcCode, abbiamo hardcodato. Guarda figura 3.3 pops. Otteniamo Interrupt Pending => su quale linea l'interrupt is pending. CAUSEMASK azzera tutta la parte precedente
-	//CERCHIAMO, partendo dal basso, SU QUALE LINEA C'E' STATO L'INTERRUPT
+                                                                              //CERCHIAMO, partendo dal basso, SU QUALE LINEA C'E' STATO L'INTERRUPT
     int line = getInterruptInt(&interruptsPending); //calcolare la linea che ha richiesto l'interrupt
     if (line == 0) PANIC(); //caso inter- processor interrupts, disabilitato in umps3, monoprocessore
     else if (line == 1) { //PLT Interrupt
@@ -103,9 +103,9 @@ void NonTimerHandler(int line, int dev){
         termreg_t* termreg = (termreg_t*) devreg;
         //Prima di poter ricevere nuovi comandi, dobbiamo mandare l'ack
         //char received/transmitted (successful completion but the interrupt is not yet acked) and device ready (completion has been acked)
-		//pops pg 54 pdf quando riceviamo l'interrupt è perchè è stato ricevuto/trasmesso un carattere ma il dispositivo non è ancora pronto a ricevere nuovi comandi => status NOT READY
+        //pops pg 54 pdf quando riceviamo l'interrupt è perchè è stato ricevuto/trasmesso un carattere ma il dispositivo non è ancora pronto a ricevere nuovi comandi => status NOT READY
         //TODO non vengono gestiti casi di errore, inoltre può capitare che bisogna effttuare l'ack ad entrambi (scritto sotto figura 5.12 pops)
-        //sotto la figura 5.12 di pops c'è scirtto che in teoria dovremmo dare l'ack ad entrambi i subterminale se entrambi pendenti. In tal caso come si decide da quale semaforo estraiamo il processo (che precedentemente era bloccato per un'op di IO)?
+        //sotto la figura 5.12 di pops c'è scirtto che in teoria dovremmo dare l'ack ad entrambi i subterminale se entrambi pendenti. In tal caso come si decide da quale semaforo estraiamo il processo (che precedentemente era bloccato per un'op di IO)? (in paragrafo 3.6 student guide "one should process only one interrupt at a time" Edge o Level triggered? se level triggered allora ok possiamo lasciare così)
         if(termreg->transm_status != READY){
             /*Salvo lo status da ritornare*/
             status_toReturn = termreg->transm_status;
@@ -126,30 +126,39 @@ void NonTimerHandler(int line, int dev){
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
     pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
 
-    /*Inserisco lo stato da ritornare nel registro v0*/
-    unlocked->p_s.reg_v0 = status_toReturn;
-
-    /*Calcolo il nuovo tempo del processo*/
-    unlocked->p_time += (CURRENT_TOD - interruptstarttime);
-
-    /*Diminuisco il numero di processi SoftBlocked*/
-    softBlockCount--;
-
-    //ad inizio pagina 3 student guide capitolo 3 rivisto, sembra che ci sia un'ulteriore prelazione dell'eventuale processo ad alta priorità sul current process
-    /*Inserisco il processo sbloccato nella readyQueue*/
-    if (unlocked->p_prio == 1){
-        if (currentProcess->p_prio == 0){
-            state_t exceptState = *((state_t*) BIOSDATAPAGE);
-            /* exceptState.pc_epc += 4; //incrementiamo per quando riprenderemo */
-            exceptState.reg_t9 = exceptState.pc_epc;
-            currentProcess->p_s = exceptState;
-            insertProcQ(&LowPriorityReadyQueue, currentProcess);
-            currentProcess = NULL;
-        }
-        else insertProcQ(&HighPriorityReadyQueue, unlocked);
+    //important points paragrafo 3.6.1 student guide
+    if (unlocked == NULL){
+        if (currentProcess != NULL) LDST((state_t*) BIOSDATAPAGE);
+        else scheduler();
     }
-    else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
+    else {
 
-    if (currentProcess == NULL) scheduler();
-    else LDST((state_t*) BIOSDATAPAGE);
+        /*Inserisco lo stato da ritornare nel registro v0*/
+        unlocked->p_s.reg_v0 = status_toReturn;
+
+        /*Calcolo il nuovo tempo del processo*/
+        unlocked->p_time += (CURRENT_TOD - interruptstarttime);
+
+        /*Diminuisco il numero di processi SoftBlocked*/
+        softBlockCount--;
+
+        //ad inizio pagina 3 student guide capitolo 3 rivisto, sembra che ci sia un'ulteriore prelazione dell'eventuale processo ad alta priorità sul current process
+        /*Inserisco il processo sbloccato nella readyQueue*/
+        if (unlocked->p_prio == 1){
+            if (currentProcess->p_prio == 0){
+                state_t exceptState = *((state_t*) BIOSDATAPAGE);
+                /* exceptState.pc_epc += 4; //incrementiamo per quando riprenderemo */
+                exceptState.reg_t9 = exceptState.pc_epc;
+                currentProcess->p_s = exceptState;
+                insertProcQ(&LowPriorityReadyQueue, currentProcess);
+                currentProcess = NULL;
+            }
+            else insertProcQ(&HighPriorityReadyQueue, unlocked);
+        }
+        else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
+
+        if (currentProcess == NULL) scheduler();
+        else LDST((state_t*) BIOSDATAPAGE);
+
+    }
 }
