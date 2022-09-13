@@ -28,7 +28,7 @@ static void createUProc(int id){
     supPool[id].sup_asid = id;
 
     /* memaddr data[PAGESIZE / 4]; // così la posizione degli indirizzi sono già allineate all'interno della pagina. 4 bytes size of memaddr */
-    /* int devStatus = flashCmd(FLASHREAD, (void *)data, 0, id-1); */
+    /* int devStatus = flashCmd(FLASHREAD, (void *)data, 0, id-1); */ //KERNEL PANIC QUI
     /* if (devStatus != READY){ */
     /*     /1* klog_print("errore nel recuperare dimensioni proc\n"); *1/ */
     /*     killProc(NULL); */
