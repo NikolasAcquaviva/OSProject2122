@@ -2,7 +2,7 @@
 #include <umps3/umps/libumps.h>
 #include <umps3/umps/types.h>
 #include "../phase2/init.h"
-#define IL_MASK_ALL 0x0000FF00
+#define IL_MASK_ALL 0x0000FF00 //uguale a IMON
 
 //Master sempahore which wait for all processes to be concluded in order to terminate testing
 int masterSem;
@@ -60,10 +60,10 @@ static void count(){return ;}
 void test() {
     initSwap();
     //init mutex sem4s vs sync sem4s in phase2
-    for(int i = 0; i < 49; i++) devSem[i]=1; 
+    for(int i = 0; i < 49; i++) devSem[i]=1;
     masterSem = 0;
-    
-    for (int id = 1; id <= UPROCMAX; id++) 
+
+    for (int id = 1; id <= UPROCMAX; id++)
         createUProc(id);
     for (int j = 0; j < UPROCMAX; j++){
         SYSCALL(PASSEREN, (int) &masterSem, 0, 0);

@@ -1,9 +1,10 @@
-#include "../pandos_const.h" 
+#include "../pandos_const.h"
 #include "../pandos_types.h"
 #include "pcb.h"
 #include "asl.h"
 #include "listx.h"
 #include "scheduler.h"
+#include <umps3/umps/const.h>
 #include <umps3/umps/libumps.h>
 #include "../phase3/initProc.h" //esporta test
 
@@ -12,7 +13,7 @@
 /*
  * Bus: dove si interfacciano i vari componenti
  *		Clocking services: TOD, Interval timer
- * 
+ *
  *
  * Five classes of peripheral devices, *8 instances
  *
@@ -41,16 +42,16 @@ char         klog_buffer[KLOG_LINES][KLOG_LINE_SIZE] = {0};     // Actual buffer
 // Print str to klog
 void klog_print(char *str) {
     while (*str != '\0') {
-        // If there is a newline skip to the next one
-        if (*str == '\n') {
-            next_line();
-            str++;
-        } 
-        // Otherwise just fill the current one
-        else {
-            klog_buffer[klog_line_index][klog_char_index] = *str++;
-            next_char();
-        }
+	// If there is a newline skip to the next one
+	if (*str == '\n') {
+	    next_line();
+	    str++;
+	}
+	// Otherwise just fill the current one
+	else {
+	    klog_buffer[klog_line_index][klog_char_index] = *str++;
+	    next_char();
+	}
     }
 }
 
@@ -60,9 +61,9 @@ void klog_print_hex(unsigned int num) {
     const char digits[] = "0123456789ABCDEF";
 
     do {
-        klog_buffer[klog_line_index][klog_char_index] = digits[num % 16];
-        num /= 16;
-        next_char();
+	klog_buffer[klog_line_index][klog_char_index] = digits[num % 16];
+	num /= 16;
+	next_char();
     } while (num > 0);
 }
 
@@ -70,8 +71,8 @@ void klog_print_hex(unsigned int num) {
 // Move onto the next character (and into the next line if the current one overflows)
 static void next_char(void) {
     if (++klog_char_index >= KLOG_LINE_SIZE) {
-        klog_char_index = 0;
-        next_line();
+	klog_char_index = 0;
+	next_line();
     }
 }
 
@@ -82,7 +83,7 @@ static void next_line(void) {
     klog_char_index = 0;
     // Clean out the rest of the line for aesthetic purposes
     for (unsigned int i = 0; i < KLOG_LINE_SIZE; i++) {
-        klog_buffer[klog_line_index][i] = ' ';
+	klog_buffer[klog_line_index][i] = ' ';
     }
 }
 
@@ -92,19 +93,19 @@ int pidCounter;
 /* Number of started, but not yet terminated processes. */
 int processCount;
 /* Number of started, but not terminated processes that in are the
-“blocked” state  due to an I/O or timer request */
+   “blocked” state  due to an I/O or timer request */
 int softBlockCount;
 
 
 
-/* Tail pointer to a queue of pcbs (related to high priority processes) 
-that are in the “ready” state. */
+/* Tail pointer to a queue of pcbs (related to high priority processes)
+   that are in the “ready” state. */
 //ricordarsi che quando un processo ad alta priorità esegue una yield(), bisogna
 //cercare di far eseguire gli altri, anche se è il primo della high priority q
 struct list_head HighPriorityReadyQueue;
 
-/* Tail pointer to a queue of pcbs (related to low priority processes) 
-that are in the “ready” state. */
+/* Tail pointer to a queue of pcbs (related to low priority processes)
+   that are in the “ready” state. */
 struct list_head LowPriorityReadyQueue;
 
 pcb_PTR lastProcessHasYielded = NULL; //puntatore al pcb del processo associato.
@@ -113,7 +114,7 @@ pcb_PTR lastProcessHasYielded = NULL; //puntatore al pcb del processo associato.
 //quando un processo rilascia, ricordarsi di inserire il puntatore al pcb corrispondente dentro lastProcessHasYielded
 
 /* Pointer to the current pcb that is in running state */
-//the current (and only) executing process 
+//the current (and only) executing process
 pcb_PTR currentProcess;
 //Array for device semaphores
 int deviceSemaphores[NoDEVICE];
@@ -129,46 +130,45 @@ extern void GeneralExceptionHandler();
 extern void print(char* msg);
 
 int main() {
-	//tra RAMTOP e KERNELSTACK c'è l'OS caricato in RAM ?
-	passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
-	//popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
-	passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
-	passUpVector->tlb_refill_stackPtr = (memaddr) KERNELSTACK;
-	passUpVector->exception_stackPtr = (memaddr) KERNELSTACK;
-	passUpVector->exception_handler = (memaddr) GeneralExceptionHandler;
+    passupvector_t *passUpVector = (passupvector_t *) PASSUPVECTOR;
+    //popolare gestore eccezioni. popolare = inserire PC e SP adeguati nei registri
+    passUpVector->tlb_refill_handler = (memaddr) uTLB_RefillHandler; /*in Memory related constants */
+    passUpVector->tlb_refill_stackPtr = (memaddr) KERNELSTACK;
+    passUpVector->exception_stackPtr = (memaddr) KERNELSTACK;
+    passUpVector->exception_handler = (memaddr) GeneralExceptionHandler;
 
-	softBlockCount = 0;
-	processCount = 0;
-	currentProcess = NULL;
+    softBlockCount = 0;
+    processCount = 0;
+    currentProcess = NULL;
 
-	mkEmptyProcQ(&LowPriorityReadyQueue);
-	mkEmptyProcQ(&HighPriorityReadyQueue);
+    mkEmptyProcQ(&LowPriorityReadyQueue);
+    mkEmptyProcQ(&HighPriorityReadyQueue);
 
-	initPcbs();
-	initASL();
+    initPcbs();
+    initASL();
 
-	for (int i = 0; i < NoDEVICE; i++) deviceSemaphores[i] = 0;
+    for (int i = 0; i < NoDEVICE; i++) deviceSemaphores[i] = 0;
 
-	//load interval timer globale. (Interval) timer è un vero e proprio dispositivo fisico che fa svolgere al kernel il context switch
-	LDIT(PSECOND); //100000
+    //load interval timer globale. (Interval) timer è un vero e proprio dispositivo fisico che fa svolgere al kernel il context switch
+    LDIT(TIME_CONVERT(PSECOND)); //100000 "Questo valore dipende dalla frequenza di esecuzione del processore, non può essere una semplice costante SLIDE PRESENTAZIONE FASE 2"
 
-	pcb_PTR initProc = allocPcb(); 
-	
-	//"Per quanto riguarda TLB Trap e Program Trap, tutto quello che si deve fare è passare il controllo a un gestore indicato dal processo corrente
-	//(se presente) oppure ucciderlo"
-	initProc->p_supportStruct = NULL; //slide pg 24/48
-	initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità
-	
-	pidCounter=1; //id 0 non può esistere per TERM_PROC
-	initProc->p_pid = pidCounter; 
-	pidCounter++;
-	processCount++;
+    pcb_PTR initProc = allocPcb();
 
-	/*init first process state */
-	state_t initState;
-	STST(&initState); //salvare stato processore in una struttura pcb_t
+    //"Per quanto riguarda TLB Trap e Program Trap, tutto quello che si deve fare è passare il controllo a un gestore indicato dal processo corrente
+    //(se presente) oppure ucciderlo"
+    initProc->p_supportStruct = NULL; //slide pg 24/48
+    initProc->p_prio = 0; //poichè viene inserito in una coda a bassa priorità
 
-	RAMTOP(initState.reg_sp); //SP a ramtop
+    pidCounter=1; //id 0 non può esistere per TERM_PROC
+    initProc->p_pid = pidCounter;
+    pidCounter++;
+    processCount++;
+
+    /*init first process state */
+    state_t initState;
+    STST(&initState); //salvare stato processore in una struttura pcb_t
+
+    RAMTOP(initState.reg_sp); //SP a ramtop
 
     initState.pc_epc = (memaddr) test; /*(exec) PC all'indirizzo della funzione test di p2test */
     initState.reg_t9 = (memaddr) test; //idiosincrasia dell'architettura
@@ -177,15 +177,19 @@ int main() {
     initState.status = IEPON | IMON | TEBITON;  //messo in fondo
 
     initProc->p_s = initState;
+    initProc->p_time = 0;
+    initProc->p_supportStruct = NULL;
+    initProc->p_semAdd = NULL;
+    initProc->p_parent = NULL;
 
     insertProcQ(&LowPriorityReadyQueue, initProc);
-	scheduler();
+    scheduler();
 
-	return 0;
+    return 0;
 }
 
 void memcpy(void *dest, const void *src, int n){
     for (int i = 0; i < n; i++) {
-    	((char *)dest)[i] = ((char *)src)[i];
+	((char *)dest)[i] = ((char *)src)[i];
     }
 }
