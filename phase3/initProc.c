@@ -27,12 +27,22 @@ static void createUProc(int id){
 
     supPool[id].sup_asid = id;
 
+    //DA QUI
     /* memaddr data[PAGESIZE / 4]; // così la posizione degli indirizzi sono già allineate all'interno della pagina. 4 bytes size of memaddr */
-    /* int devStatus = flashCmd(FLASHREAD, (void *)data, 0, id-1); */ //KERNEL PANIC QUI
-    /* if (devStatus != READY){ */
-    /*     /1* klog_print("errore nel recuperare dimensioni proc\n"); *1/ */
-    /*     killProc(NULL); */
-    /* } */
+    /* void *dataAddr = (void *)data; */
+
+    /* DISABLEINTERRUPTS; */
+    /* dtpreg_t *const reg = (dtpreg_t *)getDevRegAddr(FLASHINT, id - 1); */
+    /* const unsigned int cmd = FLASHREAD; */
+    /* reg->data0 = (memaddr)dataAddr; */
+    /* const int res = SYSCALL(DOIO, (int)&reg->command, cmd, 0); */
+    /* ENABLEINTERRUPTS; */
+    //A QUI
+    /* /1* int devStatus = flashCmd(FLASHREAD, data, 0, id-1); //KERNEL PANIC QUI *1/ */
+    /* /1* if (devStatus != READY){ *1/ */
+    /* /1*     /2* klog_print("errore nel recuperare dimensioni proc\n"); *2/ *1/ */
+    /* /1*     killProc(NULL); *1/ */
+    /* /1* } *1/ */
     /* const unsigned int text_file_size = data[5]/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
 
 
