@@ -17,8 +17,6 @@
 #define WRITETERMINAL 	        4
 #define READTERMINAL	        5
 #define EOS '\0'
-static void debug(){return;}
-static int causeDio;
 signed int gettod(support_t *currSup){
     cpu_t tod;
     STCK(tod);
@@ -44,7 +42,7 @@ int writeprinter(support_t *currSup){
 
     int printerNum = currSup->sup_asid - 1;
     int printerSem = getDevSemIndex(PRNTINT, printerNum, 0);
-    dtpreg_t* devRegs = (dtpreg_t*) getDevRegAddr(PRNTINT, printerNum); 
+    dtpreg_t* devRegs = (dtpreg_t*) getDevRegAddr(PRNTINT, printerNum);
     SYSCALL(PASSEREN, (int) &devSem[printerSem], 0, 0);
 
     int status;
@@ -74,7 +72,7 @@ int writeterminal(support_t *currSup){
     }
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 0);
-    termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum); 
+    termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum);
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
 
     int status;
@@ -101,14 +99,14 @@ int readterminal(support_t *currSup){
         killProc(NULL);
         return -1;
     }
-    
+
     int termNum = currSup->sup_asid - 1;
     int termSem = getDevSemIndex(TERMINT, termNum, 1);
-    termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum); 
+    termreg_t* devRegs = (termreg_t*) getDevRegAddr(TERMINT, termNum);
     int status;
-    int readChar = 0; 
+    int readChar = 0;
     char r = '^';
-    
+
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
     // No fixed string length: we terminate reading a newline character.
     while(r != '\n'){
@@ -121,25 +119,23 @@ int readterminal(support_t *currSup){
             buf++;
             readChar++;
         }
-        else{     
-            klog_print("else read\n");       
+        else{
+            klog_print("else read\n");
             currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = ((status & 0xFF00) >> BYTELENGTH) * -1;
             return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
         }
     }
     SYSCALL(VERHOGEN, (int) &devSem[termSem], 0, 0);
-    debug();
     currSup->sup_exceptState[GENERALEXCEPT].reg_v0 = readChar;
     return currSup->sup_exceptState[GENERALEXCEPT].reg_v0;
 }
 
 void supGeneralExceptionHandler(){
-	support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
+    support_t *currSup = (support_t*) SYSCALL(GETSUPPORTPTR, 0, 0, 0);
     int cause = CAUSE_GET_EXCCODE(currSup->sup_exceptState[GENERALEXCEPT].cause);
-    causeDio = cause;
-	if (cause == SYSEXCEPTION){
-		switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0){
-			case GET_TOD:
+    if (cause == SYSEXCEPTION){
+        switch(currSup->sup_exceptState[GENERALEXCEPT].reg_a0){
+            case GET_TOD:
                 gettod(currSup);
                 break;
             case TERMINATE:
@@ -158,12 +154,12 @@ void supGeneralExceptionHandler(){
                 klog_print("default\n");
                 killProc(NULL);
                 break;
-		}
+        }
         currSup->sup_exceptState[GENERALEXCEPT].pc_epc += 4;
         currSup->sup_exceptState[GENERALEXCEPT].reg_t9 += WORDLEN; //me lo ero dimenticato...
         LDST(&(currSup->sup_exceptState[GENERALEXCEPT]));
     }
-	else {
+    else {
         klog_print("exccode!=8\n");
         killProc(NULL);
     }

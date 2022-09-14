@@ -22,35 +22,19 @@ static void createUProc(int id){
     state_t newState;
     newState.entry_hi = id << ASIDSHIFT; //figura 6.6 pops
     newState.reg_sp = 0xC0000000;
-    newState.pc_epc = newState.reg_t9 = 0x800000B0;
+    newState.pc_epc = newState.reg_t9 = 0x800000B0; //inizio area .text
     newState.status = USERPON | IEPON | TEBITON | IMON ; //IEPON => check if IMON
 
     supPool[id].sup_asid = id;
 
-    //DA QUI
-    /* memaddr data[PAGESIZE / 4]; // così la posizione degli indirizzi sono già allineate all'interno della pagina. 4 bytes size of memaddr */
-    /* void *dataAddr = (void *)data; */
-
-    /* DISABLEINTERRUPTS; */
-    /* dtpreg_t *const reg = (dtpreg_t *)getDevRegAddr(FLASHINT, id - 1); */
-    /* const unsigned int cmd = FLASHREAD; */
-    /* reg->data0 = (memaddr)dataAddr; */
-    /* const int res = SYSCALL(DOIO, (int)&reg->command, cmd, 0); */
-    /* ENABLEINTERRUPTS; */
-    //A QUI
-    /* /1* int devStatus = flashCmd(FLASHREAD, data, 0, id-1); //KERNEL PANIC QUI *1/ */
-    /* /1* if (devStatus != READY){ *1/ */
-    /* /1*     /2* klog_print("errore nel recuperare dimensioni proc\n"); *2/ *1/ */
-    /* /1*     killProc(NULL); *1/ */
-    /* /1* } *1/ */
-    /* const unsigned int text_file_size = data[5]/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
-
-
+    memaddr data;
+    flashCmd(FLASHREAD, data, GETVPN( 0x80000014 ), id-1);
+    const unsigned int text_file_size = data/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
     // initialization of the process private PageTable
     for (int j = 0; j < MAXPAGES - 1; j++){ //-1 perchè l'ultima entry è dedicata allo stack'
         supPool[id].sup_privatePgTbl[j].pte_entryHI = 0x80000000 + (j << VPNSHIFT) + (id << ASIDSHIFT);
-        /* supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text */
-        supPool[id].sup_privatePgTbl[j].pte_entryLO =  DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text
+        supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text
+        /* supPool[id].sup_privatePgTbl[j].pte_entryLO =  DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text */
     }
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryHI = 0xBFFFF000 + (id << ASIDSHIFT);
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;

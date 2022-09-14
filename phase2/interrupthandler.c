@@ -126,7 +126,7 @@ void NonTimerHandler(int line, int dev){
     /* UNBLOCKING PROCESS ON THE SEMAPHORE */
     pcb_PTR unlocked = removeBlocked(&deviceSemaphores[semAdd]);
 
-    //important points paragrafo 3.6.1 student guide
+    //important points paragrafo 3.6.1 student guide potrebbero avver killato un suo ancestor
     if (unlocked == NULL){
         if (currentProcess != NULL) LDST((state_t*) BIOSDATAPAGE);
         else scheduler();
