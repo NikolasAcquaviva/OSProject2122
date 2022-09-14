@@ -92,7 +92,6 @@ int writeterminal(support_t *currSup){
 }
 
 int readterminal(support_t *currSup){
-    //TODO: valutare idea di fare 3 array di semafori, ognuno lungo UPROCMAX
     char *buf = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     if((memaddr) buf < KUSEG){
         klog_print("fuori kuseg\n");

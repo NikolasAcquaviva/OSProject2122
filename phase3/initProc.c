@@ -29,12 +29,11 @@ static void createUProc(int id){
 
     memaddr data;
     flashCmd(FLASHREAD, data, GETVPN( 0x80000014 ), id-1);
-    const unsigned int text_file_size = data/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
+    const int text_file_size = data/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
     // initialization of the process private PageTable
     for (int j = 0; j < MAXPAGES - 1; j++){ //-1 perchè l'ultima entry è dedicata allo stack'
         supPool[id].sup_privatePgTbl[j].pte_entryHI = 0x80000000 + (j << VPNSHIFT) + (id << ASIDSHIFT);
-        supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text
-        /* supPool[id].sup_privatePgTbl[j].pte_entryLO =  DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text */
+        supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text, ma la doc student guide phase3 pg 3 dice di no
     }
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryHI = 0xBFFFF000 + (id << ASIDSHIFT);
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
@@ -62,7 +61,6 @@ static void createUProc(int id){
    */
 void test() {
     initSwap();
-    //init mutex sem4s vs sync sem4s in phase2
     for(int i = 0; i < 49; i++) devSem[i]=1;
     masterSem = 0;
 

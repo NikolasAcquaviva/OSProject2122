@@ -150,7 +150,7 @@ int main() {
     for (int i = 0; i < NoDEVICE; i++) deviceSemaphores[i] = 0;
 
     //load interval timer globale. (Interval) timer è un vero e proprio dispositivo fisico che fa svolgere al kernel il context switch
-    LDIT(TIME_CONVERT(PSECOND)); //100000 "Questo valore dipende dalla frequenza di esecuzione del processore, non può essere una semplice costante SLIDE PRESENTAZIONE FASE 2"
+    LDIT(PSECOND); //100000 "Questo valore dipende dalla frequenza di esecuzione del processore, non può essere una semplice costante SLIDE PRESENTAZIONE FASE 2" ma la macro già moltiplica l'argomento per TIMESCALEADDR
 
     pcb_PTR initProc = allocPcb();
 

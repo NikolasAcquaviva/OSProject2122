@@ -22,7 +22,7 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 }
 
 swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
-			      //DA CONTROLLARE QUESTA VARIABILE
+							  //DA CONTROLLARE QUESTA VARIABILE
 int swapSem; //per accedere alla swapPool in mutex
 
 void initSwap(){
@@ -46,10 +46,6 @@ void clearSwap(int asid){
 
 void killProc(int *sem){
 	clearSwap(currentProcess->p_supportStruct->sup_asid);
-	//TODO controllare se asid detiene If the specified U-Proc is holding hostage the Swap Pool Table,
-	//https://github.com/lucat1/unibo_08574_progetto/blob/6a98e14a18b875e8444339dce4c451a34e54b83e/phase3/src/pager.c
-	//riga 140
-	//idea principale è di tenere un array che rappresenta lo stato del sys
 	if (sem != NULL) SYSCALL(VERHOGEN, (int) sem, 0, 0);
 	SYSCALL(VERHOGEN, (int) &masterSem, 0, 0);
 	SYSCALL(TERMPROCESS, 0, 0, 0);
@@ -73,7 +69,7 @@ int getVictimPage(){
 void updateTLB(pteEntry_t *sw_pte, int isCurr){
 	/*abbiamo 2 casi di updateTLB nel pager:
 	  1. dopo aver invalidato la entry della page victim, bisogna aggiornare quella entry anche nella TLB,se esiste
-	  2. dopo aver inserito la pagina che ora è considerata valid per il current process (iscurr=1)
+	  2. dopo aver inserito la pagina che ora è considerata valid per il current process (iscurr=1) i.e: se è presente la aggiorniamo altrimenti la inseriamo
 	  */
 
 	setENTRYHI(sw_pte->pte_entryHI);
@@ -82,15 +78,15 @@ void updateTLB(pteEntry_t *sw_pte, int isCurr){
 	int index = getINDEX(); //nei bit da 8 a 15 abbiamo l'index del tlb nel quale scrivere i registri hi/lo tramite TLBWI()
 	int probe = (index >> 31); //prendo il bit probe del registro index (6.4 pops), se è 0 c'è un tlb hit
 	if(probe == 0)
-		TLBWI();
-	else if(isCurr==1) TLBWR(); // nel caso in cui la pagina invalidata (isCurr=0) non fosse presente in cache allora non facciamo niente
+		TLBWI(); //TLBP ha già aggiornato Index.TLB-Index
+	else if(isCurr==1) TLBWR(); // pedante ("quando inserisci una pagina nella TLB che è considerata valida nella tabella delle pagine del currunt Proc")
 
 }
 
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
 int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
-										//prende mutex sul device register associato al flash device
+																	//prende mutex sul device register associato al flash device
 	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
 	dtpreg_t* flashDevReg = (dtpreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
 
@@ -111,39 +107,40 @@ void pager(){
 	//if the cause is a TLB mod exc => trap
 
 	int cause = (currSup->sup_exceptState[0].cause & GETEXECCODE) >> CAUSESHIFT;
-	if (cause == 1){
-		klog_print("pager cause=1\n");
+	if ((cause != TLBINVLDL) && (cause != TLBINVLDS)){
+		//dobbiamo trattarlo come trap
 		killProc(NULL);
 	}
 	else{
 		//swap pool mutex
 		//DA CONTROLLARE
 		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
-		int missingPageNum = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler
-		int missingPageAddr = currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi >> VPNSHIFT;
+		//ha associazione non valida
+		int pageNum = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler DA NOI student guide phase 2 3.7
+		int invalidPageAddr = currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi >> VPNSHIFT; //missing /TLBRefill vs invalid /TLBInvalid => dobbiamo inserirlo
 
 		int devStatus;
 		int victimPgNum = getVictimPage();
 		memaddr victimPgAddr = POOLSTART + victimPgNum*PAGESIZE; //indirizzo FISICO!
 
-		//if it was occupied
+		//if it was occupied - going to replace its content
 		if (swapTable[victimPgNum].sw_asid != -1){
 
-			//anche se siamo in mutex, abbiamo interrupt abilitati nel livello di supporto, pertanto in un multiproc sys potremmo essere interrotti (?)
+			//anche se siamo in mutex, abbiamo interrupt abilitati nel livello di supporto, pertanto in un multiproc sys potremmo essere interrotti
+			//"Since the Support Level runs in a fully concurrent mode (interrupts unmasked), each process needs its own location(s) for their saved exception states, and addresses to pass control to: The Support STRUCT"
 			DISABLEINTERRUPTS;
 
 			//invalidiamo associazione
-			swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON; //"puntatore alla entry corrispondente nella tabella delle pagine del processo" => lo vedrà anche l'altro processo!
-			updateTLB(swapTable[victimPgNum].sw_pte,0);
+			swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON; //"PUNTATORE alla entry corrispondente nella tabella delle pagine del processo" => lo vedrà anche il processo!
+			updateTLB(swapTable[victimPgNum].sw_pte,0); //aggiorniamo
 
 			ENABLEINTERRUPTS;
 
-			// block of the flash device to write into (coincides with the page number)
-
-			int devBlockNum = (swapTable[victimPgNum].sw_pte->pte_entryHI >> VPNSHIFT) - PAGETBLSTART;
+			//Funzionano a blocchi di 4KB come tutto il resto
+			int devBlockNum = swapTable[victimPgNum].sw_pageNo;
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
-			//update old owner's process backing storage
+			//update old owner's process backing storage. da RAM a flash dev. victimPgOwner != currSup->sup_asid -1 ! (togliamo il frame di un altro processo)
 			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
 			if (devStatus != READY){
 				klog_print("pager devstatus!=READY(1)\n");
@@ -152,8 +149,8 @@ void pager(){
 
 		}
 
-		//Read the contents of the currentProcess's backing storage/flash device logical page p into frame i
-		devStatus = flashCmd(FLASHREAD, victimPgAddr, missingPageNum, currSup->sup_asid - 1);
+		//blocco che dobbiamo inserire in ram
+		devStatus = flashCmd(FLASHREAD, victimPgAddr, pageNum, currSup->sup_asid - 1);
 		if (devStatus != READY){
 			klog_print("pager devstatus!=READY(2)\n");
 			killProc(&swapSem);
@@ -161,16 +158,15 @@ void pager(){
 
 		//UPDATING SWAP POOL TABLE ENTRY TO REFLECT THE NEW CONTENTS
 		swapTable[victimPgNum].sw_asid = currSup->sup_asid;
-		swapTable[victimPgNum].sw_pageNo = missingPageAddr;
-		swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[missingPageNum]);
+		swapTable[victimPgNum].sw_pageNo = invalidPageAddr; //entryHI
+		swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[pageNum]);
 
-		// Update the Current Process’s Page Table entry.
-		currSup->sup_privatePgTbl[missingPageNum].pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
 
-		DISABLEINTERRUPTS;
+		DISABLEINTERRUPTS; //come indicato da documentazione e perchè risorse condivise critiche
 
 		/*accende il V bit, il D bit e setta PNF*/
-		swapTable[victimPgNum].sw_pte->pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
+		// Update the Current Process’s Page Table entry as well
+		currSup->sup_privatePgTbl[pageNum].pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
 		updateTLB(swapTable[victimPgNum].sw_pte,1);
 
 		ENABLEINTERRUPTS;
@@ -187,7 +183,9 @@ void pager(){
 void uTLB_RefillHandler(){
 	/*prende l'inizio di BIOSDATAPAGE*/ // retrieving the exception state
 	state_t* currProc_s = (state_t*) BIOSDATAPAGE;
+	//recupero della entry mancante
 	int vpn = GETVPN(currProc_s->entry_hi);
+	//locate the correct Page Table entry and write into regs in order to perform TLBWR()
 	setENTRYHI(currentProcess->p_supportStruct->sup_privatePgTbl[vpn].pte_entryHI);
 	setENTRYLO(currentProcess->p_supportStruct->sup_privatePgTbl[vpn].pte_entryLO);
 	//WRITING ON TLB

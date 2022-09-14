@@ -8,6 +8,7 @@
 #include "interrupthandler.h"
 #include <umps3/umps/const.h>
 #include <umps3/umps/libumps.h>
+#include <umps3/umps/types.h>
 
 //figura 4.1 pops .interrupt_dev posizione in array unsigned int interrupt_dev[5];
 static memaddr* getInterruptLineAddr(int line){  //indirizzo linea 3. Per classe device con interrupt. parte da 0x10000040, e incrementiamo di una word
@@ -35,7 +36,7 @@ void InterruptExceptionHandler(){
     }
 
     else if (line == 2) { //System wide interval timer
-        LDIT(TIME_CONVERT( PSECOND )); //100000 ACK TODO molto convinto che debba essere moltiplicato per TIMESCALE
+        LDIT(PSECOND); //100000 ACK
         /* unlocking all processes in the interval timer semaphore */
         while (headBlocked(&deviceSemaphores[NoDEVICE-1]) != NULL) {
             STCK(interruptendtime);
@@ -54,7 +55,7 @@ void InterruptExceptionHandler(){
         deviceSemaphores[NoDEVICE-1] = 0;
         /*torna al processo in esecuzione se esiste, oppure rientro nello scheduler*/
         if (currentProcess == NULL) scheduler(); /* passing control to the current process (if there is one) */
-        else LDST((state_t*) BIOSDATAPAGE);
+        else LDST((state_t *)BIOSDATAPAGE);
     }
 
     else if(line > 2){ //controllo sulla linea che non sia un interrupt temporizzato
@@ -128,7 +129,7 @@ void NonTimerHandler(int line, int dev){
 
     //important points paragrafo 3.6.1 student guide potrebbero avver killato un suo ancestor
     if (unlocked == NULL){
-        if (currentProcess != NULL) LDST((state_t*) BIOSDATAPAGE);
+        if (currentProcess != NULL) LDST((state_t *)BIOSDATAPAGE);
         else scheduler();
     }
     else {
@@ -158,7 +159,6 @@ void NonTimerHandler(int line, int dev){
         else if (unlocked->p_prio == 0) insertProcQ(&LowPriorityReadyQueue, unlocked);
 
         if (currentProcess == NULL) scheduler();
-        else LDST((state_t*) BIOSDATAPAGE);
-
+        else LDST((state_t *)BIOSDATAPAGE);
     }
 }
