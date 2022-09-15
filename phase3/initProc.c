@@ -28,7 +28,7 @@ static void createUProc(int id){
 
     supPool[id].sup_asid = id;
 
-#define SPECIAL_ADDR (POOLSTART + UPROCMAX*2*PAGESIZE)
+    memaddr SPECIAL_ADDR = MY_POOLSTART + UPROCMAX*2*PAGESIZE;
     flashCmd(FLASHREAD, (memaddr)SPECIAL_ADDR, GETVPN( 0x80000014 ), id-1);
     unsigned int value = *(unsigned int *) SPECIAL_ADDR;
     const int text_file_size = value/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
