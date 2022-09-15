@@ -10,15 +10,6 @@
 #include "initProc.h" //eg devSem
 #include "../phase2/init.h"
 
-int my_strlen(char *str){
-    char *s;
-    for (s = str;*s != EOS; s++){
-    }
-    return (s - str);
-}
-
-
-#define PROC_TOP 0x8001E000 //le 31 pagine di ogni processo
 /* Support level SYS calls */
 #define GET_TOD			1
 #define TERMINATE		2
@@ -42,7 +33,7 @@ int writeprinter(support_t *currSup){
     //indirizzo virtuale del primo char della str da trasmettere
     char *firstCharAddr = (char *) currSup->sup_exceptState[GENERALEXCEPT].reg_a1;
     int strLen = currSup->sup_exceptState[GENERALEXCEPT].reg_a2;
-    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG || (int)&(firstCharAddr[strLen-1]) >= PROC_TOP || my_strlen(firstCharAddr) != strLen){
+    if((int)firstCharAddr < KUSEG || strLen < 0 || strLen > MAXSTRLENG){
         klog_print("\nerrore write printer\n");
         killProc(NULL);
         return -1;
