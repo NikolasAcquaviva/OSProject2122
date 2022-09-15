@@ -13,6 +13,7 @@
 #define GETVPN(T) ((T >= KUSEG && T < 0xBFFFF000) ? __GETVPN(T) : 31) //indirizzo ultimo frame dedicato a stack
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
 int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum);
+void updateTLB(pteEntry_t *sw_pte);
 void killProc(int *sem);
 extern memaddr *getDevRegAddr(int line, int devNo);
 extern int getDevSemIndex(int line, int devNo, int isReadTerm);

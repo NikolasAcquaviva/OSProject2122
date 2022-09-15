@@ -66,21 +66,15 @@ int getVictimPage(){
 	return frame;
 }
 
-void updateTLB(pteEntry_t *sw_pte, int isCurr){
-	/*abbiamo 2 casi di updateTLB nel pager:
-	  1. dopo aver invalidato la entry della page victim, bisogna aggiornare quella entry anche nella TLB,se esiste
-	  2. dopo aver inserito la pagina che ora è considerata valid per il current process (iscurr=1) i.e: se è presente la aggiorniamo altrimenti la inseriamo
-	  */
-
+void updateTLB(pteEntry_t *sw_pte){
 	setENTRYHI(sw_pte->pte_entryHI);
-	setENTRYLO(sw_pte->pte_entryLO);
-	TLBP(); //in registro index abbiamo primo bit che indica se esiste in cache la entry data dai registri cp0 entryHI/LO
-	int index = getINDEX(); //nei bit da 8 a 15 abbiamo l'index del tlb nel quale scrivere i registri hi/lo tramite TLBWI()
+	TLBP();
+	int index = getINDEX();
 	int probe = (index >> 31); //prendo il bit probe del registro index (6.4 pops), se è 0 c'è un tlb hit
-	if(probe == 0)
-		TLBWI(); //TLBP ha già aggiornato Index.TLB-Index
-	else if(isCurr==1) TLBWR(); // pedante ("quando inserisci una pagina nella TLB che è considerata valida nella tabella delle pagine del currunt Proc")
-
+	if (!probe){
+		setENTRYLO(sw_pte->pte_entryLO);
+		TLBWI(); 	/*TLBP ha già aggiornato Index.TLB-Index */
+	}
 }
 
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
@@ -132,7 +126,7 @@ void pager(){
 
 			//invalidiamo associazione
 			swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON; //"PUNTATORE alla entry corrispondente nella tabella delle pagine del processo" => lo vedrà anche il processo!
-			updateTLB(swapTable[victimPgNum].sw_pte,0); //aggiorniamo
+			updateTLB(swapTable[victimPgNum].sw_pte); //aggiorniamo
 
 			ENABLEINTERRUPTS;
 
@@ -167,8 +161,7 @@ void pager(){
 		/*accende il V bit, il D bit e setta PNF*/
 		// Update the Current Process’s Page Table entry as well
 		currSup->sup_privatePgTbl[pageNum].pte_entryLO = victimPgAddr | VALIDON | DIRTYON;
-		updateTLB(swapTable[victimPgNum].sw_pte,1);
-
+		updateTLB(swapTable[victimPgNum].sw_pte);
 		ENABLEINTERRUPTS;
 
 		/*rilascia la mutua esclusione*/

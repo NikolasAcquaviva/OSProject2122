@@ -1,3 +1,4 @@
+#include "../pandos_const.h"
 #include "vmSupport.h" //prende initSwap
 #include <umps3/umps/const.h>
 #include <umps3/umps/libumps.h>
@@ -27,13 +28,15 @@ static void createUProc(int id){
 
     supPool[id].sup_asid = id;
 
-    memaddr data;
-    flashCmd(FLASHREAD, data, GETVPN( 0x80000014 ), id-1);
-    const int text_file_size = data/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
-    // initialization of the process private PageTable
+    #define SPECIAL_ADDR (POOLSTART + UPROCMAX*2*PAGESIZE)
+    flashCmd(FLASHREAD, (memaddr)SPECIAL_ADDR, GETVPN( 0x80000014 ), id-1);
+    unsigned int value = *(unsigned int *) SPECIAL_ADDR;
+    const int text_file_size = value/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
+    *(unsigned int *) SPECIAL_ADDR = (unsigned int)0; //reset
+						       // initialization of the process private PageTable
     for (int j = 0; j < MAXPAGES - 1; j++){ //-1 perchè l'ultima entry è dedicata allo stack'
-        supPool[id].sup_privatePgTbl[j].pte_entryHI = 0x80000000 + (j << VPNSHIFT) + (id << ASIDSHIFT);
-        supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text, ma la doc student guide phase3 pg 3 dice di no
+	supPool[id].sup_privatePgTbl[j].pte_entryHI = 0x80000000 + (j << VPNSHIFT) + (id << ASIDSHIFT);
+	supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text, ma la doc student guide phase3 pg 3 dice di no
     }
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryHI = 0xBFFFF000 + (id << ASIDSHIFT);
     supPool[id].sup_privatePgTbl[MAXPAGES - 1].pte_entryLO = DIRTYON;
@@ -41,7 +44,6 @@ static void createUProc(int id){
     supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) (stackTop + PAGESIZE);
     supPool[id].sup_exceptContext[PGFAULTEXCEPT].status =  IEPON | TEBITON | IMON ;
     supPool[id].sup_exceptContext[PGFAULTEXCEPT].pc = (memaddr) pager;
-    /* supPool[id].sup_exceptContext[PGFAULTEXCEPT].stackPtr =(memaddr) &(supPool[id].sup_exceptContext[PGFAULTEXCEPT].sup_stack) ; */
 
     supPool[id].sup_exceptContext[GENERALEXCEPT].stackPtr =(memaddr) stackTop; ;
     supPool[id].sup_exceptContext[GENERALEXCEPT].status =  IEPON | TEBITON | IMON ;
@@ -49,7 +51,7 @@ static void createUProc(int id){
 
     int status = SYSCALL(CREATEPROCESS, (int) &newState, PROCESS_PRIO_LOW, (int) &(supPool[id]));
     if (status == -1){ //CREATEPROCESS se errore ritorna -1
-        SYSCALL(TERMPROCESS, 0, 0, 0);
+	SYSCALL(TERMPROCESS, 0, 0, 0);
     }
 }
 
@@ -65,9 +67,9 @@ void test() {
     masterSem = 0;
 
     for (int id = 1; id <= UPROCMAX; id++)
-        createUProc(id);
+	createUProc(id);
     for (int j = 0; j < UPROCMAX; j++){
-        SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
+	SYSCALL(PASSEREN, (int) &masterSem, 0, 0);
     }
     SYSCALL(TERMPROCESS, 0, 0, 0);
 }
