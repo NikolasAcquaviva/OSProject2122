@@ -9,7 +9,7 @@
 int masterSem;
 int devSem[49];
 //A static array of support structures to allocate
-static support_t supPool[UPROCMAX + 1]; //+1 perchè ASID 0 is reserved for kernel daemons
+static support_t supPool[UPROCMAX +1]; //+1 perchè ASID 0 is reserved for kernel daemons
 
 extern void pager(); //TLB Exception handler
 extern void supGeneralExceptionHandler();
@@ -28,12 +28,12 @@ static void createUProc(int id){
 
     supPool[id].sup_asid = id;
 
-    #define SPECIAL_ADDR (POOLSTART + UPROCMAX*2*PAGESIZE)
+#define SPECIAL_ADDR (POOLSTART + UPROCMAX*2*PAGESIZE)
     flashCmd(FLASHREAD, (memaddr)SPECIAL_ADDR, GETVPN( 0x80000014 ), id-1);
     unsigned int value = *(unsigned int *) SPECIAL_ADDR;
     const int text_file_size = value/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
     *(unsigned int *) SPECIAL_ADDR = (unsigned int)0; //reset
-						       // initialization of the process private PageTable
+						      // initialization of the process private PageTable
     for (int j = 0; j < MAXPAGES - 1; j++){ //-1 perchè l'ultima entry è dedicata allo stack'
 	supPool[id].sup_privatePgTbl[j].pte_entryHI = 0x80000000 + (j << VPNSHIFT) + (id << ASIDSHIFT);
 	supPool[id].sup_privatePgTbl[j].pte_entryLO = j < text_file_size ? 0 : DIRTYON; //bisognerebbe fare check di quali aree fanno parte di .text, ma la doc student guide phase3 pg 3 dice di no
