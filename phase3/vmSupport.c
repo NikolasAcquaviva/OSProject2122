@@ -17,15 +17,26 @@ memaddr *getDevRegAddr(int line, int devNo){
 	return (memaddr *) (0x10000054 + ((line - 3) * 0x80) + (devNo * 0x10));
 }
 
+memaddr my_poolstart(){
+
+#define CORE_TEXT_ADDR 0x20001014
+#define CORE_DATA_ADDR 0x20001024 //.bss zeroed out
+	unsigned int text_file_size = *(unsigned int *) CORE_TEXT_ADDR;
+	unsigned int data_file_size = *(unsigned int *) CORE_DATA_ADDR;
+	return  0x20001000 + text_file_size + data_file_size;
+}
+
+memaddr POOLSTART;
 int getDevSemIndex(int line, int devNo, int isReadTerm){
 	return ((line - 3) * 8) + (line == 7 ? (isReadTerm * 8) + devNo : devNo);
 }
 
 swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
-							  //DA CONTROLLARE QUESTA VARIABILE
+			      //DA CONTROLLARE QUESTA VARIABILE
 int swapSem; //per accedere alla swapPool in mutex
 
 void initSwap(){
+	POOLSTART = my_poolstart(); //messo qui poichè è la prima funzione che il main chiama
 	swapSem =  1;
 	for (int i=0; i < UPROCMAX*2; i++){
 		swapTable[i].sw_asid = -1;
@@ -80,7 +91,7 @@ void updateTLB(pteEntry_t *sw_pte){
 //flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner); //scrivi il contenuto di victimPgAddr dentro blocco devBlockNum del dispositivo flash victimPgOwner
 int flashCmd(int cmd, int block, int devBlockNum, int flashDevNum){
 	int semNo = getDevSemIndex(FLASHINT, flashDevNum, FALSE);		//(FLASHINT - 3)*8 + flashDevNum;
-																	//prende mutex sul device register associato al flash device
+										//prende mutex sul device register associato al flash device
 	SYSCALL(PASSEREN, (int) &devSem[semNo], 0, 0);
 	dtpreg_t* flashDevReg = (dtpreg_t*) getDevRegAddr(FLASHINT, flashDevNum);	//(memaddr*) (0x10000054 + ((FLASHINT - 3) * 0x80) + (flashDevNum * 0x10));
 

@@ -121,6 +121,7 @@ int readterminal(support_t *currSup){
             *buf = r;
             buf++;
             readChar++;
+            /* if ((void *)buf >= (void *)0xBFFFF000) killProc(&devSem[termSem]); */
         }
         else{
             status =  ((status & 0xFF00) >> BYTELENGTH) * -1;
