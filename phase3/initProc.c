@@ -18,7 +18,7 @@ extern void supGeneralExceptionHandler();
 static void createUProc(int id){
     memaddr ramTop;
     RAMTOP(ramTop);
-    memaddr stackTop = ramTop - (2*id*PAGESIZE);
+    memaddr stackTop = ramTop - (2*(id +1)*PAGESIZE); //"avoid stack page for text"
 
     state_t newState;
     newState.entry_hi = id << ASIDSHIFT; //figura 6.6 pops
