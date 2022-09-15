@@ -134,16 +134,18 @@ void pager(){
 			int devBlockNum = swapTable[victimPgNum].sw_pageNo;
 			int victimPgOwner = (swapTable[victimPgNum].sw_asid) - 1; //un flash device associato ad ogni ASID. 0 based
 
-			//update old owner's process backing storage. da RAM a flash dev. victimPgOwner != currSup->sup_asid -1 ! (togliamo il frame di un altro processo)
-			devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
-			if (devStatus != READY){
-				klog_print("pager devstatus!=READY(1)\n");
-				killProc(&swapSem);
-			}
+			if (swapTable[victimPgNum].sw_pte->pte_entryLO & DIRTYON){
+				//update old owner's process backing storage. da RAM a flash dev. victimPgOwner != currSup->sup_asid -1 ! (togliamo il frame di un altro processo)
+				devStatus = flashCmd(FLASHWRITE, victimPgAddr, devBlockNum, victimPgOwner);
+				if (devStatus != READY){
+					klog_print("pager devstatus!=READY(1)\n");
+					killProc(&swapSem);
+				}
 
+			}
 		}
 
-		//blocco che dobbiamo inserire in ram
+		//blocco che dobbiamo/vogliamo inserire in ram
 		devStatus = flashCmd(FLASHREAD, victimPgAddr, pageNum, currSup->sup_asid - 1);
 		if (devStatus != READY){
 			klog_print("pager devstatus!=READY(2)\n");

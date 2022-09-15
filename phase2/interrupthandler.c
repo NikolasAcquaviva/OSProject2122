@@ -51,7 +51,7 @@ void InterruptExceptionHandler(){
             softBlockCount--;
         }
 
-        //adjust the semaphore value //credo non sia mai cambiato TODO
+        //adjust the semaphore value
         deviceSemaphores[NoDEVICE-1] = 0;
         /*torna al processo in esecuzione se esiste, oppure rientro nello scheduler*/
         if (currentProcess == NULL) scheduler(); /* passing control to the current process (if there is one) */
