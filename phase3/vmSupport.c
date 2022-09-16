@@ -1,4 +1,15 @@
-//cercare "DA CONTROLLARE"
+/* perchè SOLO quando invalidiamo una entry della swap table ( swapTable[victimPgNum].sw_pte->pte_entryLO &= ~VALIDON;) oppure quando aggiorniamo la TLB (updateTLB) dobbiamo agire in mutex? */
+/* Non dovremmo agire in mutex ogni volta che modifichiamo queste risorse condivise (eg quando facciamo: */
+/*   //UPDATING SWAP POOL TABLE ENTRY TO REFLECT THE NEW CONTENTS */
+/*   swapTable[victimPgNum].sw_asid = currSup->sup_asid; */
+/*   swapTable[victimPgNum].sw_pageNo = invalidPageAddr; */
+/*   swapTable[victimPgNum].sw_pte = &(currSup->sup_privatePgTbl[pageNum]); */
+/* ) ? Grazie mille in anticipo */
+/* quando dico "agire in mutex" mi riferisco agli important point del paragrafo 4.4.2 aggiornato della student guide */
+
+/* In realta anche quello che hai indicato tu dovrebbe essere in mutua esclusione, mi rileggero' il manuale */
+
+/* Alla fine abbiamo seguito la doc */
 #include "initProc.h"
 #include <umps3/umps/const.h>
 #include <umps3/umps/libumps.h>
@@ -32,7 +43,6 @@ int getDevSemIndex(int line, int devNo, int isReadTerm){
 }
 
 swap_t swapTable[UPROCMAX*2]; //ci consente una panoramica aggiornata sulla swapPool. MEMORIA FISICA
-							  //DA CONTROLLARE QUESTA VARIABILE
 int swapSem; //per accedere alla swapPool in mutex
 
 void initSwap(){
@@ -118,7 +128,6 @@ void pager(){
 	}
 	else{
 		//swap pool mutex
-		//DA CONTROLLARE
 		SYSCALL(PASSEREN, (int) &swapSem, 0, 0);
 		//ha associazione non valida
 		int pageNum = GETVPN(currSup->sup_exceptState[PGFAULTEXCEPT].entry_hi); //l'exception state della BIOSDATAPAGE è stato caricato qui in GeneralExceptionHandler DA NOI student guide phase 2 3.7

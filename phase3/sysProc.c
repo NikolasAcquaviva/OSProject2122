@@ -49,6 +49,7 @@ int writeprinter(support_t *currSup){
     int status;
     int i = 0;
     while ((i < strLen) && (i >= 0)){
+        if ((void *)firstCharAddr >= (void *)0xC0000000 || ( (void *)KUSEG > (void *)firstCharAddr )) killProc(&devSem[printerSem]); //0xC0000000 anzichè 0xBFFFF000 perchè stack crescono dal basso
         devRegs->data0 = *firstCharAddr;
         //PRINTCHR = TRANSMITCHAR = RECEIVECHAR IMP!
         status = SYSCALL(DOIO, (int) &((dtpreg_t *)devRegs)->command, TRANSMITCHAR, 0);
@@ -80,6 +81,7 @@ int writeterminal(support_t *currSup){
     int status;
     int i = 0;
     while ((i < strLen) && (i >= 0)){
+        if ((void *)firstCharAddr >= (void *)0xC0000000 || ( (void *)KUSEG > (void *)firstCharAddr )) killProc(&devSem[termSem]); //0xC0000000 anzichè 0xBFFFF000 perchè stack crescono dal basso
         status = SYSCALL(DOIO, (int) &devRegs->transm_command, ((unsigned int)*firstCharAddr << BYTELENGTH) | TRANSMITCHAR, 0);
         //OKCHARTRANS has same value of char received
         //PRINTCHR = TRANSMITCHAR = RECEIVECHAR IMP!
@@ -113,6 +115,8 @@ int readterminal(support_t *currSup){
     SYSCALL(PASSEREN, (int) &devSem[termSem], 0, 0);
     // No fixed string length: we terminate reading a newline character.
     while(r != '\n' && status >= 0){
+        //per evitare attacchi DOS dove diamo in input "troppi" caratteri
+        if ((void *)buf >= (void *)0xC0000000 || ( (void *)KUSEG > (void *)buf ) || readChar > MAXSTRLENG) killProc(&devSem[termSem]); //0xC0000000 anzichè 0xBFFFF000 perchè stack crescono dal basso
         status = SYSCALL(DOIO, (int) &devRegs->recv_command, TRANSMITCHAR, 0);
         //OKCHARTRANS has same value of char received         //PRINTCHR = TRANSMITCHAR = RECEIVECHAR IMP!
         if ((status & 0xFF) == OKCHARTRANS){
@@ -121,7 +125,6 @@ int readterminal(support_t *currSup){
             *buf = r;
             buf++;
             readChar++;
-            /* if ((void *)buf >= (void *)0xBFFFF000) killProc(&devSem[termSem]); */
         }
         else{
             status =  ((status & 0xFF00) >> BYTELENGTH) * -1;

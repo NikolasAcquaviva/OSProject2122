@@ -30,9 +30,9 @@ static void createUProc(int id){
 
     memaddr SPECIAL_ADDR = MY_POOLSTART + UPROCMAX*2*PAGESIZE;
     flashCmd(FLASHREAD, (memaddr)SPECIAL_ADDR, GETVPN( 0x80000014 ), id-1);
-    unsigned int value = *(unsigned int *) SPECIAL_ADDR;
+    unsigned int value = *(unsigned int *) ( SPECIAL_ADDR + 20 ); //20 = 14 in hex
     const int text_file_size = value/PAGESIZE; //numero di pagine nell'area text che non deve essere hackerata; tabella 10.1 pops */
-    *(unsigned int *) SPECIAL_ADDR = (unsigned int)0; //reset
+    *(unsigned int *) ( SPECIAL_ADDR + 20 ) = (unsigned int)0; //reset
 						      // initialization of the process private PageTable
     for (int j = 0; j < MAXPAGES - 1; j++){ //-1 perchè l'ultima entry è dedicata allo stack'
 	supPool[id].sup_privatePgTbl[j].pte_entryHI = 0x80000000 + (j << VPNSHIFT) + (id << ASIDSHIFT);
